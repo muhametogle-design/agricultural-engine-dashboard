@@ -3,8 +3,9 @@
 Production-grade FastAPI + PostGIS platform that turns a **GPS tap or a drawn field
 boundary** into a complete, auditable farm development plan: groundwater well siting
 from partner VES resistivity soundings, rule-based crop matching against live
-SoilGrids/NASA POWER data, fencing bill-of-quantities, and a multi-zone master
-layout — all delivered as one JSON decision report.
+SoilGrids/NASA POWER data, an optional 1–16 day Open-Meteo irrigation schedule, fencing
+bill-of-quantities, and a multi-zone master layout — all delivered as one JSON
+decision report.
 
 ```
  tap / polygon (EPSG:4326)
@@ -17,13 +18,15 @@ layout — all delivered as one JSON decision report.
         │
         ├── services/  ── SoilGrids v2 (point+polygon sampling)   ──┐
         │                NASA POWER climatology (rain, T, ET0)      │ retry,
-        │                fault-isolated orchestration + cache      ─┘ backoff,
-        │                                                            TTL 30d
+        │                Open-Meteo daily forecast (rain + ET0)     │ backoff,
+        │                fault-isolated orchestration + cache      ─┘ TTL 30d*
+        │                * climatology/soil cache; forecast stays live
         ├── engines/
         │     ves_interpretation   resistivity bands, water-table knee, aquifer score
         │     well_siting          weighted MCE grid: IDW(VES) + slope + flow acc
         │     terrain              pluggable provider (Null | rasterio DEM, D8)
         │     crop_matching        YAML rules (13 crops), trapezoid/threshold scoring
+        │     irrigation           Kc×ET0 water balance, trigger schedule, field volume
         │     infrastructure       fencing BOM (posts, strainers, wire rolls, gates)
         │     zoning               rotated-grid multi-zone master layout + well pad
         │
@@ -40,6 +43,7 @@ layout — all delivered as one JSON decision report.
 | 3 | VES machine ingestion | `POST /api/v1/fields/{id}/ves` (+`/bulk`), interpreted on ingest, stored in `ves_groundwater_surveys` |
 | 4 | Well siting / crop matching / infrastructure | `app/engines/*`, orchestrated by `app/services/master_plan.py` |
 | 5 | Stack | FastAPI, GeoPandas, Shapely 2, PyProj, httpx+tenacity, asyncpg, PostgreSQL 16 + PostGIS 3.4, JSON reporting |
+| 6 | Operational irrigation timing | `app/services/open_meteo.py` + `app/engines/irrigation.py`; live daily rain/ET0, stage-specific Kc, efficiency-adjusted mm/m³ and optional pump hours |
 
 ## Data model
 
@@ -52,6 +56,9 @@ Your DDL is preserved 1:1 (`db/init.sql`), with these deliberate, documented dev
 3. `UNIQUE(field_id)` on the environmental cache → idempotent upsert, one live row/field.
 4. CHECK constraints: VES array length alignment, non-empty curves, positive
    resistivities, score ∈ [0,1], valid boundaries.
+5. **`irrigation_advisory JSONB` added** to `farm_master_plans` (migration 0003)
+   so the exact forecast, assumptions and schedule used by a decision report
+   remain auditable.
 
 ## Ingestion service — what changed vs. the draft `GISDataIngestionService`
 
@@ -95,9 +102,9 @@ alembic revision -m "..."      # next change
 ```
 
 0001 = baseline schema; 0002 = auth/multitenancy (adds `tenant_id` as NULLABLE
-for upgrade paths — backfill then `SET NOT NULL`; init.sql ships them strict).
-Both directions validated against scratch databases in CI tests (`alembic
-upgrade head` / `downgrade base`).
+for upgrade paths — backfill then `SET NOT NULL`; init.sql ships them strict);
+0003 = persisted irrigation advisory JSON. Both directions are designed for
+`alembic upgrade head` / `downgrade base` validation against scratch databases.
 
 ## Decision engines
 
@@ -121,6 +128,35 @@ score as trapezoids, thresholds as ramps (e.g. frost gate). Rainfall is
 **effective rainfall** = climatology + operator-supplied irrigation, so the same
 engine answers "what if we pump X mm/yr?". Output: ranked scores, rating class,
 limiting factors, agronomy notes + soil amendment recommendations.
+
+### Live irrigation advisory
+
+Open-Meteo supplies 1–16 daily values for forecast precipitation, FAO-56 ET0,
+temperature and wind at the field centroid. The pure irrigation engine applies
+stage-specific crop coefficients from
+`app/engines/rules/irrigation_rules.yaml`, tracks root-zone depletion and
+schedules a refill when the operator's management trigger is reached. Every
+result exposes effective rain, ETc, net/gross application depth, field volume
+(`1 mm·ha = 10 m³`), optional pump hours, heat/wind/rain flags, source metadata
+and all assumptions. Missing daily drivers become explicit `data_gap` rows;
+Open-Meteo failure degrades an optional master-plan advisory to a warning rather
+than blocking the other engines. Coefficients and depletion thresholds are
+screening defaults—not automatic valve-control settings.
+
+```json
+{
+  "crop": "sorghum",
+  "growth_stage": "mid_season",
+  "forecast_days": 7,
+  "irrigation_efficiency": 0.85,
+  "management_allowed_depletion_mm": 20,
+  "initial_soil_water_deficit_mm": 0,
+  "pump_flow_m3_per_hour": 40
+}
+```
+
+Use this body directly with `/irrigation-advisory`, or nest it under
+`irrigation_advisory` in the master-plan request to persist the schedule.
 
 ### Farm infrastructure
 Geodesic perimeter from PostGIS. Gates auto-derived (1 per 400 m) or explicit;
@@ -149,8 +185,10 @@ Zones provably partition the field (see tests, ±3 %).
 | `POST /fields/{id}/well-siting` | MCE over stored VES + terrain |
 | `POST /fields/{id}/crop-matching` | ranked suitability (+irrigation scenario) |
 | `POST /fields/{id}/infrastructure` | fencing BOM |
+| `POST /fields/{id}/irrigation-advisory` | live forecast water balance and schedule |
+| `GET /irrigation/crops` | supported crop/stage vocabulary |
 | `POST /fields/{id}/zoning` | master layout FeatureCollection |
-| `POST /fields/{id}/master-plan` · `GET` | full pipeline → persisted plan + report |
+| `POST /fields/{id}/master-plan` · `GET` | full pipeline → persisted plan + report (optionally including irrigation) |
 | `GET /healthz` · `GET /readyz` | liveness / DB readiness |
 
 ## Quickstart
@@ -160,7 +198,7 @@ cp .env.example .env
 docker compose up -d db                 # PostGIS with schema auto-initialized
 pip install -r requirements.txt
 uvicorn app.main:app --reload           # http://localhost:8000/docs  ·  /console (map UI)
-pytest                                  # 49 tests, no DB required
+pytest                                  # 69 tests, no DB required
 python examples/run_decision_cycle_demo.py   # full engine chain, no DB/network
 ```
 
@@ -203,6 +241,19 @@ arrive as `Decimal` (repository boundary now normalizes to float).
   tap-GPS or draw-polygon field registration, environment/VES ingestion, master
   plan with zone/candidate/well layers rendered on Leaflet/OSM.
 
+### 2026-08-14 — climate-smart irrigation advisory
+
+* Added authenticated `POST /fields/{id}/irrigation-advisory`, backed by a
+  null-tolerant Open-Meteo client and an auditable Kc×ET0 root-zone balance.
+* The console now renders a seven-day rain/ETc/application table and scales
+  gross depth to field m³ and optional pump runtime. The same request can be
+  embedded in a master-plan run and is persisted through Alembic revision 0003.
+* Forecast failures are isolated from master-plan generation; missing daily
+  values are never silently treated as zero rainfall or zero ET0.
+* Live provider contract check at the Afgooye demo coordinate returned
+  `Africa/Mogadishu`, aligned daily arrays, and plausible ET0 (4.30–5.37 mm/day)
+  for 2026-08-14 through 2026-08-16.
+
 ## Production notes
 
 - **Scaling**: engines are CPU-bound pure functions → run via `asyncio.to_thread`
@@ -214,15 +265,20 @@ arrive as `Decimal` (repository boundary now normalizes to float).
   emit a flagged synthetic surface (`--synthetic`) for offline testing. For
   national scale, place a COG-backed terrain microservice behind the same
   `TerrainProvider` protocol.
+- **Forecast operations**: Open-Meteo is queried live and is not placed in the
+  30-day climatology cache. Review its licence/attribution and commercial-use
+  terms for your deployment, and add provider redundancy before using the
+  schedule for time-critical operations.
 - **Calibration gates before go-live**: VES resistivity bands (geology-specific),
-  crop rules (agronomy partner), MCE weights, fencing price list.
+  crop and irrigation Kc rules (agronomy partner), root-zone depletion triggers,
+  MCE weights, fencing price list.
 - **Integrity**: every report echoes its factor weights, coverage flags and raw
   JSONB provenance — decisions are reproducible and auditable.
 
 ## Tests
 
-49 passing (`pytest`): engine math with known-answer fixtures, respx-mocked
-SoilGrids/POWER clients (retry, sentinel, null, coverage paths), orchestrator
-degradation, DEM provider against a synthetic plane, Alembic up/down on scratch
-databases, API wiring via in-memory repository fakes, and a console smoke test
-(no DB needed).
+69 passing (`pytest`): engine math with known-answer fixtures, respx-mocked
+SoilGrids/POWER/Open-Meteo clients (retry, sentinel, null, coverage paths),
+orchestrator degradation, irrigation schedule/volume arithmetic, DEM provider
+against a synthetic plane, API wiring via in-memory repository fakes, repository
+JSON persistence, and console smoke tests (no DB needed).

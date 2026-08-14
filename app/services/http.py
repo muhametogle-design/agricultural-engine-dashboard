@@ -57,7 +57,19 @@ async def get_json(
                 f"GET {url} returned HTTP {resp.status_code}",
                 detail={"body": resp.text[:400], "url": str(resp.url)},
             )
-        return resp.json()
+        try:
+            payload = resp.json()
+        except ValueError as exc:
+            raise ExternalServiceError(
+                f"GET {url} returned invalid JSON",
+                detail={"body": resp.text[:400], "url": str(resp.url)},
+            ) from exc
+        if not isinstance(payload, dict):
+            raise ExternalServiceError(
+                f"GET {url} returned a non-object JSON payload",
+                detail={"payload_type": type(payload).__name__, "url": str(resp.url)},
+            )
+        return payload
 
     runner = retry(
         stop=stop_after_attempt(settings.max_retries),

@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app import __version__
 from app.api.deps import get_settings
-from app.api.routes import analysis, auth, clients, environmental, fields, health, lab, plans, ves
+from app.api.routes import analysis, auth, clients, environmental, fields, health, irrigation, lab, plans, ves
 from app.core.errors import AppError
 from app.core.logging import configure_logging, get_logger
 from app.db.pool import close_pool, create_pool
@@ -51,7 +51,7 @@ a.btn.alt{{background:transparent;color:#5fd08a;border:1px solid #5fd08a}}
 code{{background:#0b120e;padding:2px 6px;border-radius:6px;font-size:13px}}
 </style></head><body><div class="card">
 <h1>Agricultural Spatial DSS</h1>
-<p>version {version} — live sandbox: PostGIS + SoilGrids · NASA POWER · terrain DEM</p>
+<p>version {version} — PostGIS · SoilGrids · NASA POWER · Open-Meteo · terrain DEM</p>
 <a class="btn" href="/console">Open the map console →</a>
 <a class="btn" href="/dashboard">Open the unified dashboard →</a>
 <a class="btn alt" href="/docs">API reference (Swagger)</a>
@@ -63,7 +63,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Agricultural Spatial DSS",
         version=__version__,
-        description="Well siting, crop matching and farm infrastructure decision support.",
+        description="Well siting, crop matching, irrigation and farm infrastructure decision support.",
         lifespan=lifespan,
     )
 
@@ -92,7 +92,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     api_prefix = "/api/v1"
     for r in (auth.router, clients.router, fields.router, environmental.router,
-              ves.router, analysis.router, plans.router, lab.router):
+              ves.router, analysis.router, irrigation.router, plans.router, lab.router):
         app.include_router(r, prefix=api_prefix)
 
     @app.get("/api")

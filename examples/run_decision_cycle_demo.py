@@ -1,6 +1,6 @@
 """End-to-end engine dry-run WITHOUT the database or external APIs:
 synthetic field -> VES interpretation -> well siting -> crop matching ->
-fencing BOM -> master layout -> consolidated JSON report.
+irrigation water balance -> fencing BOM -> master layout -> consolidated JSON report.
 
 Run:  python examples/run_decision_cycle_demo.py
 """
@@ -13,7 +13,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # repo root
 
 from app.config import get_settings
-from app.engines import crop_matching, infrastructure, well_siting, zoning
+from app.engines import crop_matching, infrastructure, irrigation, well_siting, zoning
 from app.engines.terrain import NullTerrainProvider
 from app.engines.ves_interpretation import interpret_ves
 
@@ -42,6 +42,21 @@ ENV = {
     "annual_et0_mm": 1650.0, "coldest_month_min_temp_c": 21.0,
 }
 
+# Synthetic daily forecast in the same parsed shape as Open-Meteo service output.
+DAILY_FORECAST = [
+    {"date": f"2026-08-{day:02d}", "precipitation_mm": rain, "et0_mm": et0,
+     "temperature_min_c": tmin, "temperature_max_c": tmax, "wind_gusts_max_kmh": wind}
+    for day, rain, et0, tmin, tmax, wind in [
+        (14, 0.0, 5.8, 25.0, 36.0, 27.0),
+        (15, 0.0, 6.1, 25.5, 38.5, 39.0),
+        (16, 8.0, 5.2, 24.0, 34.0, 24.0),
+        (17, 0.0, 5.9, 25.0, 37.0, 29.0),
+        (18, 22.0, 4.2, 23.0, 31.0, 33.0),
+        (19, 0.0, 5.5, 24.0, 35.0, 22.0),
+        (20, 0.0, 5.7, 25.0, 36.0, 25.0),
+    ]
+]
+
 
 def main() -> None:
     settings = get_settings()
@@ -59,6 +74,27 @@ def main() -> None:
     siting = well_siting.run_well_siting(FIELD, ves_records, settings, NullTerrainProvider())
     crops = crop_matching.match_crops(ENV, supplemental_irrigation_mm=300.0)
     amendments = crop_matching.recommend_amendments(ENV)
+    irrigation_advisory = irrigation.build_irrigation_advisory(
+        DAILY_FORECAST,
+        area_ha=4.85,
+        crop="sorghum",
+        growth_stage="mid_season",
+        irrigation_efficiency=0.85,
+        management_allowed_depletion_mm=15.0,
+        pump_flow_m3_per_hour=35.0,
+    )
+    irrigation_advisory["source"] = {
+        "provider": "synthetic offline fixture",
+        "provider_url": "local://examples/run_decision_cycle_demo.py",
+        "model": "demo",
+        "timezone": "Africa/Mogadishu",
+        "requested_latitude": CENTER[1],
+        "requested_longitude": CENTER[0],
+        "latitude": CENTER[1],
+        "longitude": CENTER[0],
+        "elevation_m": None,
+        "retrieved_at": "2026-08-14T00:00:00+03:00",
+    }
     bom = infrastructure.fencing_bom(perimeter_m=884.0, corner_count=4, gates=None,
                                    settings=settings.fencing)
     well = (siting.optimal_lon, siting.optimal_lat) if siting.optimal_lon else None
@@ -78,6 +114,7 @@ def main() -> None:
         },
         "top_crops": crops[:6],
         "soil_amendment_recommendations": amendments,
+        "irrigation_advisory": irrigation_advisory,
         "fencing": bom.to_dict(),
         "layout_zones_metadata": layout["metadata"],
         "layout_zone_names": [f["properties"]["zone"] for f in layout["features"]],

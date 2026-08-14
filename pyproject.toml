@@ -1,7 +1,7 @@
 [project]
 name = "agri-dss"
-version = "0.1.0"
-description = "Agricultural Spatial Decision Support System - well siting, crop matching, farm infrastructure"
+version = "0.2.0"
+description = "Agricultural Spatial DSS - well siting, crop matching, irrigation scheduling, and infrastructure"
 requires-python = ">=3.11"
 
 [tool.pytest.ini_options]

@@ -1,0 +1,21 @@
+# Crop coefficients (Kc) for forecast water-balance scheduling.
+# Values are screening defaults adapted from FAO-56 crop-coefficient ranges.
+# Local agronomists must calibrate cultivar, planting density, wind, humidity,
+# rooting depth and season length before operational deployment.
+version: 1
+source: "FAO-56 crop-coefficient screening defaults; local calibration required"
+growth_stages: [initial, development, mid_season, late_season]
+crops:
+  maize:         {initial: 0.30, development: 0.70, mid_season: 1.20, late_season: 0.60}
+  sorghum:       {initial: 0.30, development: 0.70, mid_season: 1.05, late_season: 0.55}
+  pearl_millet:  {initial: 0.30, development: 0.65, mid_season: 1.00, late_season: 0.50}
+  cowpea:        {initial: 0.40, development: 0.70, mid_season: 1.05, late_season: 0.60}
+  mung_bean:     {initial: 0.40, development: 0.70, mid_season: 1.05, late_season: 0.60}
+  groundnut:     {initial: 0.40, development: 0.70, mid_season: 1.15, late_season: 0.60}
+  sesame:        {initial: 0.35, development: 0.70, mid_season: 1.10, late_season: 0.60}
+  tomato:        {initial: 0.60, development: 0.85, mid_season: 1.15, late_season: 0.80}
+  onion:         {initial: 0.70, development: 0.85, mid_season: 1.05, late_season: 0.75}
+  watermelon:    {initial: 0.40, development: 0.75, mid_season: 1.00, late_season: 0.75}
+  banana:        {initial: 0.50, development: 0.85, mid_season: 1.10, late_season: 1.00}
+  mango:         {initial: 0.50, development: 0.75, mid_season: 0.90, late_season: 0.75}
+  date_palm:     {initial: 0.50, development: 0.75, mid_season: 0.95, late_season: 0.85}

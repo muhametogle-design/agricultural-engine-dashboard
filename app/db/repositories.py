@@ -297,20 +297,20 @@ class PlansRepo:
             """
             INSERT INTO farm_master_plans (
                 field_id, optimal_well_point, recommended_drilling_depth_m,
-                top_suitable_crops, soil_amendment_recommendations,
+                top_suitable_crops, soil_amendment_recommendations, irrigation_advisory,
                 fencing_post_count, fencing_wire_rolls_required, fencing_total_cost_est,
                 layout_zones_geojson
             ) VALUES (
                 $1,
                 CASE WHEN $2::text IS NOT NULL
                      THEN ST_SetSRID(ST_GeomFromGeoJSON($2), 4326) END,
-                $3, $4::jsonb, $5::text[], $6, $7, $8, $9::jsonb
+                $3, $4::jsonb, $5::text[], $6::jsonb, $7, $8, $9, $10::jsonb
             )
             RETURNING id, field_id,
                       ST_AsGeoJSON(optimal_well_point)::text AS optimal_well_point,
                       recommended_drilling_depth_m, top_suitable_crops,
-                      soil_amendment_recommendations, fencing_post_count,
-                      fencing_wire_rolls_required, fencing_total_cost_est,
+                      soil_amendment_recommendations, irrigation_advisory,
+                      fencing_post_count, fencing_wire_rolls_required, fencing_total_cost_est,
                       layout_zones_geojson, generated_at
             """,
             field_id,
@@ -318,13 +318,18 @@ class PlansRepo:
             plan.get("recommended_drilling_depth_m"),
             json.dumps(plan.get("top_suitable_crops") or []),
             plan.get("soil_amendment_recommendations") or [],
+            json.dumps(plan.get("irrigation_advisory"), default=str)
+            if plan.get("irrigation_advisory") else None,
             plan.get("fencing_post_count"),
             plan.get("fencing_wire_rolls_required"),
             plan.get("fencing_total_cost_est"),
             json.dumps(plan.get("layout_zones_geojson")) if plan.get("layout_zones_geojson") else None,
         )
         out = dict(row)
-        _decode_geojson_columns(out, ("optimal_well_point", "top_suitable_crops", "layout_zones_geojson"))
+        _decode_geojson_columns(
+            out,
+            ("optimal_well_point", "top_suitable_crops", "irrigation_advisory", "layout_zones_geojson"),
+        )
         return _normalize_columns(out, self.NUMERIC_COLS)
 
     async def latest(self, field_id: UUID) -> dict | None:
@@ -332,8 +337,8 @@ class PlansRepo:
             """
             SELECT id, field_id, ST_AsGeoJSON(optimal_well_point)::text AS optimal_well_point,
                    recommended_drilling_depth_m, top_suitable_crops,
-                   soil_amendment_recommendations, fencing_post_count,
-                   fencing_wire_rolls_required, fencing_total_cost_est,
+                   soil_amendment_recommendations, irrigation_advisory,
+                   fencing_post_count, fencing_wire_rolls_required, fencing_total_cost_est,
                    layout_zones_geojson, generated_at
             FROM farm_master_plans
             WHERE field_id = $1
@@ -343,7 +348,10 @@ class PlansRepo:
         )
         out = dict(row) if row else None
         if out:
-            _decode_geojson_columns(out, ("optimal_well_point", "top_suitable_crops", "layout_zones_geojson"))
+            _decode_geojson_columns(
+                out,
+                ("optimal_well_point", "top_suitable_crops", "irrigation_advisory", "layout_zones_geojson"),
+            )
             _normalize_columns(out, self.NUMERIC_COLS)
         return out
 

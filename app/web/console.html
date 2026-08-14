@@ -25,8 +25,13 @@
   .card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px}
   .card h3{margin:0 0 8px;font-size:12.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim)}
   label{display:block;font-size:12px;color:var(--dim);margin:6px 0 2px}
-  input{width:100%;padding:7px 9px;border-radius:7px;border:1px solid var(--line);
+  input,select{width:100%;padding:7px 9px;border-radius:7px;border:1px solid var(--line);
     background:#0f1714;color:var(--txt)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 8px}
+  .scroll-x{overflow-x:auto}
+  .action-irrigate{color:var(--warn);font-weight:700}
+  .action-rain_sufficient{color:var(--acc)}
+  .action-data_gap{color:var(--bad)}
   button{cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:7px 10px;
     background:#22352b;color:var(--txt);margin:4px 4px 0 0;font-weight:600;font-size:12.5px}
   button:hover{border-color:var(--acc)}
@@ -89,11 +94,48 @@
     </div>
 
     <div class="card">
-      <h3>4 · Decide</h3>
-      <label>Supplemental irrigation (mm/yr)</label>
+      <h3>4 · Live irrigation advisory</h3>
+      <div class="grid2">
+        <div><label>Crop</label>
+          <select id="irrigation-crop">
+            <option>maize</option><option selected>sorghum</option><option>pearl_millet</option>
+            <option>cowpea</option><option>mung_bean</option><option>groundnut</option>
+            <option>sesame</option><option>tomato</option><option>onion</option>
+            <option>watermelon</option><option>banana</option><option>mango</option>
+            <option>date_palm</option>
+          </select>
+        </div>
+        <div><label>Growth stage</label>
+          <select id="growth-stage">
+            <option>initial</option><option>development</option>
+            <option selected>mid_season</option><option>late_season</option>
+          </select>
+        </div>
+        <div><label>System efficiency (%)</label>
+          <input id="irrigation-efficiency" type="number" value="85" min="30" max="100" step="1"/>
+        </div>
+        <div><label>Trigger deficit (mm)</label>
+          <input id="depletion-trigger" type="number" value="20" min="1" max="200" step="1"/>
+        </div>
+        <div><label>Current deficit (mm)</label>
+          <input id="initial-deficit" type="number" value="0" min="0" max="300" step="1"/>
+        </div>
+        <div><label>Pump flow (m³/hour)</label>
+          <input id="pump-flow" type="number" value="40" min="0.1" step="1"/>
+        </div>
+      </div>
+      <div class="row">
+        <button id="irrigation-btn" class="blue needs-field" disabled onclick="runIrrigation()">☁ Build 7-day schedule</button>
+      </div>
+      <div id="irrigation-info" style="margin-top:8px"></div>
+    </div>
+
+    <div class="card">
+      <h3>5 · Complete decision plan</h3>
+      <label>Supplemental irrigation scenario (mm/yr)</label>
       <input id="irrigation" type="number" value="600" step="50" min="0"/>
       <div class="row">
-        <button class="primary needs-field" disabled onclick="runPlan()">⚡ Run master plan</button>
+        <button class="primary needs-field" disabled onclick="runPlan()">⚡ Run + persist master plan</button>
       </div>
       <div id="plan-info" style="margin-top:8px"></div>
     </div>
@@ -162,12 +204,29 @@ async function login(){
     chip.style.display = "inline-block"; chip.textContent = "authenticated";
     setDisabled(".needs-auth", false);
     log(`signed in as ${me.email}`);
+    loadIrrigationCatalog();
   }catch(e){
     if (e.status === 405 || e.status === 404)
       log("server didn't recognize POST there — fill the API base box with the API's origin (e.g. https://8000-….e2b.app)", "err");
     log(`login failed: ${e.message}`, "err");
   }
   btn.disabled = false;
+}
+async function loadIrrigationCatalog(){
+  try{
+    const catalog = await call("/irrigation/crops");
+    const cropSelect = document.getElementById("irrigation-crop");
+    const stageSelect = document.getElementById("growth-stage");
+    const previousCrop = cropSelect.value || "sorghum";
+    const previousStage = stageSelect.value || "mid_season";
+    const fill = (select, values) => select.replaceChildren(...values.map(v => {
+      const option = document.createElement("option"); option.value = v;
+      option.textContent = v.replaceAll("_", " "); return option;
+    }));
+    fill(cropSelect, catalog.crops); fill(stageSelect, catalog.growth_stages);
+    cropSelect.value = catalog.crops.includes(previousCrop) ? previousCrop : catalog.crops[0];
+    stageSelect.value = catalog.growth_stages.includes(previousStage) ? previousStage : catalog.growth_stages[0];
+  }catch(e){ log(`using built-in irrigation catalog: ${e.message}`, "err"); }
 }
 
 /* ---------------- field lifecycle ---------------- */
@@ -190,6 +249,11 @@ function showField(){
   document.getElementById("field-info").innerHTML =
     `${field.field_name}<br>${field.area_hectares} ha · ${field.perimeter_meters} m<br>` +
     `<span title="${field.id}">id ${String(field.id).slice(0,8)}…</span>`;
+  // Never leave a previous field's diagnostics visible under a newly selected boundary.
+  document.getElementById("env-info").innerHTML = "";
+  document.getElementById("irrigation-info").innerHTML = "";
+  document.getElementById("plan-info").innerHTML = "";
+  marksLayer.clearLayers(); zonesLayer.clearLayers();
   if (fieldLayer) fieldLayer.remove();
   fieldLayer = L.geoJSON(field.boundary, {color: "#5fd08a", weight: 2, fillOpacity: 0.08}).addTo(map);
   map.fitBounds(fieldLayer.getBounds().pad(0.25));
@@ -276,6 +340,60 @@ async function addDemoVes(){
   }catch(e){ log(e.message, "err"); }
 }
 
+/* ---------------- live irrigation advisory ---------------- */
+function irrigationRequest(){
+  const pump = parseFloat(document.getElementById("pump-flow").value);
+  return {
+    crop: document.getElementById("irrigation-crop").value,
+    growth_stage: document.getElementById("growth-stage").value,
+    forecast_days: 7,
+    irrigation_efficiency: parseFloat(document.getElementById("irrigation-efficiency").value) / 100,
+    management_allowed_depletion_mm: parseFloat(document.getElementById("depletion-trigger").value),
+    initial_soil_water_deficit_mm: parseFloat(document.getElementById("initial-deficit").value),
+    pump_flow_m3_per_hour: Number.isFinite(pump) && pump > 0 ? pump : null,
+  };
+}
+async function runIrrigation(){
+  if (!field) return;
+  const btn = document.getElementById("irrigation-btn"); btn.disabled = true;
+  const requestedFieldId = field.id;
+  log("fetching Open-Meteo forecast and building field water balance …");
+  try{
+    const advisory = await call(`/fields/${requestedFieldId}/irrigation-advisory`, {
+      method: "POST", body: irrigationRequest()});
+    if (!field || field.id !== requestedFieldId){ log("discarded advisory for a field no longer selected"); return; }
+    renderIrrigation(advisory);
+    log(`irrigation advisory ready — ${advisory.summary.irrigation_events} event(s), ` +
+        `${advisory.summary.total_irrigation_volume_m3} m³`);
+  }catch(e){
+    renderIrrigation(null);
+    log(`irrigation advisory failed: ${e.message}`, "err");
+  }finally{ btn.disabled = false; }
+}
+function renderIrrigation(a){
+  const target = document.getElementById("irrigation-info");
+  if (!a){ target.innerHTML = '<p class="err mono">Live forecast unavailable; the rest of the plan remains valid.</p>'; return; }
+  const s = a.summary;
+  const days = (a.schedule || []).map(d => `<tr>
+    <td>${String(d.date).slice(5)}</td><td>${fmt(d.precipitation_mm)}</td>
+    <td>${fmt(d.crop_et_mm)}</td><td>${fmt(d.gross_irrigation_mm)}</td>
+    <td>${fmt(d.irrigation_volume_m3)}</td><td>${fmt(d.pump_hours)}</td>
+    <td class="action-${d.action}" title="${(d.risk_flags || []).join(", ")}">
+      ${d.action.replaceAll("_", " ")}${(d.risk_flags || []).length ? " ⚠" : ""}</td></tr>`).join("");
+  target.innerHTML = `
+    <div class="kv" style="margin-bottom:7px">
+      <span>Kc · stage</span><b>${a.crop_coefficient} · ${a.growth_stage.replaceAll("_", " ")}</b>
+      <span>forecast rain</span><b>${s.total_forecast_rain_mm} mm</b>
+      <span>crop demand</span><b>${s.total_crop_water_demand_mm} mm</b>
+      <span>scheduled water</span><b>${s.total_irrigation_volume_m3} m³ · ${s.irrigation_events} event(s)</b>
+      <span>peak pump runtime</span><b>${s.peak_daily_pump_hours == null ? "—" : s.peak_daily_pump_hours + " h/day"}</b>
+      <span>forecast source</span><b>${a.source.provider} · ${a.source.timezone}</b>
+    </div>
+    <div class="scroll-x"><table><tr><th>day</th><th>rain mm</th><th>ETc mm</th><th>gross mm</th><th>m³</th><th>pump h</th><th>action</th></tr>${days}</table></div>
+    <p style="font-size:12px;color:var(--warn)">${s.recommendation}</p>` +
+    ((a.warnings || []).length ? `<p class="err mono">${a.warnings.join(" · ")}</p>` : "");
+}
+
 /* ---------------- master plan ---------------- */
 const ZONE_COLORS = {homestead: "#f5c46a", orchard: "#7ec96e", roads_service: "#8fa79a",
                      production: "#3fa9f5", well_site: "#f57c7c"};
@@ -284,8 +402,13 @@ async function runPlan(){
   log("running decision pipeline (ingest → engines → persist) …");
   try{
     const p = await call(`/fields/${field.id}/master-plan`, {method: "POST",
-      body: {supplemental_irrigation_mm: parseFloat(document.getElementById("irrigation").value)}});
-    renderPlan(p); log(`plan ${String(p.plan_id).slice(0,8)} ready — well score ${p.well_siting.composite_score}`);
+      body: {
+        supplemental_irrigation_mm: parseFloat(document.getElementById("irrigation").value),
+        irrigation_advisory: irrigationRequest(),
+      }});
+    renderPlan(p);
+    renderIrrigation(p.irrigation_advisory || null);
+    log(`plan ${String(p.plan_id).slice(0,8)} ready — well score ${p.well_siting ? p.well_siting.composite_score : "—"}`);
   }catch(e){ log(e.message, "err"); }
 }
 function renderPlan(p){
@@ -319,15 +442,10 @@ function renderPlan(p){
       <span>well score</span><b>${ws ? ws.composite_score : "—"}</b>
       <span>drill depth</span><b>${ws ? ws.recommended_drilling_depth_m + " m" : "—"}</b>
       <span>fencing</span><b>${f.total_posts} posts · ${f.wire_rolls} rolls · $${f.total_cost}</b>
+      <span>irrigation forecast</span><b>${p.irrigation_advisory ? p.irrigation_advisory.summary.total_irrigation_volume_m3 + " m³" : "unavailable"}</b>
       <span>zones</span><b>${p.layout_zones ? p.layout_zones.features.length : 0}</b>
     </div>
     <table><tr><th>crop</th><th>score</th><th>rating</th></tr>${crops}</table>` +
-    (p.warnings.length ? `<p class="err mono">${p.warnings.join(" · ")}</p>` : "");
-}
-</script>
-</body>
-</html>
-tr>${crops}</table>` +
     (p.warnings.length ? `<p class="err mono">${p.warnings.join(" · ")}</p>` : "");
 }
 </script>

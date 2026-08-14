@@ -9,12 +9,14 @@ from uuid import UUID
 import httpx
 
 from app.config import Settings
+from app.core.errors import ExternalServiceError
 from app.core.logging import get_logger
 from app.db.repositories import RepositoryBundle
 from app.engines import crop_matching, infrastructure, well_siting, zoning
 from app.engines.terrain import TerrainProvider
 from app.schemas.plans import MasterPlanOptions
 from app.services.environmental import collect_environmental
+from app.services.irrigation import generate_irrigation_advisory
 
 log = get_logger(__name__)
 
@@ -119,6 +121,18 @@ async def generate_master_plan(
 
     amendments = crop_matching.recommend_amendments(env)
 
+    # A live forecast is opt-in because it adds another network dependency.
+    # An upstream outage degrades the master plan instead of blocking the
+    # deterministic engines and persistence.
+    irrigation_advisory = None
+    if options.irrigation_advisory is not None:
+        try:
+            irrigation_advisory = await generate_irrigation_advisory(
+                http_client, settings, field, options.irrigation_advisory
+            )
+        except ExternalServiceError as exc:
+            warnings.append(f"Live irrigation forecast unavailable: {exc.message}")
+
     # --- 3. Persist ----------------------------------------------------------
     plan_row = await repos.plans.create(
         field_id,
@@ -127,6 +141,7 @@ async def generate_master_plan(
             "recommended_drilling_depth_m": well_result.recommended_drilling_depth_m if well_result else None,
             "top_suitable_crops": top_crops,
             "soil_amendment_recommendations": amendments,
+            "irrigation_advisory": irrigation_advisory,
             "fencing_post_count": bom.total_posts,
             "fencing_wire_rolls_required": bom.wire_rolls,
             "fencing_total_cost_est": bom.total_cost,
@@ -165,6 +180,7 @@ async def generate_master_plan(
             if well_result else None
         ),
         "crop_matching": crops,
+        "irrigation_advisory": irrigation_advisory,
         "fencing": bom.to_dict(),
         "layout_zones": layout,
         "warnings": warnings,

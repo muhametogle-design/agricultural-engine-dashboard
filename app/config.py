@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional
 
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -16,7 +15,7 @@ class HttpSettings(BaseModel):
     timeout_s: float = 25.0
     max_retries: int = 3
     max_concurrency: int = 8  # caps parallel SoilGrids point queries for polygons
-    user_agent: str = "agri-dss/0.1 (agricultural decision support)"
+    user_agent: str = "agri-dss/0.2 (agricultural decision support)"
 
 
 class SoilSettings(BaseModel):
@@ -38,6 +37,24 @@ class ClimateSettings(BaseModel):
     parameters: str = "PRECTOTCORR,T2M,T2M_MAX,T2M_MIN,RH2M,WS2M,ALLSKY_SFC_SW_DWN"
     community: str = "AG"
     sentinel_value: float = -999.0  # POWER missing-data sentinel
+
+
+class ForecastSettings(BaseModel):
+    """Open-Meteo daily variables required by the irrigation scheduler."""
+
+    daily_parameters: str = (
+        "precipitation_sum,precipitation_probability_max,"
+        "et0_fao_evapotranspiration,temperature_2m_min,temperature_2m_max,"
+        "wind_gusts_10m_max"
+    )
+    max_days: int = Field(default=16, ge=1, le=16)
+
+
+class IrrigationSettings(BaseModel):
+    effective_rainfall_fraction: float = Field(default=0.80, ge=0.0, le=1.0)
+    heat_stress_temp_c: float = Field(default=38.0, ge=20.0, le=60.0)
+    heavy_rain_mm: float = Field(default=20.0, gt=0.0)
+    high_wind_kmh: float = Field(default=35.0, gt=0.0)
 
 
 class WellSitingSettings(BaseModel):
@@ -123,24 +140,33 @@ class ZoningSettings(BaseModel):
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="AGRI_", env_nested_delimiter="__", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_prefix="AGRI_",
+        env_nested_delimiter="__",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     database_dsn: str = "postgresql://postgres:postgres@localhost:5432/agri_dss"
     soilgrids_base_url: str = "https://rest.isric.org/soilgrids/v2.0/properties/query"
     nasa_power_base_url: str = "https://power.larc.nasa.gov/api/temporal/climatology/point"
+    open_meteo_base_url: str = "https://api.open-meteo.com/v1/forecast"
     env_cache_ttl_s: int = 30 * 24 * 3600
     default_point_field_ha: float = 1.0
     jwt_secret: str = "dev-only-secret-change-me-0123456789abcdef"  # >=32 bytes for HS256
     jwt_expiry_hours: int = 12
-    dem_path: Optional[str] = Field(default=None, validation_alias="AGRI_TERRAIN__DEM_PATH")
+    dem_path: str | None = Field(default=None, validation_alias="AGRI_TERRAIN__DEM_PATH")
     # Offline HWSD v2.0 (FAO/IIASA) sampling for the Laboratory auto-fill.
     # Point both at files inside the /data volume (see data/hwsd/README.md).
-    hwsd_raster: Optional[str] = None
-    hwsd_attrs: Optional[str] = None
+    hwsd_raster: str | None = None
+    hwsd_attrs: str | None = None
 
     http: HttpSettings = Field(default_factory=HttpSettings)
     soil: SoilSettings = Field(default_factory=SoilSettings)
     climate: ClimateSettings = Field(default_factory=ClimateSettings)
+    forecast: ForecastSettings = Field(default_factory=ForecastSettings)
+    irrigation: IrrigationSettings = Field(default_factory=IrrigationSettings)
     well_siting: WellSitingSettings = Field(default_factory=WellSitingSettings)
     ves: VesInterpretationSettings = Field(default_factory=VesInterpretationSettings)
     fencing: FencingSettings = Field(default_factory=FencingSettings)

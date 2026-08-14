@@ -25,6 +25,14 @@ services:
         condition: service_healthy
     environment:
       AGRI_DATABASE_DSN: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-agri_dss}
+      AGRI_JWT_SECRET: ${AGRI_JWT_SECRET:-dev-only-secret-change-me-0123456789abcdef}
+      AGRI_TERRAIN__DEM_PATH: /data/dem_field.tif
+      AGRI_OPEN_METEO_BASE_URL: ${AGRI_OPEN_METEO_BASE_URL:-https://api.open-meteo.com/v1/forecast}
+      AGRI_FORECAST__MAX_DAYS: ${AGRI_FORECAST__MAX_DAYS:-16}
+      AGRI_IRRIGATION__EFFECTIVE_RAINFALL_FRACTION: ${AGRI_IRRIGATION__EFFECTIVE_RAINFALL_FRACTION:-0.80}
+      AGRI_IRRIGATION__HEAT_STRESS_TEMP_C: ${AGRI_IRRIGATION__HEAT_STRESS_TEMP_C:-38}
+      AGRI_IRRIGATION__HEAVY_RAIN_MM: ${AGRI_IRRIGATION__HEAVY_RAIN_MM:-20}
+      AGRI_IRRIGATION__HIGH_WIND_KMH: ${AGRI_IRRIGATION__HIGH_WIND_KMH:-35}
       # Offline HWSD v2.0 dataset for the Laboratory auto-fill (optional but recommended):
       AGRI_HWSD_RASTER: /data/hwsd/hwsd2_somalia.tif
       AGRI_HWSD_ATTRS: /data/hwsd/hwsd2_layers.csv

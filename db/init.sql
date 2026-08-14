@@ -9,6 +9,7 @@
 --     no column in the draft DDL)
 --   * nitrogen stored as g/kg to match the ingestion service conversion
 --     (SoilGrids delivers cg/kg; the service divides by 100 -> g/kg)
+--   * irrigation_advisory JSONB stores the live forecast water-balance report
 -- ============================================================================
 
 -- Enable Spatial & UUID Extensions
@@ -123,6 +124,7 @@ CREATE TABLE IF NOT EXISTS farm_master_plans (
     recommended_drilling_depth_m NUMERIC(6, 2),
     top_suitable_crops JSONB,                       -- List of matched crops with scores
     soil_amendment_recommendations TEXT[],
+    irrigation_advisory JSONB,                      -- Live forecast water-balance schedule
     fencing_post_count INT,
     fencing_wire_rolls_required INT,
     fencing_total_cost_est NUMERIC(10, 2),

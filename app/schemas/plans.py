@@ -6,6 +6,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from app.schemas.irrigation import IrrigationAdvisoryReport, IrrigationAdvisoryRequest
+
 
 class MasterPlanOptions(BaseModel):
     refresh_environmental: bool = False       # ignore cache TTL and re-fetch APIs
@@ -13,6 +15,9 @@ class MasterPlanOptions(BaseModel):
     gates: int | None = Field(default=None, ge=1, le=100)         # auto if omitted
     run_zoning: bool = True
     run_well_siting: bool = True
+    # Optional because a live forecast adds network latency. When supplied,
+    # the advisory is generated and persisted inside this master plan.
+    irrigation_advisory: IrrigationAdvisoryRequest | None = None
 
 
 class WellSitingReport(BaseModel):
@@ -57,6 +62,7 @@ class MasterPlanReport(BaseModel):
     soil_amendment_recommendations: list[str]
     well_siting: WellSitingReport | None
     crop_matching: list[CropSuitability]
+    irrigation_advisory: IrrigationAdvisoryReport | None = None
     fencing: FencingReport
     layout_zones: dict | None
-    warnings: list[str] = []
+    warnings: list[str] = Field(default_factory=list)
