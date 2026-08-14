@@ -187,6 +187,7 @@ Zones provably partition the field (see tests, ±3 %).
 | `GET /fields` | list tenant fields (latest first) |
 | `GET /fields/{id}` | field + geodesic metrics |
 | `GET /console` | single-page map console (sign-in → field → ingest → master plan) |
+| `GET /lims` | responsive React laboratory operations, finance, pathology and crop-rotation dashboard |
 | `POST /fields/{id}/environmental?refresh=` | soil+climate ingestion (cache-first) |
 | `POST /fields/{id}/ves` · `POST /ves/bulk` · `GET /ves` | partner machine ingestion |
 | `POST /fields/{id}/well-siting` | MCE over stored VES + terrain |
@@ -208,7 +209,7 @@ cp .env.example .env
 docker compose up -d db                 # PostGIS with schema auto-initialized
 pip install -r requirements.txt
 uvicorn app.main:app --reload           # http://localhost:8000/docs  ·  /console (map UI)
-pytest                                  # 79 tests, no DB required
+pytest                                  # 80 tests, no DB required
 python examples/run_decision_cycle_demo.py   # full engine chain, no DB/network
 ```
 
@@ -265,6 +266,17 @@ arrive as `Decimal` (repository boundary now normalizes to float).
   `Africa/Mogadishu`, aligned daily arrays, and plausible ET0 (4.30–5.37 mm/day)
   for 2026-08-14 through 2026-08-16.
 
+### 2026-08-14 — modular agricultural laboratory dashboard
+
+* `/lims` now loads a lightweight, same-origin React source module over the
+  vendored Tailwind, Lucide and Recharts runtimes—no CDN or build server.
+* Interactive modules cover six-color themes, on-duty engineer management,
+  clickable soil certificates with pH-driven lime advice, monthly lab/revenue
+  analytics, USD cash intake with six Somali payment rails, asynchronous crop
+  pathology/treatment logging, and CSV-driven Gu/Deyr rotation planning.
+* The five-year planner recognizes both structured crop CSVs and wide matrix
+  templates, then flags pH incompatibility and consecutive crop-family risk.
+
 ## Production notes
 
 - **Scaling**: engines are CPU-bound pure functions → run via `asyncio.to_thread`
@@ -291,8 +303,8 @@ arrive as `Decimal` (repository boundary now normalizes to float).
 
 ## Tests
 
-79 passing (`pytest`): engine math with known-answer fixtures, respx-mocked
+80 passing (`pytest`): engine math with known-answer fixtures, respx-mocked
 SoilGrids/POWER/Open-Meteo clients (retry, sentinel, null, coverage paths),
 orchestrator degradation, irrigation schedule/volume arithmetic, CSV/iCalendar
 exports, DEM provider against a synthetic plane, API wiring via in-memory
-repository fakes, repository JSON persistence, and console smoke tests (no DB needed).
+repository fakes, repository JSON persistence, and console/LIMS smoke tests (no DB needed).

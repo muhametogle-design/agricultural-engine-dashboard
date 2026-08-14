@@ -54,6 +54,7 @@ code{{background:#0b120e;padding:2px 6px;border-radius:6px;font-size:13px}}
 <p>version {version} — PostGIS · SoilGrids · NASA POWER · Open-Meteo · terrain DEM</p>
 <a class="btn" href="/console">Open the map console →</a>
 <a class="btn" href="/dashboard">Open the unified dashboard →</a>
+<a class="btn" href="/lims">Open the laboratory dashboard →</a>
 <a class="btn alt" href="/docs">API reference (Swagger)</a>
 <p style="margin-top:18px">demo login: <code>demo@agri-dss.app</code> / <code>demo-pass-2026</code></p>
 </div></body></html>"""

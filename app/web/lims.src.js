@@ -1,4 +1,4 @@
-/* LabOps LIMS v7 — Somali SpatialBio Engine (source; compiled ES5 inlined into lims.html) */
+/* LabOps LIMS v9 — modular React source, loaded directly by lims.html */
 const { useState, useMemo, useEffect } = React;
 const e = React.createElement;
 const { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, Legend,
@@ -6,16 +6,12 @@ const { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, Legend,
 
 /* ═════════ MODULE 1 · BACKGROUND SPECTRUM ═════════ */
 const SPECTRUM = [
-  {id:"slate",   label:"Slate Dark (default)", cls:"bg-slate-950"},
-  {id:"light",   label:"Slate Light",          cls:"bg-slate-100"},
-  {id:"red",     label:"Red",                  cls:"bg-rose-950"},
-  {id:"orange",  label:"Orange",               cls:"bg-orange-950"},
-  {id:"yellow",  label:"Yellow",               cls:"bg-amber-950"},
-  {id:"green",   label:"Green",                cls:"bg-emerald-950"},
-  {id:"cyan",    label:"Cyan",                 cls:"bg-cyan-950"},
-  {id:"blue",    label:"Blue",                 cls:"bg-blue-950"},
-  {id:"purple",  label:"Purple",               cls:"bg-violet-950"},
-  {id:"magenta", label:"Magenta",              cls:"bg-fuchsia-950"},
+  {id:"red",    label:"Red",    cls:"bg-red-950",    swatch:"#ef4444"},
+  {id:"orange", label:"Orange", cls:"bg-orange-950", swatch:"#f97316"},
+  {id:"green",  label:"Green",  cls:"bg-emerald-950",swatch:"#10b981"},
+  {id:"blue",   label:"Blue",   cls:"bg-blue-950",   swatch:"#3b82f6"},
+  {id:"purple", label:"Purple", cls:"bg-violet-950", swatch:"#8b5cf6"},
+  {id:"slate",  label:"Slate",  cls:"bg-slate-950",  swatch:"#64748b"},
 ];
 
 /* ═════════ RECOMMENDATION FORMULA (Module 2) ═════════ */
@@ -35,9 +31,10 @@ const TIERS = {
   "Basic pH Test": 25, "Texture + OM Panel": 40,
   "Full Micronutrient Sweep": 85, "Heavy Metal Scan": 120,
 };
+const PAYMENT_METHODS = ["ZAAD","SAHAL","EDAHAB","CASH","EVCPLUS","BANK"];
 const GATEWAYS = {
-  ZAAD:0.0, SAHAL:0.0, EVCPLUS:0.0, CASH:0.0,
-  EDAHAB:0.005, BANK:0.01, "CREDIT CARD":0.025,
+  ZAAD:0.010, SAHAL:0.012, EDAHAB:0.008,
+  CASH:0.000, EVCPLUS:0.010, BANK:0.015,
 };
 const TAX = 0.05;
 const money = x => "$"+Number(x).toFixed(2);
@@ -118,6 +115,9 @@ const DISEASE_VECTOR = [
   immediate:["Strip heavily pustuled lower leaves between rows","Irrigate mornings only — dry foliage by dusk"],
   remedy:"Triadimefon (systemic) at first pustules, or mancozeb protectant weekly through pod fill."},
 ];
+function loadDiseaseDictionary(){
+  return new Promise(function(resolve){setTimeout(function(){resolve(DISEASE_VECTOR.slice());},600);});
+}
 
 /* ═════════ MOCK DATA ENGINE ═════════ */
 const FARMERS = [
@@ -142,7 +142,7 @@ function seedSamples(engineerLine){
   };});
 }
 function seedInvoices(samples){
-  const methods = Object.keys(GATEWAYS);
+  const methods = PAYMENT_METHODS;
   return samples.slice(0,7).map(function(s,i){
     const base = TIERS[s.tier], gw = methods[(i*3)%methods.length];
     const c = calcInvoice(base, gw);
@@ -152,7 +152,7 @@ function seedInvoices(samples){
       base:base, gw:gw, subtotal:c.subtotal, tax:c.tax, fee:c.fee, total:c.total,
       paid:paid, balance:Math.max(0, c.total-paid), currency:"USD",
       status: invStatus(c.total, paid),
-      method:(["ZAAD-TXN-8F2A9C","SAHAL-88231-Q","EDAHAB-2219K","CASH-RCP-041","EVC-CP-77220","BNK-TRANS-9912","CC-4402-XX-09"])[i],
+      method:(["ZAAD-TXN-8F2A9C","SAHAL-88231-Q","EDAHAB-2219K","CASH-RCP-041","EVC-CP-77220","BNK-TRANS-9912"])[i%6],
       at:(9+i)+":3"+(i%10),
     };
   });
@@ -179,15 +179,241 @@ const ENGINEERS = [
   {id:3, name:"Eng. Khalid Sheikh",    license:"LIC-2023-0289"},
 ];
 
+/* ═════════ MODULE 6 · FIVE-YEAR ROTATION DATA ENGINE ═════════ */
+const SEASONS = ["Gu","Deyr"];
+const CROP_LIBRARY = [
+  {id:"maize",name:"Maize",family:"Poaceae",minPh:5.5,maxPh:7.5,color:"#f59e0b"},
+  {id:"sorghum",name:"Sorghum",family:"Poaceae",minPh:5.5,maxPh:8.5,color:"#fb923c"},
+  {id:"pearl_millet",name:"Pearl Millet",family:"Poaceae",minPh:5.0,maxPh:8.5,color:"#eab308"},
+  {id:"cowpea",name:"Cowpea",family:"Fabaceae",minPh:5.5,maxPh:7.5,color:"#22c55e"},
+  {id:"beans",name:"Beans",family:"Fabaceae",minPh:5.5,maxPh:7.5,color:"#10b981"},
+  {id:"mung_bean",name:"Mung Bean",family:"Fabaceae",minPh:6.0,maxPh:7.5,color:"#34d399"},
+  {id:"groundnut",name:"Groundnut",family:"Fabaceae",minPh:5.8,maxPh:7.2,color:"#84cc16"},
+  {id:"sesame",name:"Sesame",family:"Pedaliaceae",minPh:5.5,maxPh:8.0,color:"#facc15"},
+  {id:"tomato",name:"Tomato",family:"Solanaceae",minPh:5.5,maxPh:7.5,color:"#ef4444"},
+  {id:"onion",name:"Onion",family:"Amaryllidaceae",minPh:6.0,maxPh:7.2,color:"#a78bfa"},
+  {id:"garlic",name:"Garlic",family:"Amaryllidaceae",minPh:6.0,maxPh:7.5,color:"#c4b5fd"},
+  {id:"watermelon",name:"Watermelon",family:"Cucurbitaceae",minPh:5.5,maxPh:7.5,color:"#f43f5e"},
+  {id:"butternut",name:"Butternut",family:"Cucurbitaceae",minPh:5.8,maxPh:7.2,color:"#f97316"},
+  {id:"red_kuri",name:"Red Kuri",family:"Cucurbitaceae",minPh:5.8,maxPh:7.2,color:"#dc2626"},
+  {id:"cabbage",name:"Cabbage",family:"Brassicaceae",minPh:6.0,maxPh:7.5,color:"#14b8a6"},
+  {id:"green_manure",name:"Green Manure",family:"Fabaceae",minPh:5.5,maxPh:7.8,color:"#059669"},
+  {id:"banana",name:"Banana",family:"Musaceae",minPh:5.5,maxPh:7.5,color:"#fde047"},
+  {id:"mango",name:"Mango",family:"Anacardiaceae",minPh:5.5,maxPh:8.0,color:"#fbbf24"},
+];
+const CROP_ALIASES = {
+  corn:"maize",cornmeal:"maize",millet:"pearl_millet",pearlmillet:"pearl_millet",
+  bean:"beans",commonbean:"beans",greenbeans:"beans",mungbean:"mung_bean",
+  peanuts:"groundnut",peanut:"groundnut",sesame:"sesame",onions:"onion",
+  wmelon:"watermelon",melon:"watermelon",butternuts:"butternut",redkuri:"red_kuri",
+  greenmanure:"green_manure",covercrop:"green_manure",
+};
+function slug(value){
+  return String(value||"").trim().toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"");
+}
+function compact(value){ return slug(value).replace(/_/g,""); }
+function libraryCrop(raw){
+  const key=compact(raw);
+  const alias=CROP_ALIASES[key];
+  return CROP_LIBRARY.find(function(c){return compact(c.id)===key||compact(c.name)===key||c.id===alias;})||null;
+}
+function csvRows(text){
+  const rows=[]; let row=[], cell="", quoted=false;
+  for(let i=0;i<text.length;i+=1){
+    const ch=text[i], next=text[i+1];
+    if(ch==='"'&&quoted&&next==='"'){cell+='"';i+=1;continue;}
+    if(ch==='"'){quoted=!quoted;continue;}
+    if(ch===","&&!quoted){row.push(cell.trim());cell="";continue;}
+    if((ch==="\n"||ch==="\r")&&!quoted){
+      if(ch==="\r"&&next==="\n")i+=1;
+      row.push(cell.trim());cell="";
+      if(row.some(Boolean))rows.push(row);row=[];continue;
+    }
+    cell+=ch;
+  }
+  row.push(cell.trim()); if(row.some(Boolean))rows.push(row);
+  return rows;
+}
+function rotationSlots(){
+  const out=[];
+  for(let year=1;year<=5;year+=1)SEASONS.forEach(function(season){out.push({key:"y"+year+"-"+season.toLowerCase(),year,season,cropId:""});});
+  return out;
+}
+function defaultRotation(){
+  const ids=["maize","cowpea","sorghum","groundnut","sesame","mung_bean","pearl_millet","beans","tomato","green_manure"];
+  return rotationSlots().map(function(slot,i){return Object.assign({},slot,{cropId:ids[i]});});
+}
+function cropRecord(raw,family,minPh,maxPh){
+  const known=libraryCrop(raw);
+  if(known)return Object.assign({},known,{family:family||known.family,
+    minPh:Number.isFinite(minPh)?minPh:known.minPh,maxPh:Number.isFinite(maxPh)?maxPh:known.maxPh});
+  const name=String(raw||"").trim();
+  return {id:slug(name)||"crop_"+Date.now(),name,family:family||"Unclassified",
+    minPh:Number.isFinite(minPh)?minPh:5.5,maxPh:Number.isFinite(maxPh)?maxPh:7.5,color:"#64748b"};
+}
+function parseCropPlan(text){
+  const rows=csvRows(text);
+  if(!rows.length)throw new Error("The CSV is empty.");
+  const headerIndex=rows.findIndex(function(row){return row.some(function(v){return ["crop","cropname","name"].includes(compact(v));});});
+  let catalog=[], sequence=[], assignments=[];
+  if(headerIndex>=0){
+    const headers=rows[headerIndex].map(compact);
+    const at=function(names){return headers.findIndex(function(h){return names.includes(h);});};
+    const cropAt=at(["crop","cropname","name"]), familyAt=at(["family","cropfamily"]);
+    const minAt=at(["minph","phmin","minimumph"]), maxAt=at(["maxph","phmax","maximumph"]);
+    const yearAt=at(["year","planyear"]), seasonAt=at(["season","cycle"]);
+    const data=rows.slice(headerIndex+1).filter(function(row){return row[cropAt]&&row[cropAt].trim();});
+    const rawYears=data.map(function(r){return Number(r[yearAt]);}).filter(Number.isFinite);
+    const actualYears=Array.from(new Set(rawYears.filter(function(y){return y>5;}))).sort();
+    data.forEach(function(row){
+      const crop=cropRecord(row[cropAt],row[familyAt],parseFloat(row[minAt]),parseFloat(row[maxAt]));
+      catalog.push(crop);sequence.push(crop.id);
+      let yr=Number(row[yearAt]);
+      if(yr>5)yr=actualYears.indexOf(yr)+1;
+      if(yr>=1&&yr<=5){
+        const season=String(row[seasonAt]||"Gu").toLowerCase().includes("deyr")?"Deyr":"Gu";
+        assignments.push({key:"y"+yr+"-"+season.toLowerCase(),cropId:crop.id});
+      }
+    });
+  }else{
+    const rowSequences=rows.map(function(row){
+      const crops=row.map(libraryCrop).filter(Boolean);
+      return crops.filter(function(c,i){return i===0||c.id!==crops[i-1].id;});
+    }).filter(function(row){return row.length;});
+    const best=rowSequences.sort(function(a,b){return b.length-a.length;})[0]||[];
+    sequence=best.map(function(c){return c.id;});
+    rows.forEach(function(row){row.forEach(function(cell){const crop=libraryCrop(cell);if(crop)catalog.push(crop);});});
+  }
+  catalog=catalog.filter(function(c,i,all){return all.findIndex(function(x){return x.id===c.id;})===i;});
+  if(!catalog.length)throw new Error("No crop names were recognized. Include a 'crop' column or common crop names.");
+  const slots=rotationSlots();
+  if(assignments.length){assignments.forEach(function(a){const slot=slots.find(function(s){return s.key===a.key;});if(slot)slot.cropId=a.cropId;});}
+  let seqAt=0;
+  slots.forEach(function(slot){if(!slot.cropId){slot.cropId=(sequence[seqAt%sequence.length]||catalog[seqAt%catalog.length].id);seqAt+=1;}});
+  return {catalog,slots,rowCount:rows.length};
+}
+
 /* ═════════ UI ATOMS ═════════ */
 function Icon(props){ return e("i",{"data-lucide":props.name, className:props.cls||"w-4 h-4"}); }
 function Panel(props){
   return e("section",{className:"rounded-2xl border border-slate-700/60 bg-slate-900/80 backdrop-blur p-4 shadow-xl "+(props.cls||"")},
-    e("div",{className:"flex items-center gap-2 mb-3"},
+    e("div",{className:"flex flex-wrap items-center gap-2 mb-3"},
       e("span",{className:"w-7 h-7 rounded-lg bg-emerald-600/20 text-emerald-300 flex items-center justify-center"},e(Icon,{name:props.icon})),
       e("h2",{className:"font-bold text-slate-100 text-sm tracking-wide"},props.title),
       props.right && e("div",{className:"ml-auto"},props.right)),
     props.children);
+}
+function EngineerPanel(props){
+  return e(Panel,{title:"Technical Engineer on Duty",icon:"hard-hat",cls:"2xl:col-span-2",
+    right:e("span",{className:"text-[10px] text-emerald-300 border border-emerald-700/60 rounded-full px-2 py-1"},"ACTIVE SHIFT")},
+    e("div",{className:"grid grid-cols-1 lg:grid-cols-[1fr_1.4fr] gap-3"},
+      e("div",{className:"rounded-xl border border-emerald-600/50 bg-emerald-950/40 p-4 flex flex-col sm:flex-row sm:items-center gap-3"},
+        e("span",{className:"w-11 h-11 rounded-xl bg-emerald-500/15 text-emerald-300 flex items-center justify-center"},e(Icon,{name:"shield-check",cls:"w-6 h-6"})),
+        e("div",null,e("div",{className:"text-[10px] uppercase tracking-widest text-emerald-400"},"Active technical engineer"),
+          e("div",{className:"font-bold text-lg text-white"},props.duty.name),
+          e("div",{className:"font-mono text-xs text-slate-400"},props.duty.license)),
+        e("select",{value:props.duty.id,onChange:function(ev){props.setDutyId(Number(ev.target.value));},
+          className:"w-full sm:ml-auto sm:max-w-56 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-xs"},
+          props.engineers.map(function(g){return e("option",{key:g.id,value:g.id},g.name);}))),
+      e("div",{className:"rounded-xl border border-slate-700 bg-slate-800/50 p-3"},
+        e("div",{className:"text-[10px] uppercase tracking-widest text-slate-500 mb-2"},"Add engineer to duty roster"),
+        e("div",{className:"grid grid-cols-1 sm:grid-cols-[1fr_150px_auto] gap-2"},
+          e("input",{value:props.engName,onChange:function(ev){props.setEngName(ev.target.value);},placeholder:"Engineer full name",
+            className:"bg-slate-950 border border-slate-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-xs"}),
+          e("input",{value:props.engLic,onChange:function(ev){props.setEngLic(ev.target.value);},placeholder:"License ID",
+            className:"bg-slate-950 border border-slate-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-xs"}),
+          e("button",{onClick:props.addEngineer,disabled:!props.engName.trim()||!props.engLic.trim(),
+            className:"rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 px-4 py-2 text-xs font-bold text-white"},
+            e("span",{className:"flex items-center justify-center gap-1.5"},e(Icon,{name:"user-plus",cls:"w-3.5 h-3.5"}),"Add & activate"))),
+        e("div",{className:"mt-2 text-[10px] text-slate-500"},props.engineers.length+" engineers in local roster · duty changes apply instantly"))));
+}
+function RotationPlanner(){
+  const [catalog,setCatalog]=useState(function(){
+    try{const saved=JSON.parse(localStorage.getItem("lims_crop_catalog"));return Array.isArray(saved)&&saved.length?saved:CROP_LIBRARY;}catch(_){return CROP_LIBRARY;}
+  });
+  const [rotation,setRotation]=useState(function(){
+    try{const saved=JSON.parse(localStorage.getItem("lims_rotation"));return Array.isArray(saved)&&saved.length===10?saved:defaultRotation();}catch(_){return defaultRotation();}
+  });
+  const [fieldPh,setFieldPh]=useState(function(){return localStorage.getItem("lims_rotation_ph")||"6.5";});
+  const [importState,setImportState]=useState({kind:"idle",message:"Upload a crop CSV or use the starter rotation."});
+  useEffect(function(){localStorage.setItem("lims_crop_catalog",JSON.stringify(catalog));},[catalog]);
+  useEffect(function(){localStorage.setItem("lims_rotation",JSON.stringify(rotation));},[rotation]);
+  useEffect(function(){localStorage.setItem("lims_rotation_ph",fieldPh);},[fieldPh]);
+  useEffect(function(){if(window.lucide)lucide.createIcons();});
+  const byId=useMemo(function(){const out={};catalog.forEach(function(c){out[c.id]=c;});return out;},[catalog]);
+  const phNum=parseFloat(fieldPh);
+  const warnings=useMemo(function(){
+    const out=[];
+    rotation.forEach(function(slot,index){
+      const crop=byId[slot.cropId]; if(!crop)return;
+      if(Number.isFinite(phNum)&&(phNum<crop.minPh||phNum>crop.maxPh))out.push({key:slot.key,type:"pH",
+        message:"Year "+slot.year+" "+slot.season+": "+crop.name+" prefers pH "+crop.minPh+"–"+crop.maxPh+" (field "+phNum.toFixed(1)+")."});
+      const previous=index>0?byId[rotation[index-1].cropId]:null;
+      if(previous&&previous.family===crop.family)out.push({key:slot.key,type:"family",
+        message:"Year "+slot.year+" "+slot.season+": back-to-back "+crop.family+" after "+previous.name+" raises pest and nutrient risk."});
+    });
+    return out;
+  },[rotation,byId,phNum]);
+  const warningKeys=useMemo(function(){const out={};warnings.forEach(function(w){out[w.key]=(out[w.key]||[]).concat(w.type);});return out;},[warnings]);
+  function setCrop(key,cropId){setRotation(function(prev){return prev.map(function(slot){return slot.key===key?Object.assign({},slot,{cropId}):slot;});});}
+  function autoBalance(){
+    const suitable=catalog.filter(function(c){return !Number.isFinite(phNum)||(phNum>=c.minPh&&phNum<=c.maxPh);});
+    const choices=suitable.length?suitable:catalog; let cursor=0,previous=null;
+    setRotation(rotationSlots().map(function(slot){
+      let crop=choices[cursor%choices.length];
+      for(let tries=0;tries<choices.length&&previous&&crop.family===previous.family;tries+=1){cursor+=1;crop=choices[cursor%choices.length];}
+      cursor+=1;previous=crop;return Object.assign({},slot,{cropId:crop.id});
+    }));
+    setImportState({kind:"ok",message:"Auto-balanced by soil pH and crop family."});
+  }
+  async function importCsv(ev){
+    const file=ev.target.files&&ev.target.files[0]; if(!file)return;
+    setImportState({kind:"loading",message:"Reading "+file.name+"…"});
+    try{
+      const result=parseCropPlan(await file.text());
+      setCatalog(result.catalog);setRotation(result.slots);
+      setImportState({kind:"ok",message:"Loaded "+result.catalog.length+" crops from "+result.rowCount+" CSV rows."});
+    }catch(err){setImportState({kind:"error",message:err.message||"Unable to read crop CSV."});}
+    ev.target.value="";
+  }
+  return e(Panel,{title:"5-Year Crop Rotation Planner",icon:"calendar-range",cls:"2xl:col-span-2",
+    right:e("span",{className:"text-[10px] text-slate-500"},"10 seasonal slots · Gu + Deyr")},
+    e("div",{className:"grid grid-cols-1 lg:grid-cols-[1.3fr_170px_auto] gap-2 items-end"},
+      e("label",{className:"rounded-xl border border-dashed border-slate-600 hover:border-emerald-500 bg-slate-800/50 px-3 py-2 cursor-pointer"},
+        e("span",{className:"flex items-center gap-2 text-xs font-semibold"},e(Icon,{name:"file-up",cls:"w-4 h-4 text-emerald-300"}),"Load crop CSV data"),
+        e("span",{className:"block text-[10px] text-slate-500 mt-0.5"},"Supports crop/family/min_ph/max_ph/year/season rows and matrix templates"),
+        e("input",{type:"file",accept:".csv,text/csv",onChange:importCsv,className:"hidden"})),
+      e("label",{className:"text-[10px] uppercase tracking-widest text-slate-500"},"Field soil pH",
+        e("input",{value:fieldPh,onChange:function(ev){setFieldPh(ev.target.value);},type:"number",min:"3",max:"11",step:"0.1",
+          className:"mt-1 w-full bg-slate-950 border border-slate-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm text-slate-100"})),
+      e("div",{className:"flex gap-2"},
+        e("button",{onClick:autoBalance,className:"flex-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3 py-2 text-xs font-bold text-white flex items-center justify-center gap-1.5"},e(Icon,{name:"shuffle",cls:"w-3.5 h-3.5"}),"Auto-balance"),
+        e("button",{onClick:function(){setRotation(rotationSlots());},title:"Clear timeline",className:"rounded-lg border border-slate-700 hover:border-red-500 px-3 py-2 text-slate-400"},e(Icon,{name:"trash-2",cls:"w-3.5 h-3.5"})))),
+    e("div",{className:"mt-2 text-[11px] "+(importState.kind==="error"?"text-red-300":importState.kind==="ok"?"text-emerald-300":"text-slate-500")},
+      importState.kind==="loading"&&e(Icon,{name:"loader-circle",cls:"inline w-3.5 h-3.5 mr-1 animate-spin"}),importState.message),
+    e("div",{className:"mt-3 overflow-x-auto pb-2"},
+      e("div",{className:"min-w-[980px] grid grid-cols-5 gap-2"},[1,2,3,4,5].map(function(year){
+        return e("div",{key:year,className:"rounded-xl border border-slate-700 bg-slate-950/70 p-2"},
+          e("div",{className:"flex items-center justify-between mb-2"},e("b",{className:"text-xs text-slate-200"},"Year "+year),
+            e("span",{className:"text-[9px] text-slate-600 font-mono"},"Y"+year)),
+          rotation.filter(function(slot){return slot.year===year;}).map(function(slot){
+            const crop=byId[slot.cropId], flags=warningKeys[slot.key]||[];
+            return e("div",{key:slot.key,className:"mb-2 last:mb-0 rounded-lg border p-2 "+(flags.length?"border-amber-600/70 bg-amber-950/20":"border-slate-800 bg-slate-900/70"),
+              style:crop?{borderLeftColor:crop.color,borderLeftWidth:"3px"}:null},
+              e("div",{className:"flex items-center justify-between mb-1"},e("span",{className:"text-[10px] uppercase tracking-widest text-slate-500"},slot.season),
+                flags.length?e(Icon,{name:"triangle-alert",cls:"w-3.5 h-3.5 text-amber-300"}):e(Icon,{name:"circle-check",cls:"w-3.5 h-3.5 text-emerald-500"})),
+              e("select",{value:slot.cropId,onChange:function(ev){setCrop(slot.key,ev.target.value);},
+                className:"w-full bg-slate-950 border border-slate-700 rounded-md px-2 py-1.5 text-xs"},
+                e("option",{value:""},"— fallow —"),catalog.map(function(c){return e("option",{key:c.id,value:c.id},c.name);})),
+              crop&&e("div",{className:"mt-1.5 text-[9px] text-slate-500 leading-relaxed"},crop.family+" · pH "+crop.minPh+"–"+crop.maxPh));
+          }));
+      }))),
+    e("div",{className:"mt-2 grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-3"},
+      e("div",{className:"flex gap-2 text-[10px]"},
+        e("span",{className:"rounded-full border border-amber-700 bg-amber-950/30 text-amber-200 px-2 py-1"},warnings.length+" warning"+(warnings.length===1?"":"s")),
+        e("span",{className:"rounded-full border border-slate-700 text-slate-400 px-2 py-1"},catalog.length+" crops available")),
+      warnings.length?e("div",{className:"max-h-24 overflow-y-auto space-y-1 pr-1"},warnings.map(function(w,i){return e("div",{key:w.key+"-"+w.type+"-"+i,className:"text-[10px] text-amber-200 flex gap-1.5"},e(Icon,{name:w.type==="pH"?"flask-conical":"repeat-2",cls:"w-3 h-3 flex-none mt-0.5"}),w.message);}))
+        :e("div",{className:"text-[11px] text-emerald-300 flex items-center gap-1.5"},e(Icon,{name:"badge-check",cls:"w-3.5 h-3.5"}),"Rotation passes pH and consecutive-family checks.")));
 }
 
 /* ═════════ CERTIFICATE MODAL (Module 2) ═════════ */
@@ -241,7 +467,7 @@ function Certificate(props){
 
 /* ═════════ MAIN APP ═════════ */
 function App(){
-  const [spectrum, setSpectrum] = useState(localStorage.getItem("lims_spectrum")||"slate");
+  const [spectrum, setSpectrum] = useState(function(){const saved=localStorage.getItem("lims_spectrum");return SPECTRUM.some(function(s){return s.id===saved;})?saved:"slate";});
   const [spectrumOpen, setSpectrumOpen] = useState(false);
   const [engineers, setEngineers] = useState(function(){return JSON.parse(localStorage.getItem("lims_engineers")||"null")||ENGINEERS;});
   const [dutyId, setDutyId] = useState(function(){return parseInt(localStorage.getItem("lims_duty")||"1");});
@@ -273,10 +499,11 @@ function App(){
   useEffect(function(){ localStorage.setItem("lims_duty",String(duty.id)); },[duty.id]);
   useEffect(function(){ if(window.lucide) lucide.createIcons(); });
 
-  /* Option 2 — mock async API loop: 600ms artificial network latency */
+  /* Mock asynchronous repository; cancellation avoids updates after unmount. */
   useEffect(function(){
-    const t=setTimeout(function(){ setDiseases(DISEASE_VECTOR); },600);
-    return function(){ clearTimeout(t); };
+    let active=true;
+    loadDiseaseDictionary().then(function(records){if(active)setDiseases(records);});
+    return function(){active=false;};
   },[]);
 
   const diseaseFiltered = useMemo(function(){
@@ -350,7 +577,7 @@ function App(){
   function settleInvoice(id){
     setInvoices(invoices.map(function(v){
       if(v.id!==id)return v;
-      const newPaid=v.total, credit=0;
+      const newPaid=v.total;
       setRevenue(function(prev){return prev.map(function(r){return r.month==="Aug"
         ? {month:r.month, collected:r.collected+(v.total-v.paid), pending:Math.max(0,r.pending-v.balance)} : r;});});
       return Object.assign({},v,{paid:newPaid,balance:0,status:"PAID"});
@@ -370,26 +597,27 @@ function App(){
     setMonth(function(m){return m.map(function(r){return r.day===today.getDate()?Object.assign({},r,{samples:r.samples+1}):r;});});
     document.getElementById("s-name").value="";document.getElementById("s-loc").value="";document.getElementById("s-ph").value="";
   }
-  function logIssue(){
-    if(!issueClient.trim()||!issueDisease)return;
-    const parts=issueDisease.split("|");
-    const rec=(diseases||[]).filter(function(d){ return d.disease===parts[0]&&d.plant===parts[1]; })[0];
-    if(!rec)return;
+  function appendIssue(rec){
+    if(!rec||!issueClient.trim())return;
     const entry={ t:new Date().toTimeString().slice(0,5), client:issueClient,
       plant:rec.plant, disease:rec.disease, cat:rec.cat };
     setIssueFeed(function(f){ return [entry].concat(f).slice(0,12); });
   }
+  function logIssue(){
+    if(!issueDisease)return;
+    const parts=issueDisease.split("|");
+    appendIssue((diseases||[]).filter(function(d){ return d.disease===parts[0]&&d.plant===parts[1]; })[0]);
+  }
 
   const themeCls = (SPECTRUM.find(function(s){return s.id===spectrum;})||{}).cls || "bg-slate-950";
-  const light = spectrum==="light";
 
-  return e("div",{className:themeCls+" min-h-screen "+(light?"text-slate-900":"text-slate-100")+" transition-colors duration-500"},
+  return e("div",{className:themeCls+" min-h-screen text-slate-100 transition-colors duration-500"},
     /* ── HEADER ── */
-    e("header",{className:"sticky top-0 z-40 border-b border-slate-700/60 bg-black/30 backdrop-blur px-4 h-14 flex items-center gap-3"},
-      e("div",{className:"font-extrabold tracking-widest text-sm"},
+    e("header",{className:"sticky top-0 z-40 border-b border-slate-700/60 bg-black/30 backdrop-blur px-3 sm:px-4 min-h-14 py-2 flex flex-wrap items-center gap-2 sm:gap-3"},
+      e("div",{className:"font-extrabold tracking-widest text-xs sm:text-sm"},
         e("span",{className:"text-emerald-400"},"SOMALI "),e("span",null,"SPATIALBIO "),e("span",{className:"text-sky-400"},"ENGINE"),
-        e("span",{className:(light?"text-slate-500":"text-slate-400")+" font-normal ml-2 text-xs"},"· LabOps LIMS")),
-      e("a",{href:"/dashboard",className:"text-xs px-2.5 py-1.5 rounded-lg border border-slate-600 hover:border-emerald-500 text-slate-300 flex items-center gap-1"},e(Icon,{name:"map",cls:"w-3.5 h-3.5"}),"GIS Engine"),
+        e("span",{className:"hidden sm:inline text-slate-400 font-normal ml-2 text-xs"},"· LabOps LIMS")),
+      e("a",{href:"/dashboard",title:"Open GIS Engine",className:"text-xs px-2.5 py-1.5 rounded-lg border border-slate-600 hover:border-emerald-500 text-slate-300 flex items-center gap-1"},e(Icon,{name:"map",cls:"w-3.5 h-3.5"}),e("span",{className:"hidden sm:inline"},"GIS Engine")),
       e("div",{className:"flex-1"}),
       e("div",{className:"hidden md:flex items-center gap-2 rounded-full border border-emerald-600/50 bg-emerald-900/30 px-3 py-1.5"},
         e("span",{className:"relative flex h-2 w-2"},
@@ -397,20 +625,20 @@ function App(){
           e("span",{className:"relative inline-flex rounded-full h-2 w-2 bg-emerald-400"})),
         e("span",{className:"text-xs"},"On duty: ",e("b",null,duty.name), e("span",{className:"text-slate-400 font-mono text-[10px] ml-1"},duty.license))),
       e("div",{className:"relative"},
-        e("button",{onClick:function(){setSpectrumOpen(!spectrumOpen);},"aria-label":"Background spectrum",
+        e("button",{onClick:function(){setSpectrumOpen(!spectrumOpen);},"aria-label":"Background spectrum","aria-expanded":spectrumOpen,
           className:"p-2 rounded-lg border border-slate-600 hover:border-emerald-500"},e(Icon,{name:"palette"})),
         spectrumOpen && e("div",{className:"absolute right-0 mt-2 w-52 rounded-xl border border-slate-600 bg-slate-900 shadow-2xl p-2 z-50"},
           e("div",{className:"text-[10px] uppercase tracking-widest text-slate-500 px-1 pb-1.5"},"Background spectrum"),
           SPECTRUM.map(function(s){return e("button",{key:s.id,onClick:function(){setSpectrum(s.id);setSpectrumOpen(false);},
             className:"w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-left hover:bg-slate-800 "+(s.id===spectrum?"text-emerald-300":"text-slate-300")},
-            e("span",{className:"w-3.5 h-3.5 rounded-full border border-white/20 "+s.cls}),s.label);}))),
+            e("span",{className:"w-3.5 h-3.5 rounded-full border border-white/20",style:{backgroundColor:s.swatch}}),s.label);}))),
     ),
 
     /* ── LAYOUT ── */
-    e("div",{className:"grid grid-cols-1 xl:grid-cols-[280px_1fr] gap-4 p-4"},
+    e("div",{className:"grid grid-cols-1 xl:grid-cols-[300px_minmax(0,1fr)] gap-3 sm:gap-4 p-3 sm:p-4"},
 
       /* ══ LEFT · MONTHLY ANALYTICS ══ */
-      e(Panel,{title:"Monthly Work & Lab Analytics",icon:"calendar-days"},
+      e(Panel,{title:"Monthly Lab Analytics",icon:"calendar-days",cls:"xl:sticky xl:top-20 self-start"},
         e("div",{className:"space-y-2"},
           [["Total Samples Tested",totals.tested,"flask-conical","text-emerald-300"],
            ["Certificates Issued",totals.certs,"badge-check","text-sky-300"],
@@ -431,10 +659,21 @@ function App(){
               e(Legend,{wrapperStyle:{fontSize:10}}),
               e(Bar,{dataKey:"samples",name:"Samples",fill:"#34d399",radius:[2,2,0,0]}),
               e(Bar,{dataKey:"certs",name:"Certificates",fill:"#38bdf8",radius:[2,2,0,0]})))),
+        e("div",{className:"mt-4 h-36"},
+          e("div",{className:"text-[10px] uppercase tracking-widest text-slate-500 mb-1"},"Monthly revenue · USD"),
+          e(ResponsiveContainer,{width:"100%",height:"100%"},
+            e(LineChart,{data:revenue,margin:{top:4,right:4,left:-24,bottom:-5}},
+              e(CartesianGrid,{stroke:"#1e293b",strokeDasharray:"3 3"}),
+              e(XAxis,{dataKey:"month",tick:{fill:"#64748b",fontSize:9},tickLine:false,axisLine:{stroke:"#334155"}}),
+              e(YAxis,{tick:{fill:"#64748b",fontSize:8},tickLine:false,axisLine:false}),
+              e(Tooltip,{contentStyle:{background:"#0f172a",border:"1px solid #334155",borderRadius:10,fontSize:10},formatter:function(v){return money(v);}}),
+              e(Line,{type:"monotone",dataKey:"collected",name:"Revenue",stroke:"#34d399",strokeWidth:2.3,dot:{r:2}}))))
       ),
 
       /* ══ RIGHT AREA ══ */
       e("div",{className:"grid grid-cols-1 2xl:grid-cols-2 gap-4 content-start"},
+
+        e(EngineerPanel,{duty,engineers,dutyId,setDutyId,engName,setEngName,engLic,setEngLic,addEngineer}),
 
         /* Module 2 — daily ledger */
         e(Panel,{title:"Daily Work History — Today "+today.toLocaleDateString(),icon:"clipboard-list",cls:"2xl:col-span-2",
@@ -445,8 +684,8 @@ function App(){
                 ["Ref","Farmer","Location","Test Tier","pH","Status","Engineer","Time"].map(function(h){return e("th",{key:h,className:"py-2 pr-3 font-medium"},h);}))),
               e("tbody",null,samples.map(function(s){
                 const v=phVerdict(s.ph);
-                return e("tr",{key:s.id,onClick:function(){setOpenCert(s);},role:"button",tabIndex:0,
-                  className:"border-b border-slate-800 hover:bg-emerald-900/20 cursor-pointer transition-colors"},
+                return e("tr",{key:s.id,onClick:function(){setOpenCert(s);},onKeyDown:function(ev){if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();setOpenCert(s);}},role:"button",tabIndex:0,
+                  className:"border-b border-slate-800 hover:bg-emerald-900/20 focus:bg-emerald-900/30 focus:outline-none cursor-pointer transition-colors"},
                   e("td",{className:"py-2 pr-3 font-mono text-emerald-300"},s.id),
                   e("td",{className:"py-2 pr-3"},s.farmer),
                   e("td",{className:"py-2 pr-3 text-slate-400"},s.location),
@@ -467,16 +706,17 @@ function App(){
               e("button",{onClick:registerSample,className:"rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold"},"Add Sample"))))),
 
         /* Module 5 — invoices + typed payment intake */
-        e(Panel,{title:"Laboratory Fees & Farmer Invoicing",icon:"receipt"},
+        e(Panel,{title:"Financial Ledger · Cash Intake",icon:"receipt"},
           e("div",{className:"overflow-x-auto max-h-56 overflow-y-auto pr-1"},
             e("table",{className:"w-full text-xs"},
               e("thead",null,e("tr",{className:"text-left text-slate-500 border-b border-slate-700"},
-                ["Invoice","Farmer","Method","Subtotal","Tax 5%","Gateway","Total USD","Paid","Balance","Status"].map(function(h){return e("th",{key:h,className:"py-2 pr-3 font-medium"},h);}))),
+                ["Invoice","Client Name","Currency","Method","Charge","Tax 5%","Gateway Fee","Total USD","Paid","Balance","Status"].map(function(h){return e("th",{key:h,className:"py-2 pr-3 font-medium"},h);}))),
               e("tbody",null,invoices.map(function(v){
                 const chip=v.status==="PAID"?"border-emerald-700 bg-emerald-900/40 text-emerald-300":v.status==="PARTIAL"?"border-amber-700 bg-amber-900/40 text-amber-300":"border-red-800 bg-red-900/40 text-red-300";
                 return e("tr",{key:v.id,className:"border-b border-slate-800"},
                   e("td",{className:"py-1.5 pr-3 font-mono text-sky-300"},v.id),
                   e("td",{className:"py-1.5 pr-3"},v.farmer),
+                  e("td",{className:"py-1.5 pr-3 font-mono text-slate-400"},v.currency),
                   e("td",{className:"py-1.5 pr-3 text-slate-400"},v.gw),
                   e("td",{className:"py-1.5 pr-3"},money(v.subtotal)),
                   e("td",{className:"py-1.5 pr-3"},money(v.tax)),
@@ -489,14 +729,15 @@ function App(){
                     : e("button",{onClick:function(){settleInvoice(v.id);},title:"Settle full balance",className:"px-2 py-0.5 rounded-full border text-[10px] "+chip+" hover:opacity-80"},v.status+" ⧉ settle")));
               }))))),
           e("div",{className:"mt-3 rounded-xl border border-slate-700 bg-slate-800/50 p-3"},
-            e("div",{className:"text-[10px] uppercase tracking-widest text-slate-500 mb-2 flex items-center gap-1.5"},e(Icon,{name:"banknote",cls:"w-3.5 h-3.5"}),"Receive New Payment — type what the farmer actually paid"),
-            e("div",{className:"grid grid-cols-2 lg:grid-cols-6 gap-2 text-xs"},
-              e("input",{value:payName,onChange:function(ev){setPayName(ev.target.value);},placeholder:"Farmer name",className:"bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2"}),
+            e("div",{className:"text-[10px] uppercase tracking-widest text-slate-500 mb-2 flex items-center gap-1.5"},e(Icon,{name:"banknote",cls:"w-3.5 h-3.5"}),"Cash Intake · Client, charge, USD currency & payment method"),
+            e("div",{className:"grid grid-cols-2 lg:grid-cols-7 gap-2 text-xs"},
+              e("input",{value:payName,onChange:function(ev){setPayName(ev.target.value);},placeholder:"Client Name","aria-label":"Client Name",className:"bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2"}),
               e("select",{value:payTier,onChange:function(ev){pickTier(ev.target.value);},className:"bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2"},
                 Object.keys(TIERS).map(function(t){return e("option",{key:t,value:t},t+" ~ "+money(TIERS[t]));})),
-              e("input",{value:payBase,onChange:function(ev){setPayBase(ev.target.value);},type:"number",min:"0",step:"0.01",title:"Editable base price (tier only suggests)",className:"bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2"}),
-              e("select",{value:payGw,onChange:function(ev){setPayGw(ev.target.value);},className:"bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2"},
-                Object.keys(GATEWAYS).map(function(g){return e("option",{key:g,value:g},g+(GATEWAYS[g]?" (+"+(GATEWAYS[g]*100).toFixed(1)+"%)":""));})),
+              e("input",{value:payBase,onChange:function(ev){setPayBase(ev.target.value);},type:"number",min:"0",step:"0.01","aria-label":"Charge in USD",title:"Charge in USD (tier is only a suggestion)",className:"bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2"}),
+              e("input",{value:"USD",readOnly:true,"aria-label":"Currency",className:"bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 font-mono text-emerald-300"}),
+              e("select",{value:payGw,onChange:function(ev){setPayGw(ev.target.value);},"aria-label":"Payment method",className:"bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2"},
+                PAYMENT_METHODS.map(function(g){return e("option",{key:g,value:g},g+" ("+(GATEWAYS[g]*100).toFixed(1)+"% fee)");})),
               e("input",{value:payPaid,onChange:function(ev){setPayPaid(ev.target.value);},type:"number",min:"0",step:"0.01",placeholder:"Amount paid USD",title:"What the farmer handed over today",className:"bg-slate-900 border border-emerald-700 rounded-lg px-2.5 py-2"}),
               e("button",{onClick:receivePay,disabled:!payName.trim()||baseNum<=0,className:"rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 text-white font-semibold"},"Record")),
             e("div",{className:"mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px]"},
@@ -521,23 +762,10 @@ function App(){
                 e(Line,{type:"monotone",dataKey:"collected",name:"Income collected",stroke:"#34d399",strokeWidth:2.4,dot:{r:2.5}}),
                 e(Line,{type:"monotone",dataKey:"pending",name:"Outstanding balances",stroke:"#f59e0b",strokeWidth:2.2,strokeDasharray:"6 4",dot:{r:2.2}})))),
 
-        /* Module 4 — engineer roster */
-        e(Panel,{title:"Technical Engineer Roster",icon:"hard-hat",
-          right:e("select",{value:duty.id,onChange:function(ev){setDutyId(parseInt(ev.target.value));},className:"text-xs bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5"},
-              engineers.map(function(g){return e("option",{key:g.id,value:g.id},"On duty: "+g.name);}))},
-          e("div",{className:"space-y-1.5"},
-            engineers.map(function(g){return e("div",{key:g.id,className:"flex items-center gap-2 rounded-xl border px-3 py-2 "+(g.id===duty.id?"border-emerald-600 bg-emerald-900/20":"border-slate-700/60 bg-slate-800/50")},
-              e(Icon,{name:g.id===duty.id?"shield-check":"user",cls:"w-4 h-4 "+(g.id===duty.id?"text-emerald-300":"text-slate-500")}),
-              e("div",{className:"text-xs"},
-                e("b",null,g.name)," ",e("span",{className:"text-slate-500 font-mono text-[10px]"},g.license)),
-              g.id===duty.id&&e("span",{className:"ml-auto text-[10px] text-emerald-300 font-bold"},"ON DUTY"));})),
-          e("div",{className:"mt-3 grid grid-cols-[1fr_130px_auto] gap-2"},
-            e("input",{value:engName,onChange:function(ev){setEngName(ev.target.value);},placeholder:"New engineer full name",className:"bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-xs"}),
-            e("input",{value:engLic,onChange:function(ev){setEngLic(ev.target.value);},placeholder:"License ID",className:"bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-xs"}),
-            e("button",{onClick:addEngineer,disabled:!engName.trim()||!engLic.trim(),className:"rounded-lg bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 px-3 text-xs font-semibold text-white"},"+ Add"))),
+        e(RotationPlanner),
 
-        /* Module 6 — DISEASE INTELLIGENCE (Option-2 asynchronous engine) */
-        e(Panel,{title:"Agronomic Disease & Treatment Intelligence System",icon:"stethoscope",cls:"2xl:col-span-2"},
+        /* Module 5 — CROP PATHOLOGY · asynchronous dictionary */
+        e(Panel,{title:"Crop Pathology Log · Disease & Treatment Intelligence",icon:"stethoscope",cls:"2xl:col-span-2"},
           /* control sector — category tabs with count badges + fuzzy search */
           e("div",{className:"flex flex-wrap items-center gap-1.5"},
             DISEASE_CATEGORIES.map(function(c){return e("button",{key:c,onClick:function(){setCatTab(c);},
@@ -626,7 +854,10 @@ function App(){
                   e("span",null,step));}))),
               e("div",{className:"mt-2 rounded-lg bg-slate-900/70 border border-slate-700 p-3"},
                 e("div",{className:"text-[10px] uppercase tracking-widest text-slate-500 mb-0.5"},"Chemical / cultural treatment programme"),
-                e("div",{className:"text-sm text-sky-300"},manifest.remedy))))
+                e("div",{className:"text-sm text-sky-300"},manifest.remedy)),
+              e("button",{onClick:function(){appendIssue(manifest);setManifest(null);},
+                className:"mt-3 w-full rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-2 flex items-center justify-center gap-2"},
+                e(Icon,{name:"history",cls:"w-3.5 h-3.5"}),"Log issue to treatment timeline")))
             ),
         ),
       ),

@@ -32,10 +32,42 @@ def test_dashboard_served():
         assert marker in r.text
 
 
+def test_lims_dashboard_is_modular_and_offline_safe():
+    app = create_app()
+    app.state.pool = None
+    app.state.terrain = None
+    client = TestClient(app)
+
+    page = client.get("/lims")
+    assert page.status_code == 200
+    assert "/web/lims.src.js" in page.text
+    assert "/web/vendor/react.min.js" in page.text
+    assert "https://" not in page.text
+
+    source = client.get("/web/lims.src.js")
+    assert source.status_code == 200
+    for marker in (
+        "Technical Engineer on Duty",
+        "Monthly Lab Analytics",
+        "Daily Work History",
+        "Soil Analysis Certificate",
+        "PAYMENT_METHODS",
+        '"ZAAD","SAHAL","EDAHAB","CASH","EVCPLUS","BANK"',
+        "Crop Pathology Log",
+        "loadDiseaseDictionary",
+        "5-Year Crop Rotation Planner",
+        "parseCropPlan",
+        "back-to-back",
+        "Field soil pH",
+    ):
+        assert marker in source.text
+    assert "CREDIT CARD" not in source.text
+
+
 def test_landing_links():
     app = create_app()
     app.state.pool = None
     app.state.terrain = None
     client = TestClient(app)
     r = client.get("/")
-    assert "/console" in r.text and "/dashboard" in r.text
+    assert all(path in r.text for path in ("/console", "/dashboard", "/lims"))
