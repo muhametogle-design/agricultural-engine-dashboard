@@ -15,7 +15,7 @@ class HttpSettings(BaseModel):
     timeout_s: float = 25.0
     max_retries: int = 3
     max_concurrency: int = 8  # caps parallel SoilGrids point queries for polygons
-    user_agent: str = "agri-dss/0.2 (agricultural decision support)"
+    user_agent: str = "agri-dss/0.3 (agricultural decision support)"
 
 
 class SoilSettings(BaseModel):

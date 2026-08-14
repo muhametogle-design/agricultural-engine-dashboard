@@ -32,6 +32,9 @@
   .action-irrigate{color:var(--warn);font-weight:700}
   .action-rain_sufficient{color:var(--acc)}
   .action-data_gap{color:var(--bad)}
+  .history-row{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--line)}
+  .history-row button{margin:0;padding:3px 7px}
+  .history-row .sp{flex:1}
   button{cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:7px 10px;
     background:#22352b;color:var(--txt);margin:4px 4px 0 0;font-weight:600;font-size:12.5px}
   button:hover{border-color:var(--acc)}
@@ -125,9 +128,12 @@
         </div>
       </div>
       <div class="row">
-        <button id="irrigation-btn" class="blue needs-field" disabled onclick="runIrrigation()">☁ Build 7-day schedule</button>
+        <button id="irrigation-preview-btn" class="blue needs-field" disabled onclick="runIrrigation(false)">☁ Preview schedule</button>
+        <button id="irrigation-save-btn" class="primary needs-field" disabled onclick="runIrrigation(true)">Save schedule</button>
+        <button class="needs-field" disabled onclick="loadIrrigationHistory()">History</button>
       </div>
       <div id="irrigation-info" style="margin-top:8px"></div>
+      <div id="irrigation-history" style="margin-top:8px"></div>
     </div>
 
     <div class="card">
@@ -163,6 +169,7 @@ let demoClientId = null;   // client created lazily for new fields
 let mode = null;           // 'point' | 'draw' | null
 let drawRing = [];         // [[lat,lon],...]
 let drawLayer = null, fieldLayer = null, zonesLayer = null, marksLayer = null;
+let lastSavedAdvisoryId = null;
 
 /* ---------------- map ---------------- */
 const map = L.map("map").setView([2.046, 45.318], 15);
@@ -188,6 +195,7 @@ async function call(path, {method="GET", body=null} = {}){
 }
 function setDisabled(sel, off){ document.querySelectorAll(sel).forEach(b => b.disabled = off); }
 const fmt = (v, u="") => v === null || v === undefined ? "—" : `${typeof v === "number" ? v.toLocaleString() : v}${u}`;
+const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
 /* ---------------- auth ---------------- */
 async function login(){
@@ -252,12 +260,15 @@ function showField(){
   // Never leave a previous field's diagnostics visible under a newly selected boundary.
   document.getElementById("env-info").innerHTML = "";
   document.getElementById("irrigation-info").innerHTML = "";
+  document.getElementById("irrigation-history").innerHTML = "";
   document.getElementById("plan-info").innerHTML = "";
+  lastSavedAdvisoryId = null;
   marksLayer.clearLayers(); zonesLayer.clearLayers();
   if (fieldLayer) fieldLayer.remove();
   fieldLayer = L.geoJSON(field.boundary, {color: "#5fd08a", weight: 2, fillOpacity: 0.08}).addTo(map);
   map.fitBounds(fieldLayer.getBounds().pad(0.25));
   setDisabled(".needs-field", false);
+  loadIrrigationHistory();
 }
 async function createField(geojson){
   const clientId = await ensureClient();
@@ -353,33 +364,85 @@ function irrigationRequest(){
     pump_flow_m3_per_hour: Number.isFinite(pump) && pump > 0 ? pump : null,
   };
 }
-async function runIrrigation(){
+async function runIrrigation(persist=false){
   if (!field) return;
-  const btn = document.getElementById("irrigation-btn"); btn.disabled = true;
+  const btn = document.getElementById(persist ? "irrigation-save-btn" : "irrigation-preview-btn");
+  btn.disabled = true;
   const requestedFieldId = field.id;
-  log("fetching Open-Meteo forecast and building field water balance …");
+  log(`${persist ? "saving" : "previewing"} Open-Meteo irrigation schedule …`);
   try{
-    const advisory = await call(`/fields/${requestedFieldId}/irrigation-advisory`, {
-      method: "POST", body: irrigationRequest()});
+    const path = persist ? `/fields/${requestedFieldId}/irrigation-advisories`
+                         : `/fields/${requestedFieldId}/irrigation-advisory`;
+    const advisory = await call(path, {method: "POST", body: irrigationRequest()});
     if (!field || field.id !== requestedFieldId){ log("discarded advisory for a field no longer selected"); return; }
     renderIrrigation(advisory);
-    log(`irrigation advisory ready — ${advisory.summary.irrigation_events} event(s), ` +
-        `${advisory.summary.total_irrigation_volume_m3} m³`);
+    log(`${persist ? "saved" : "previewed"} irrigation advisory — ` +
+        `${advisory.summary.irrigation_events} event(s), ${advisory.summary.total_irrigation_volume_m3} m³`);
+    if (persist) loadIrrigationHistory();
   }catch(e){
-    renderIrrigation(null);
+    if (field && field.id === requestedFieldId) renderIrrigation(null);
     log(`irrigation advisory failed: ${e.message}`, "err");
   }finally{ btn.disabled = false; }
 }
+async function loadIrrigationHistory(){
+  if (!field) return;
+  const requestedFieldId = field.id;
+  const box = document.getElementById("irrigation-history");
+  box.innerHTML = '<span class="mono" style="color:var(--dim)">loading saved schedules…</span>';
+  try{
+    const rows = await call(`/fields/${requestedFieldId}/irrigation-advisories?limit=8`);
+    if (!field || field.id !== requestedFieldId) return;
+    if (!rows.length){ box.innerHTML = '<span class="mono" style="color:var(--dim)">no saved schedules</span>'; return; }
+    box.innerHTML = `<div class="mono" style="color:var(--dim);margin-bottom:3px">saved schedule history</div>` +
+      rows.map(r => `<div class="history-row">
+        <button onclick="openSavedAdvisory('${r.id}')">Open</button>
+        <span>${esc(r.crop).replaceAll("_", " ")} · ${esc(r.growth_stage).replaceAll("_", " ")}</span>
+        <span class="sp"></span><span class="mono">${String(r.generated_at).slice(0,10)} · ${fmt(r.total_irrigation_volume_m3)} m³</span>
+      </div>`).join("");
+  }catch(e){ box.innerHTML = `<span class="err mono">history unavailable: ${esc(e.message)}</span>`; }
+}
+async function openSavedAdvisory(advisoryId){
+  if (!field) return;
+  const requestedFieldId = field.id;
+  try{
+    const advisory = await call(`/fields/${requestedFieldId}/irrigation-advisories/${advisoryId}`);
+    if (!field || field.id !== requestedFieldId) return;
+    renderIrrigation(advisory);
+    log(`opened saved irrigation advisory ${advisoryId.slice(0,8)}`);
+  }catch(e){ log(`saved advisory failed: ${e.message}`, "err"); }
+}
+async function downloadAdvisory(format){
+  if (!field || !lastSavedAdvisoryId) return;
+  const suffix = format === "ics" ? "calendar.ics" : "schedule.csv";
+  const headers = token ? {"Authorization": `Bearer ${token}`} : {};
+  try{
+    const response = await fetch(
+      `${apiBase}/api/v1/fields/${field.id}/irrigation-advisories/${lastSavedAdvisoryId}/${suffix}`,
+      {headers});
+    if (!response.ok) throw new Error(`download returned HTTP ${response.status}`);
+    const blob = await response.blob();
+    const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
+    link.download = `irrigation-${lastSavedAdvisoryId}.${format}`;
+    document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(link.href);
+    log(`downloaded ${format.toUpperCase()} irrigation schedule`);
+  }catch(e){ log(`download failed: ${e.message}`, "err"); }
+}
 function renderIrrigation(a){
   const target = document.getElementById("irrigation-info");
+  lastSavedAdvisoryId = a && a.advisory_id ? a.advisory_id : null;
   if (!a){ target.innerHTML = '<p class="err mono">Live forecast unavailable; the rest of the plan remains valid.</p>'; return; }
   const s = a.summary;
   const days = (a.schedule || []).map(d => `<tr>
     <td>${String(d.date).slice(5)}</td><td>${fmt(d.precipitation_mm)}</td>
     <td>${fmt(d.crop_et_mm)}</td><td>${fmt(d.gross_irrigation_mm)}</td>
     <td>${fmt(d.irrigation_volume_m3)}</td><td>${fmt(d.pump_hours)}</td>
-    <td class="action-${d.action}" title="${(d.risk_flags || []).join(", ")}">
+    <td class="action-${d.action}" title="${esc((d.risk_flags || []).join(", "))}">
       ${d.action.replaceAll("_", " ")}${(d.risk_flags || []).length ? " ⚠" : ""}</td></tr>`).join("");
+  const savedControls = a.advisory_id ? `<div class="row" style="margin-top:7px">
+    <span class="chip">saved ${String(a.advisory_id).slice(0,8)}…</span>
+    <button onclick="downloadAdvisory('csv')">Download CSV</button>
+    <button onclick="downloadAdvisory('ics')">Add to calendar</button>
+  </div>` : '<div class="mono" style="color:var(--dim);margin-top:6px">preview only — save to enable audit history and exports</div>';
   target.innerHTML = `
     <div class="kv" style="margin-bottom:7px">
       <span>Kc · stage</span><b>${a.crop_coefficient} · ${a.growth_stage.replaceAll("_", " ")}</b>
@@ -387,11 +450,11 @@ function renderIrrigation(a){
       <span>crop demand</span><b>${s.total_crop_water_demand_mm} mm</b>
       <span>scheduled water</span><b>${s.total_irrigation_volume_m3} m³ · ${s.irrigation_events} event(s)</b>
       <span>peak pump runtime</span><b>${s.peak_daily_pump_hours == null ? "—" : s.peak_daily_pump_hours + " h/day"}</b>
-      <span>forecast source</span><b>${a.source.provider} · ${a.source.timezone}</b>
+      <span>forecast source</span><b>${esc(a.source.provider)} · ${esc(a.source.timezone)}</b>
     </div>
     <div class="scroll-x"><table><tr><th>day</th><th>rain mm</th><th>ETc mm</th><th>gross mm</th><th>m³</th><th>pump h</th><th>action</th></tr>${days}</table></div>
-    <p style="font-size:12px;color:var(--warn)">${s.recommendation}</p>` +
-    ((a.warnings || []).length ? `<p class="err mono">${a.warnings.join(" · ")}</p>` : "");
+    <p style="font-size:12px;color:var(--warn)">${esc(s.recommendation)}</p>${savedControls}` +
+    ((a.warnings || []).length ? `<p class="err mono">${a.warnings.map(esc).join(" · ")}</p>` : "");
 }
 
 /* ---------------- master plan ---------------- */

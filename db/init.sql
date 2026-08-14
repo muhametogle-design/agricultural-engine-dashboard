@@ -9,7 +9,7 @@
 --     no column in the draft DDL)
 --   * nitrogen stored as g/kg to match the ingestion service conversion
 --     (SoilGrids delivers cg/kg; the service divides by 100 -> g/kg)
---   * irrigation_advisory JSONB stores the live forecast water-balance report
+--   * irrigation JSONB in master plans plus immutable operational schedule history
 -- ============================================================================
 
 -- Enable Spatial & UUID Extensions
@@ -135,3 +135,26 @@ CREATE TABLE IF NOT EXISTS farm_master_plans (
 CREATE INDEX IF NOT EXISTS idx_master_plans_well ON farm_master_plans USING GIST(optimal_well_point);
 CREATE INDEX IF NOT EXISTS idx_master_plans_field_latest
     ON farm_master_plans(field_id, generated_at DESC);
+
+-- 6. Saved Operational Irrigation Advisories
+CREATE TABLE IF NOT EXISTS field_irrigation_advisories (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    field_id UUID NOT NULL REFERENCES farm_fields(id) ON DELETE CASCADE,
+    crop VARCHAR(64) NOT NULL,
+    growth_stage VARCHAR(20) NOT NULL
+        CHECK (growth_stage IN ('initial', 'development', 'mid_season', 'late_season')),
+    forecast_start DATE,
+    forecast_end DATE,
+    irrigation_events INT NOT NULL DEFAULT 0 CHECK (irrigation_events >= 0),
+    total_gross_irrigation_mm NUMERIC(10, 2) NOT NULL DEFAULT 0
+        CHECK (total_gross_irrigation_mm >= 0),
+    total_irrigation_volume_m3 NUMERIC(16, 2) NOT NULL DEFAULT 0
+        CHECK (total_irrigation_volume_m3 >= 0),
+    advisory JSONB NOT NULL CHECK (jsonb_typeof(advisory) = 'object'),
+    generated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT irrigation_forecast_date_order
+        CHECK (forecast_end IS NULL OR forecast_start IS NULL OR forecast_end >= forecast_start)
+);
+
+CREATE INDEX IF NOT EXISTS idx_irrigation_advisories_field_latest
+    ON field_irrigation_advisories(field_id, generated_at DESC);

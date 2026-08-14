@@ -59,6 +59,9 @@ Your DDL is preserved 1:1 (`db/init.sql`), with these deliberate, documented dev
 5. **`irrigation_advisory JSONB` added** to `farm_master_plans` (migration 0003)
    so the exact forecast, assumptions and schedule used by a decision report
    remain auditable.
+6. **`field_irrigation_advisories` added** (migration 0004) for immutable
+   operational schedule history, queryable totals and tenant-safe CSV/iCalendar
+   exports independent of full master-plan runs.
 
 ## Ingestion service — what changed vs. the draft `GISDataIngestionService`
 
@@ -103,8 +106,9 @@ alembic revision -m "..."      # next change
 
 0001 = baseline schema; 0002 = auth/multitenancy (adds `tenant_id` as NULLABLE
 for upgrade paths — backfill then `SET NOT NULL`; init.sql ships them strict);
-0003 = persisted irrigation advisory JSON. Both directions are designed for
-`alembic upgrade head` / `downgrade base` validation against scratch databases.
+0003 = irrigation JSON embedded in master plans; 0004 = standalone saved
+irrigation-advisory history and export metadata. Both directions are designed
+for `alembic upgrade head` / `downgrade base` validation against scratch databases.
 
 ## Decision engines
 
@@ -155,8 +159,11 @@ screening defaults—not automatic valve-control settings.
 }
 ```
 
-Use this body directly with `/irrigation-advisory`, or nest it under
-`irrigation_advisory` in the master-plan request to persist the schedule.
+Use this body with singular `/irrigation-advisory` for a non-mutating preview,
+POST it to plural `/irrigation-advisories` to save an immutable field-history
+record, or nest it under `irrigation_advisory` in a master-plan request. Saved
+records can be reopened and downloaded as row-oriented CSV or all-day iCalendar
+irrigation events; both export routes re-check parent-field tenancy.
 
 ### Farm infrastructure
 Geodesic perimeter from PostGIS. Gates auto-derived (1 per 400 m) or explicit;
@@ -185,7 +192,10 @@ Zones provably partition the field (see tests, ±3 %).
 | `POST /fields/{id}/well-siting` | MCE over stored VES + terrain |
 | `POST /fields/{id}/crop-matching` | ranked suitability (+irrigation scenario) |
 | `POST /fields/{id}/infrastructure` | fencing BOM |
-| `POST /fields/{id}/irrigation-advisory` | live forecast water balance and schedule |
+| `POST /fields/{id}/irrigation-advisory` | non-mutating live forecast preview |
+| `POST` · `GET /fields/{id}/irrigation-advisories` | save or list immutable schedules |
+| `GET /fields/{id}/irrigation-advisories/{advisory_id}` | reopen a saved schedule |
+| `GET …/{advisory_id}/schedule.csv` · `calendar.ics` | authenticated operational exports |
 | `GET /irrigation/crops` | supported crop/stage vocabulary |
 | `POST /fields/{id}/zoning` | master layout FeatureCollection |
 | `POST /fields/{id}/master-plan` · `GET` | full pipeline → persisted plan + report (optionally including irrigation) |
@@ -198,7 +208,7 @@ cp .env.example .env
 docker compose up -d db                 # PostGIS with schema auto-initialized
 pip install -r requirements.txt
 uvicorn app.main:app --reload           # http://localhost:8000/docs  ·  /console (map UI)
-pytest                                  # 69 tests, no DB required
+pytest                                  # 79 tests, no DB required
 python examples/run_decision_cycle_demo.py   # full engine chain, no DB/network
 ```
 
@@ -246,8 +256,9 @@ arrive as `Decimal` (repository boundary now normalizes to float).
 * Added authenticated `POST /fields/{id}/irrigation-advisory`, backed by a
   null-tolerant Open-Meteo client and an auditable Kc×ET0 root-zone balance.
 * The console now renders a seven-day rain/ETc/application table and scales
-  gross depth to field m³ and optional pump runtime. The same request can be
-  embedded in a master-plan run and is persisted through Alembic revision 0003.
+  gross depth to field m³ and optional pump runtime. Preview and save are
+  separate actions; saved schedules expose history, CSV and calendar downloads.
+  Master-plan embedding is revision 0003; standalone history is revision 0004.
 * Forecast failures are isolated from master-plan generation; missing daily
   values are never silently treated as zero rainfall or zero ET0.
 * Live provider contract check at the Afgooye demo coordinate returned
@@ -269,6 +280,9 @@ arrive as `Decimal` (repository boundary now normalizes to float).
   30-day climatology cache. Review its licence/attribution and commercial-use
   terms for your deployment, and add provider redundancy before using the
   schedule for time-critical operations.
+- **Schedule retention**: saved advisories are append-only through the API and
+  cascade with their parent field. Define archival/retention policy for long-lived
+  tenants before enabling automated forecast refreshes.
 - **Calibration gates before go-live**: VES resistivity bands (geology-specific),
   crop and irrigation Kc rules (agronomy partner), root-zone depletion triggers,
   MCE weights, fencing price list.
@@ -277,8 +291,8 @@ arrive as `Decimal` (repository boundary now normalizes to float).
 
 ## Tests
 
-69 passing (`pytest`): engine math with known-answer fixtures, respx-mocked
+79 passing (`pytest`): engine math with known-answer fixtures, respx-mocked
 SoilGrids/POWER/Open-Meteo clients (retry, sentinel, null, coverage paths),
-orchestrator degradation, irrigation schedule/volume arithmetic, DEM provider
-against a synthetic plane, API wiring via in-memory repository fakes, repository
-JSON persistence, and console smoke tests (no DB needed).
+orchestrator degradation, irrigation schedule/volume arithmetic, CSV/iCalendar
+exports, DEM provider against a synthetic plane, API wiring via in-memory
+repository fakes, repository JSON persistence, and console smoke tests (no DB needed).

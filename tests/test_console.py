@@ -15,7 +15,7 @@ def test_console_served():
     assert r.status_code == 200
     assert "text/html" in r.headers["content-type"]
     for marker in ("L.map(", "/api/v1", "master-plan", "leaflet", "auth/login",
-                   "irrigation-advisory", "Open-Meteo", "Build 7-day schedule"):
+                   "irrigation-advisory", "Open-Meteo", "Save schedule", "Download CSV"):
         assert marker in r.text
 
 

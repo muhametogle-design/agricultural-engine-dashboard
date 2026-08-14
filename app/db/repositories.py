@@ -8,6 +8,7 @@ scoping through their parent field, which routes resolve tenant-safely first.
 from __future__ import annotations
 
 import json
+from datetime import date
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -356,6 +357,83 @@ class PlansRepo:
         return out
 
 
+class IrrigationAdvisoriesRepo:
+    """Saved operational schedules; tenancy is inherited through the parent field."""
+
+    NUMERIC_COLS = ("total_gross_irrigation_mm", "total_irrigation_volume_m3")
+    SUMMARY_SELECT = """
+        SELECT id, field_id, crop, growth_stage, forecast_start, forecast_end,
+               irrigation_events, total_gross_irrigation_mm,
+               total_irrigation_volume_m3, generated_at
+        FROM field_irrigation_advisories
+    """
+
+    def __init__(self, pool: asyncpg.Pool):
+        self.pool = pool
+
+    @staticmethod
+    def _forecast_range(advisory: dict[str, Any]) -> tuple[date | None, date | None]:
+        dates = [
+            date.fromisoformat(str(day["date"]))
+            for day in advisory.get("schedule", [])
+            if day.get("date")
+        ]
+        return (min(dates), max(dates)) if dates else (None, None)
+
+    async def create(self, field_id: UUID, advisory: dict[str, Any]) -> dict:
+        forecast_start, forecast_end = self._forecast_range(advisory)
+        summary = advisory.get("summary") or {}
+        row = await self.pool.fetchrow(
+            """
+            INSERT INTO field_irrigation_advisories (
+                field_id, crop, growth_stage, forecast_start, forecast_end,
+                irrigation_events, total_gross_irrigation_mm,
+                total_irrigation_volume_m3, advisory
+            ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb)
+            RETURNING id, field_id, crop, growth_stage, forecast_start, forecast_end,
+                      irrigation_events, total_gross_irrigation_mm,
+                      total_irrigation_volume_m3, advisory, generated_at
+            """,
+            field_id,
+            advisory["crop"],
+            advisory["growth_stage"],
+            forecast_start,
+            forecast_end,
+            int(summary.get("irrigation_events") or 0),
+            float(summary.get("total_gross_irrigation_mm") or 0),
+            float(summary.get("total_irrigation_volume_m3") or 0),
+            json.dumps(advisory, default=str),
+        )
+        out = _decode_geojson_columns(dict(row), ("advisory",))
+        return _normalize_columns(out, self.NUMERIC_COLS)
+
+    async def list_for_field(self, field_id: UUID, limit: int = 20) -> list[dict]:
+        rows = await self.pool.fetch(
+            self.SUMMARY_SELECT
+            + " WHERE field_id = $1 ORDER BY generated_at DESC, id DESC LIMIT $2",
+            field_id,
+            limit,
+        )
+        return [_normalize_columns(dict(row), self.NUMERIC_COLS) for row in rows]
+
+    async def get(self, advisory_id: UUID, field_id: UUID) -> dict:
+        row = await self.pool.fetchrow(
+            """
+            SELECT id, field_id, crop, growth_stage, forecast_start, forecast_end,
+                   irrigation_events, total_gross_irrigation_mm,
+                   total_irrigation_volume_m3, advisory, generated_at
+            FROM field_irrigation_advisories
+            WHERE id = $1 AND field_id = $2
+            """,
+            advisory_id,
+            field_id,
+        )
+        if row is None:
+            raise NotFoundError(f"irrigation advisory {advisory_id} not found")
+        out = _decode_geojson_columns(dict(row), ("advisory",))
+        return _normalize_columns(out, self.NUMERIC_COLS)
+
+
 class RepositoryBundle:
     """Aggregates all repositories; constructed per-request (cheap)."""
 
@@ -367,3 +445,4 @@ class RepositoryBundle:
         self.environmental = EnvironmentalRepo(pool)
         self.ves = VesRepo(pool)
         self.plans = PlansRepo(pool)
+        self.irrigation_advisories = IrrigationAdvisoriesRepo(pool)

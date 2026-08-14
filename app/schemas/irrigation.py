@@ -78,7 +78,9 @@ class ForecastSource(BaseModel):
 
 
 class IrrigationAdvisoryReport(BaseModel):
+    advisory_id: UUID | None = None
     field_id: UUID | None = None
+    generated_at: datetime | None = None
     crop: str
     growth_stage: GrowthStage
     crop_coefficient: float
@@ -88,3 +90,16 @@ class IrrigationAdvisoryReport(BaseModel):
     assumptions: dict
     source: ForecastSource
     warnings: list[str] = Field(default_factory=list)
+
+
+class IrrigationAdvisoryHistoryItem(BaseModel):
+    id: UUID
+    field_id: UUID
+    crop: str
+    growth_stage: GrowthStage
+    forecast_start: date | None
+    forecast_end: date | None
+    irrigation_events: int
+    total_gross_irrigation_mm: float
+    total_irrigation_volume_m3: float
+    generated_at: datetime
