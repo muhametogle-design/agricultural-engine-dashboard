@@ -3,6 +3,8 @@ const { useState, useMemo, useEffect } = React;
 const e = React.createElement;
 const { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, Legend,
         CartesianGrid, ResponsiveContainer } = Recharts;
+const SHARED_AGRI = window.AGRI_SHARED || {catalog:[],produce:[],seedOils:[],trees:[],i18n:{en:{},so:{}},t:function(_,key){return key;}};
+const uiText = (lang,key) => SHARED_AGRI.t(lang,key);
 const STANDALONE_WEB = window.location.pathname.indexOf("/web/")===0;
 const GIS_ENGINE_URL = STANDALONE_WEB ? "/web/dashboard.html" : "/dashboard";
 
@@ -180,7 +182,12 @@ const DISEASE_EXPANSION = [
   pathology("Legumes","Chickpea","Ascochyta Blight","Ascochyta rabiei (Fungus)","Circular leaf and pod lesions","Stem girdling and breakage","Remove infected residue and avoid contaminated seed","Use certified seed, resistant varieties and forecast-guided registered fungicides."),
   pathology("Legumes","Pigeon Pea","Fusarium Wilt","Fusarium udum (Fungus)","Progressive branch wilt","Brown vascular tissue","Remove wilted plants with roots","Use resistant cultivars and long rotation with cereals."),
 ];
-const DISEASE_VECTOR = BASE_DISEASE_VECTOR.concat(DISEASE_EXPANSION);
+const SHARED_DISEASE_VECTOR = SHARED_AGRI.catalog.flatMap(function(item){
+  const cat=item.category==="Fruits"||item.category==="Tree"?"Fruit Trees":item.category==="Vegetables"?"Vegetables":item.family==="Fabaceae"?"Legumes":"Grains & Crops";
+  return (item.pathologies||[]).map(function(record){return Object.assign({cat:cat,plant:item.name},record);});
+});
+const DISEASE_VECTOR = BASE_DISEASE_VECTOR.concat(DISEASE_EXPANSION,SHARED_DISEASE_VECTOR)
+  .filter(function(item,index,all){return all.findIndex(function(other){return other.plant===item.plant&&other.disease===item.disease;})===index;});
 const FAMILY_PATHOLOGY_TEMPLATES={
  Solanaceae:[
   {disease:"Bacterial Wilt Risk",cause:"Ralstonia solanacearum complex",symptoms:["Rapid green wilt","Vascular browning"],immediate:["Isolate affected beds and sanitize tools"],remedy:"Use clean transplants, resistant material, drainage and non-solanaceous rotation."},
@@ -515,8 +522,16 @@ const REGIONAL_PRODUCE_EXPANSION = [
   crop("frankincense_tree","Frankincense Tree","Tree","Burseraceae","Deep","Light Feeder",7.0,8.5,1825,["Dry upland establishment"],"#a8a29e"),
   crop("myrrh_tree","Myrrh Tree","Tree","Burseraceae","Deep","Light Feeder",6.5,8.0,1460,["Dry upland establishment"],"#78716c"),
 ];
-const CROP_LIBRARY = BASE_CROP_LIBRARY.concat(CROP_VARIETY_EXPANSION,REGIONAL_PRODUCE_EXPANSION)
-  .map(item=>Object.assign({},item,{pathologies:linkedPathologies(item)}));
+const SHARED_CROP_LIBRARY = SHARED_AGRI.catalog.map(function(item){
+  const category=item.category==="Fruits"?"Fruit":item.category==="Vegetables"?"Vegetable":item.category;
+  return Object.assign({},item,{category:category,baseId:item.baseId||item.id,baseName:item.name,color:item.color||"#64748b"});
+});
+const CROP_LIBRARY = BASE_CROP_LIBRARY.concat(CROP_VARIETY_EXPANSION,REGIONAL_PRODUCE_EXPANSION,SHARED_CROP_LIBRARY)
+  .filter(function(item,index,all){return all.findIndex(function(other){return other.id===item.id;})===index;})
+  .map(function(item){
+    const linked=(item.pathologies||[]).concat(linkedPathologies(item)).filter(function(record,index,all){return all.findIndex(function(other){return other.disease===record.disease;})===index;});
+    return Object.assign({},item,{pathologies:linked.slice(0,8)});
+  });
 const CROP_ALIASES = {
   corn:"maize",cornmeal:"maize",millet:"pearl_millet",pearlmillet:"pearl_millet",
   bean:"beans",commonbean:"beans",greenbeans:"beans",mungbean:"mung_bean",
@@ -677,7 +692,7 @@ function Panel(props){
     props.children);
 }
 function EngineerPanel(props){
-  return e(Panel,{title:"Technical Engineer on Duty",icon:"hard-hat",cls:"2xl:col-span-2",
+  return e(Panel,{title:uiText(props.lang||"en","engineer"),icon:"hard-hat",cls:"2xl:col-span-2",
     right:e("span",{className:"text-[10px] text-emerald-300 border border-emerald-700/60 rounded-full px-2 py-1"},"ACTIVE SHIFT")},
     e("div",{className:"grid grid-cols-1 lg:grid-cols-[1fr_1.4fr] gap-3"},
       e("div",{className:"rounded-xl border border-emerald-600/50 bg-emerald-950/40 p-4 flex flex-col sm:flex-row sm:items-center gap-3"},
@@ -701,6 +716,7 @@ function EngineerPanel(props){
         e("div",{className:"mt-2 text-[10px] text-slate-500"},props.engineers.length+" engineers in local roster · duty changes apply instantly"))));
 }
 function RotationPlanner(props){
+  const lang=props.lang||"en";
   const derivedFields=(props.samples||[]).slice(0,5).map(function(sample,index){
     return {id:sample.id,name:sample.farmer+" · "+sample.location,ph:Number(sample.ph),texture:sample.texture,
       organicMatter:Number(sample.om)||1.2,nitrogenReserve:Math.max(35,72-index*7)};
@@ -721,6 +737,7 @@ function RotationPlanner(props){
   });
   const [fieldId,setFieldId]=useState(function(){return localStorage.getItem("lims_strategic_field_id")||fallbackFields[0].id;});
   const [search,setSearch]=useState("");
+  const [categoryFilter,setCategoryFilter]=useState("All categories");
   const [familyFilter,setFamilyFilter]=useState("All families");
   const [demandFilter,setDemandFilter]=useState("All demands");
   const [sortMode,setSortMode]=useState("name");
@@ -745,19 +762,20 @@ function RotationPlanner(props){
   const selectedCrop=byId[selectedCropId]||null;
   const selectedPathologies=selectedCrop&&selectedCrop.pathologies?selectedCrop.pathologies:[];
   const selectedPathology=selectedPathologies.find(function(item){return item.disease===linkedPathologyKey;})||selectedPathologies[0]||null;
+  const categories=useMemo(function(){return Array.from(new Set(catalog.map(function(crop){return crop.category;}))).sort();},[catalog]);
   const families=useMemo(function(){return Array.from(new Set(catalog.map(function(crop){return crop.family;}))).sort();},[catalog]);
   const filteredCrops=useMemo(function(){
     const query=search.trim().toLowerCase();
     const rows=catalog.filter(function(crop){
       const matchesSearch=!query||(crop.name+" "+crop.family+" "+crop.category+" "+crop.rootDepth+" "+crop.nitrogenDemand).toLowerCase().includes(query);
-      return matchesSearch&&(familyFilter==="All families"||crop.family===familyFilter)&&(demandFilter==="All demands"||crop.nitrogenDemand===demandFilter);
+      return matchesSearch&&(categoryFilter==="All categories"||crop.category===categoryFilter)&&(familyFilter==="All families"||crop.family===familyFilter)&&(demandFilter==="All demands"||crop.nitrogenDemand===demandFilter);
     });
     return rows.sort(function(a,b){
       if(sortMode==="maturity")return a.maturityDays-b.maturityDays;
       if(sortMode==="family")return a.family.localeCompare(b.family)||a.name.localeCompare(b.name);
       return a.name.localeCompare(b.name);
     });
-  },[catalog,search,familyFilter,demandFilter,sortMode]);
+  },[catalog,search,categoryFilter,familyFilter,demandFilter,sortMode]);
 
   const risks=useMemo(function(){
     const out=[];
@@ -838,7 +856,7 @@ function RotationPlanner(props){
   }
   function dropCrop(event,key){event.preventDefault();const cropId=event.dataTransfer.getData("text/crop-id");if(cropId)assignCrop(key,cropId);setDragOver("");}
 
-  return e(Panel,{title:"5-Year Strategic Crop Planning & Rotation",icon:"calendar-range",cls:"strategic-planner 2xl:col-span-2",
+  return e(Panel,{title:uiText(lang,"planner"),icon:"calendar-range",cls:"strategic-planner 2xl:col-span-2",
     right:e("span",{className:"text-[10px] text-slate-500"},catalog.length+" crop rules · drag, drop or select")},
     e("div",{className:"grid grid-cols-1 xl:grid-cols-[300px_minmax(0,1fr)] gap-4"},
       e("aside",{className:"rounded-xl border border-slate-700 bg-slate-950/70 p-3"},
@@ -855,6 +873,8 @@ function RotationPlanner(props){
           e("input",{value:search,onChange:function(event){setSearch(event.target.value);},placeholder:"Search crop, family or category…",
             className:"w-full bg-slate-900 border border-slate-700 rounded-lg pl-8 pr-2 py-2 text-xs"})),
         e("div",{className:"grid grid-cols-2 gap-1.5 mt-2"},
+          e("select",{value:categoryFilter,onChange:function(event){setCategoryFilter(event.target.value);},className:"col-span-2 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-[10px]"},
+            e("option",null,"All categories"),categories.map(function(category){const label=category==="Seed Oil"?uiText(lang,"seedOil"):category==="Fruit"?uiText(lang,"fruits"):category==="Vegetable"?uiText(lang,"vegetables"):category;return e("option",{key:category,value:category},label);})),
           e("select",{value:familyFilter,onChange:function(event){setFamilyFilter(event.target.value);},className:"bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-[10px]"},
             e("option",null,"All families"),families.map(function(family){return e("option",{key:family,value:family},family);})),
           e("select",{value:demandFilter,onChange:function(event){setDemandFilter(event.target.value);},className:"bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-[10px]"},
@@ -862,8 +882,8 @@ function RotationPlanner(props){
           e("select",{value:sortMode,onChange:function(event){setSortMode(event.target.value);},className:"col-span-2 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-[10px]"},
             e("option",{value:"name"},"Sort: Crop name"),e("option",{value:"family"},"Sort: Botanical family"),e("option",{value:"maturity"},"Sort: Fastest maturity"))),
         e("div",{className:"mt-2 flex items-center justify-between text-[10px] text-slate-500"},
-          e("span",null,filteredCrops.length+" matching crops"),e("span",null,catalog.filter(function(c){return c.category==="Vegetable";}).length+" vegetables · "+catalog.filter(function(c){return c.category==="Fruit";}).length+" fruits")),
-        e("div",{className:"mt-2 max-h-[38rem] overflow-y-auto space-y-1.5 pr-1"},filteredCrops.map(function(crop){
+          e("span",null,"Showing "+Math.min(filteredCrops.length,120)+" of "+filteredCrops.length),e("span",null,catalog.filter(function(c){return c.category==="Vegetable";}).length+" "+uiText(lang,"vegetables")+" · "+catalog.filter(function(c){return c.category==="Fruit";}).length+" "+uiText(lang,"fruits")+" · "+catalog.filter(function(c){return c.category==="Seed Oil";}).length+" seed oils")),
+        e("div",{className:"mt-2 max-h-[38rem] overflow-y-auto space-y-1.5 pr-1"},filteredCrops.slice(0,120).map(function(crop){
           const selected=selectedCropId===crop.id;
           return e("button",{key:crop.id,draggable:true,onDragStart:function(event){event.dataTransfer.setData("text/crop-id",crop.id);event.dataTransfer.effectAllowed="copy";},
             onClick:function(){if(selected){setSelectedCropId("");setLinkedPathologyKey("");}else{setSelectedCropId(crop.id);setLinkedPathologyKey((crop.pathologies[0]||{}).disease||"");}},
@@ -881,7 +901,7 @@ function RotationPlanner(props){
             e("label",{className:"text-[9px] uppercase tracking-widest text-slate-500"},"Active plot / LIMS profile",
               e("select",{value:activeField.id,onChange:function(event){setFieldId(event.target.value);},className:"mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-xs"},
                 fields.map(function(field){return e("option",{key:field.id,value:field.id},field.name);}))),
-            e("label",{className:"text-[9px] uppercase tracking-widest text-slate-500"},"Soil pH",
+            e("label",{className:"text-[9px] uppercase tracking-widest text-slate-500"},uiText(lang,"soil")+" pH",
               e("input",{value:activeField.ph,type:"number",step:"0.1",min:"3",max:"11",onChange:function(event){updateField("ph",Number(event.target.value));},className:"mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-xs"})),
             e("label",{className:"text-[9px] uppercase tracking-widest text-slate-500"},"Organic matter %",
               e("input",{value:activeField.organicMatter,type:"number",step:"0.1",min:"0",onChange:function(event){updateField("organicMatter",Number(event.target.value));},className:"mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-xs"})),
@@ -1002,6 +1022,7 @@ function Certificate(props){
 /* ═════════ MAIN APP ═════════ */
 function App(){
   const [spectrum, setSpectrum] = useState(function(){const saved=localStorage.getItem("lims_spectrum");return SPECTRUM.some(function(s){return s.id===saved;})?saved:"slate";});
+  const [lang,setLang]=useState(function(){return localStorage.getItem("agri_lang")==="so"?"so":"en";});
   const [spectrumOpen, setSpectrumOpen] = useState(false);
   const [engineers, setEngineers] = useState(function(){return JSON.parse(localStorage.getItem("lims_engineers")||"null")||ENGINEERS;});
   const [dutyId, setDutyId] = useState(function(){return parseInt(localStorage.getItem("lims_duty")||"1");});
@@ -1029,6 +1050,7 @@ function App(){
   const [issueFeed, setIssueFeed] = useState([]);
 
   useEffect(function(){ localStorage.setItem("lims_spectrum",spectrum); },[spectrum]);
+  useEffect(function(){localStorage.setItem("agri_lang",lang);},[lang]);
   useEffect(function(){ localStorage.setItem("lims_engineers",JSON.stringify(engineers)); },[engineers]);
   useEffect(function(){ localStorage.setItem("lims_duty",String(duty.id)); },[duty.id]);
 
@@ -1156,7 +1178,9 @@ function App(){
         e("span",{className:"relative flex h-2 w-2"},
           e("span",{className:"animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"}),
           e("span",{className:"relative inline-flex rounded-full h-2 w-2 bg-emerald-400"})),
-        e("span",{className:"text-xs"},"On duty: ",e("b",null,duty.name), e("span",{className:"text-slate-400 font-mono text-[10px] ml-1"},duty.license))),
+        e("span",{className:"text-xs"},lang==="so"?"Shaqada: ":"On duty: ",e("b",null,duty.name), e("span",{className:"text-slate-400 font-mono text-[10px] ml-1"},duty.license))),
+      e("button",{onClick:function(){setLang(lang==="en"?"so":"en");},title:"SOM | ENG",className:"rounded-lg border border-emerald-700/70 bg-emerald-950/30 px-3 py-1.5 text-xs font-black text-emerald-200"},
+        e("span",{className:lang==="so"?"text-white":"text-slate-500"},"SOM")," | ",e("span",{className:lang==="en"?"text-white":"text-slate-500"},"ENG")),
       e("div",{className:"relative"},
         e("button",{onClick:function(){setSpectrumOpen(!spectrumOpen);},"aria-label":"Background spectrum","aria-expanded":spectrumOpen,
           className:"p-2 rounded-lg border border-slate-600 hover:border-emerald-500"},e(Icon,{name:"palette"})),
@@ -1171,7 +1195,7 @@ function App(){
     e("div",{className:"grid grid-cols-1 xl:grid-cols-[300px_minmax(0,1fr)] gap-3 sm:gap-4 p-3 sm:p-4"},
 
       /* ══ LEFT · MONTHLY ANALYTICS ══ */
-      e(Panel,{title:"Monthly Lab Analytics",icon:"calendar-days",cls:"xl:sticky xl:top-20 self-start"},
+      e(Panel,{title:lang==="so"?"Falanqaynta Billaha Shaybaarka":"Monthly Lab Analytics",icon:"calendar-days",cls:"xl:sticky xl:top-20 self-start"},
         e("div",{className:"space-y-2"},
           [["Total Samples Tested",totals.tested,"flask-conical","text-emerald-300"],
            ["Certificates Issued",totals.certs,"badge-check","text-sky-300"],
@@ -1206,10 +1230,10 @@ function App(){
       /* ══ RIGHT AREA ══ */
       e("div",{className:"grid grid-cols-1 2xl:grid-cols-2 gap-4 content-start"},
 
-        e(EngineerPanel,{duty,engineers,dutyId,setDutyId,engName,setEngName,engLic,setEngLic,addEngineer}),
+        e(EngineerPanel,{lang,duty,engineers,dutyId,setDutyId,engName,setEngName,engLic,setEngLic,addEngineer}),
 
         /* Module 2 — daily ledger */
-        e(Panel,{title:"Daily Work History — Today "+today.toLocaleDateString(),icon:"clipboard-list",cls:"2xl:col-span-2",
+        e(Panel,{title:(lang==="so"?"Taariikhda Shaqada Maanta — ":"Daily Work History — Today ")+today.toLocaleDateString(),icon:"clipboard-list",cls:"2xl:col-span-2",
           right:e("span",{className:"text-[10px] text-slate-500"},"click a row → certificate")},
           e("div",{className:"overflow-x-auto"},
             e("table",{className:"w-full text-xs"},
@@ -1239,7 +1263,7 @@ function App(){
               e("button",{onClick:registerSample,className:"rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold"},"Add Sample"))))),
 
         /* Module 5 — invoices + typed payment intake */
-        e(Panel,{title:"Financial Ledger · Cash Intake",icon:"receipt",
+        e(Panel,{title:uiText(lang,"finance")+" · Cash Intake",icon:"receipt",
           right:e("span",{className:"rounded-full border border-emerald-700/60 bg-emerald-950/30 px-2 py-1 text-[10px] font-bold text-emerald-300"},"NO TAX · NO FEES")},
           e("div",{className:"overflow-x-auto max-h-56 overflow-y-auto pr-1"},
             e("table",{className:"w-full text-xs"},
@@ -1293,10 +1317,10 @@ function App(){
                 e(Line,{type:"monotone",dataKey:"collected",name:"Income collected",stroke:"#34d399",strokeWidth:2.4,dot:{r:2.5}}),
                 e(Line,{type:"monotone",dataKey:"pending",name:"Outstanding balances",stroke:"#f59e0b",strokeWidth:2.2,strokeDasharray:"6 4",dot:{r:2.2}})))),
 
-        e(RotationPlanner,{samples:samples}),
+        e(RotationPlanner,{lang,samples:samples}),
 
         /* Module 5 — CROP PATHOLOGY · asynchronous dictionary */
-        e(Panel,{title:"Crop Pathology Log · Disease & Treatment Intelligence",icon:"stethoscope",cls:"2xl:col-span-2",
+        e(Panel,{title:uiText(lang,"pathology")+" · Disease & Treatment Intelligence",icon:"stethoscope",cls:"2xl:col-span-2",
           right:e("span",{className:"rounded-full border border-red-800/70 bg-red-950/30 px-2 py-1 text-[10px] font-bold text-red-200"},diseases?diseases.length+" classifications":"loading…")},
           /* control sector — category tabs with count badges + fuzzy search */
           e("div",{className:"flex flex-wrap items-center gap-1.5"},

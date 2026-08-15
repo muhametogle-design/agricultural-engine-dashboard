@@ -27,7 +27,7 @@ def test_dashboard_served():
     r = client.get("/dashboard")
     assert r.status_code == 200
     for marker in (
-        "Native trees", "Ziziphus mauritiana", "base-active", "Soil engine",
+        "Native Somali Trees", "Ziziphus mauritiana", "base-active", 'id:"soil",key:"soil"',
         "Soil amendment required", "ringAreaM2", "renderSim",
         "World_Imagery", "mt{s}.google.com", "Field Intelligence Map",
         "SQUARE v4", "map-frame", "map-summary", "map-aoi-count",
@@ -36,12 +36,16 @@ def test_dashboard_served():
         "Local HWSD pH overlay", "local-sampler=v1",
         "hwsdPhPane", "hwsd-ph-raster", "ph-ranges=v2", "Distinct pH ranges",
         "alphaFlora", "plant-pathology-select", "Applicable pathology for",
+        "agri.shared.js", "seedOils", "lang-toggle", "SOM | ENG",
+        "indexedDB", "openFarmAnalytics", "recordFarmEvent", "restoreFarmRecords",
         "overscroll-behavior:contain", "scrollbar-gutter:stable",
         "#left,#right,#map-shell", "overflow-y:auto!important",
     ):
         assert marker in r.text
     assert "f.icon" not in r.text
     assert "GRP_ICON" not in r.text
+    assert "Demo plot" not in r.text
+    assert "demoPlot" not in r.text
 
 
 def test_lims_dashboard_is_modular_and_offline_safe():
@@ -53,25 +57,34 @@ def test_lims_dashboard_is_modular_and_offline_safe():
     page = client.get("/lims")
     assert page.status_code == 200
     assert "/web/lims.src.js" in page.text
+    assert "/web/agri.shared.js" in page.text
     assert "/web/vendor/react.min.js" in page.text
     assert ".strategic-planner h2" in page.text
     assert "font-size:19px" in page.text
     assert "https://" not in page.text
 
+    shared = client.get("/web/agri.shared.js")
+    assert shared.status_code == 200
+    for marker in ("Ciid", "Dhoobo", "Khudaar", "Midho", "Beer", "Cudurada", "Saliidda Abuurka", "seedOils", "Oil Palm", "Jojoba", "2026.08-regional-200", "minimumRegionalCount:200"):
+        assert marker in shared.text
+    assert "const profiles=" in shared.text
+    assert "const names=" in shared.text
+    assert "regionalProduceCount:produce.length" in shared.text
+
     source = client.get("/web/lims.src.js")
     assert source.status_code == 200
     for marker in (
-        "Technical Engineer on Duty",
+        'uiText(props.lang||"en","engineer")',
         "Monthly Lab Analytics",
         "Daily Work History",
         "Soil Analysis Certificate",
         "PAYMENT_METHODS",
         '"ZAAD","SAHAL","EDAHAB","CASH","EVCPLUS","BANK"',
-        "Crop Pathology Log",
+        'uiText(lang,"pathology")',
         "loadDiseaseDictionary",
         "Writable Farmer Field Issue Logger",
         "linked to the current pathology filters",
-        "5-Year Strategic Crop Planning & Rotation",
+        'uiText(lang,"planner")',
         "parseCropPlan",
         "Root Depth Profile",
         "Nitrogen Demand Category",
@@ -85,9 +98,13 @@ def test_lims_dashboard_is_modular_and_offline_safe():
         "Broccoli",
         "CROP_VARIETY_EXPANSION",
         "REGIONAL_PRODUCE_EXPANSION",
+        "SHARED_CROP_LIBRARY",
+        "SHARED_DISEASE_VECTOR",
         "DISEASE_EXPANSION",
         "linkedPathologies",
         "Associated pathology selection",
+        "Seed Oil",
+        "SOM",
         "strategic-planner",
         "NO TAX · NO FEES",
         "GIS_ENGINE_URL",

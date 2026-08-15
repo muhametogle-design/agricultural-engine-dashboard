@@ -276,18 +276,19 @@ arrive as `Decimal` (repository boundary now normalizes to float).
   pathology/treatment logging, and CSV-driven five-year rotation planning.
 * Farmer/client names are writable, diagnoses stay linked to active pathology
   filters, and every planner season label accepts suggestions or custom text.
-* The enterprise planner now ships 207 crop records: 51 core rules, 76 named
-  varieties and 80 regional African/Middle Eastern entries (109 vegetables,
-  77 fruits and 5 multipurpose trees). It supports CSV mapping, drag/drop,
-  lifecycle forecasting and agronomic compliance.
-* Every planner crop carries an applicable pathology array; selecting a crop opens
-  a species/family-specific pathology selector with cause, symptoms and response.
-  The standalone GIS plant cards expose the same selectable pathology workflow.
-* Pathology contains 79 detailed classifications spanning fruit trees, citrus,
-  vegetables, cereals and legumes. Financial intake remains tax- and fee-free.
-* GIS square-v4 keeps isolated scroll regions, renders FAO/HWSD pH in a dedicated
-  color pane with a visible seven-range legend, and alphabetizes text-only plant
-  cards. Scoped planner typography raises labels and controls to 12–19 px.
+* `app/web/agri.shared.js` is now the cross-module source of truth. It contributes
+  215 named East African/Middle Eastern produce cultivars plus seven Seed Oil and
+  seven regional tree profiles to both GIS and LIMS in one update path.
+* Seed Oil / `Saliidda Abuurka` includes sesame, oil palm, sunflower, castor,
+  niger seed, olive and jojoba, each with linked `Cudurada` records. Every shared
+  crop/tree carries selectable pathology cause, symptom and response data.
+* A persistent `SOM | ENG` switch shares language state across pages and includes
+  the native seeds Ciid, Dhoobo, Khudaar, Midho, Beer, Cudurada and Saliidda Abuurka.
+* Static Demo Plot creation was removed. Custom GIS polygons persist in IndexedDB
+  with coordinates and Ciid/test/pathology event history; Monthly Farm Analytics
+  aggregates pH, N/P/K trends and Cudurada alerts across saved Beer records.
+* GIS retains isolated scroll regions and a seven-range FAO/HWSD pH pane; its
+  alphabetized text-only plant cards expose species-specific pathology selectors.
 
 ## Production notes
 
