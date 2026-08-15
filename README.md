@@ -281,7 +281,8 @@ arrive as `Decimal` (repository boundary now normalizes to float).
   search/filter/sort and drag/drop, and projects lifecycle, diversity and field
   health. Compliance flags family repetition, sequential heavy feeders and pH.
 * The GIS link detects standalone `/web` hosting and opens the bundled dashboard
-  instead of the FastAPI-only route.
+  instead of the FastAPI-only route. Its map uses a compact responsive viewport,
+  high-contrast permanent laboratory/AOI labels and readable 14–16 px annotations.
 
 ## Production notes
 

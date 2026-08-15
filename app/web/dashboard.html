@@ -22,6 +22,29 @@
   .soil-active{outline:2px solid #38bdf8;outline-offset:-2px}
   button:focus-visible,input:focus-visible{outline:2px solid #34d399;outline-offset:1px}
 
+  /* Compact, high-contrast map workspace */
+  #map-shell{background:linear-gradient(145deg,#111827,#0f172a);}
+  .map-frame{height:clamp(360px,60vh,620px);box-shadow:0 18px 55px rgba(2,6,23,.48)}
+  .leaflet-container{font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;background:#0f172a}
+  .leaflet-control{font-size:14px}
+  .leaflet-popup-content{font-size:15px;line-height:1.55;margin:14px 16px}
+  .leaflet-tooltip.map-label,
+  .leaflet-tooltip.lab-map-label{border:1px solid rgba(255,255,255,.28);border-radius:9px;box-shadow:0 5px 18px rgba(2,6,23,.55);white-space:nowrap}
+  .leaflet-tooltip.map-label{background:rgba(15,23,42,.94);color:#f8fafc;font-size:15px;font-weight:700;padding:7px 10px;text-align:center}
+  .leaflet-tooltip.map-label b{display:block;color:#6ee7b7;font-size:16px;line-height:1.2}
+  .leaflet-tooltip.map-label span{color:#cbd5e1;font-size:13px;font-weight:600}
+  .leaflet-tooltip.lab-map-label{background:rgba(6,78,59,.96);color:#fff;font-size:16px;font-weight:800;padding:8px 11px}
+  .leaflet-tooltip.lab-map-label small{display:block;color:#d1fae5;font-size:13px;font-weight:600;margin-top:2px}
+  .leaflet-tooltip.map-label:before{border-top-color:rgba(15,23,42,.94)}
+  .leaflet-tooltip-top.lab-map-label:before{border-top-color:rgba(6,78,59,.96)}
+  .leaflet-tooltip-right.lab-map-label:before{border-right-color:rgba(6,78,59,.96)}
+  .leaflet-tooltip-left.lab-map-label:before{border-left-color:rgba(6,78,59,.96)}
+  @media (min-width:1280px){
+    #map-shell{flex:0 1 45vw;min-width:420px;max-width:760px}
+    #right{flex:1 1 430px;min-width:430px;max-width:760px;width:auto}
+  }
+  @media (max-width:1279px){#map-shell{max-width:none}.map-frame{height:clamp(380px,68vh,680px)}}
+
   /* Orbital logo */
   .orbit-sat{animation:orbit 7s linear infinite;transform-origin:24px 24px}
   @keyframes orbit{to{transform:rotate(360deg)}}
@@ -53,18 +76,12 @@
   html[data-theme="light"] .tab-active{background:#059669!important;color:#fff!important}
   html[data-theme="light"] .hist-chip{color:#334155!important}
 
-  /* ── PRINT: certificate only; NASA banner + lineage (data-no-print) statically stripped ── */
+  /* ── PRINT: certificate only; map/data chrome stays hidden ── */
   @media print{
     body *{visibility:hidden}
     .cert-wrap,.cert-wrap *{visibility:visible}
     .cert-wrap{position:absolute;inset:0;overflow:visible;background:#fff}
     #ph-legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:2px}
-
-  /* ── PRINT: certificate only; NASA banner + lineage statically stripped ── */
-  @media print{
-    body *{visibility:hidden}
-    .cert-wrap,.cert-wrap *{visibility:visible}
-    .cert-wrap{position:absolute;inset:0;overflow:visible;background:#fff}
     .data-node,.cert-hidden,[data-no-print]{display:none!important}
     aside,header,main,footer{display:none!important}
   }
@@ -99,22 +116,22 @@
   <div class="flex items-center gap-1.5 text-[11px] text-slate-500"><span id="api-led" class="w-2 h-2 rounded-full bg-slate-600"></span><span id="api-text">API…</span></div>
   <button id="theme-btn" onclick="toggleTheme()" role="switch" aria-checked="true" aria-label="Switch to light mode" title="Toggle light / dark mode"
           class="px-2.5 py-1.5 rounded-lg border border-slate-800 hover:border-emerald-500 text-sm">🌙</button>
-  <button onclick="toggleRight()" aria-label="Toggle database panel" class="lg:hidden p-1.5 rounded hover:bg-slate-800">🌿</button>
+  <button onclick="toggleRight()" aria-label="Toggle database panel" class="xl:hidden p-1.5 rounded hover:bg-slate-800">🌿</button>
 </header>
 
 <div class="flex flex-1 min-h-0 relative">
 
   <!-- ══ LEFT SIDEBAR ══ -->
-  <aside id="left" class="w-72 bg-slate-950 border-r border-slate-800 flex flex-col z-20 flex-none
+  <aside id="left" class="w-80 bg-slate-950 border-r border-slate-800 flex flex-col z-20 flex-none
          absolute lg:static h-full -translate-x-full lg:translate-x-0 transition-transform overflow-y-auto">
     <nav class="p-2 border-b border-slate-800 flex-none">
       <button class="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg bg-emerald-950/60 text-emerald-300 text-sm">🗺️ Map & AOIs</button>
     </nav>
     <div class="p-3 border-b border-slate-800 flex-none">
-      <div class="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Basemap</div>
+      <div class="text-sm font-bold uppercase tracking-wide text-slate-300 mb-2">Basemap</div>
       <div id="basemaps" class="grid grid-cols-2 gap-2"></div>
-      <div class="mt-2.5 text-[10px] uppercase tracking-widest text-slate-500 mb-1">Data overlay</div>
-      <label class="flex items-center gap-1.5 text-[11px] text-slate-400 select-none cursor-pointer">
+      <div class="mt-3 text-sm font-bold uppercase tracking-wide text-slate-300 mb-1.5">Data overlay</div>
+      <label class="flex items-center gap-2 text-sm font-medium text-slate-300 select-none cursor-pointer">
         <input type="checkbox" id="ov-ph" onchange="togglePhOverlay(this.checked)"/> 🗺️ FAO topsoil pH map (HWSD v2.0)
       </label>
       <div id="ph-legend" class="hidden mt-2 rounded-lg bg-slate-900 border border-slate-800 p-2">
@@ -132,7 +149,7 @@
       </div>
     </div>
     <div class="p-3 border-b border-slate-800 flex-none">
-      <div class="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Polygon engine</div>
+      <div class="text-sm font-bold uppercase tracking-wide text-slate-300 mb-2">Polygon engine</div>
       <div class="flex gap-2 flex-wrap">
         <button id="btn-draw" onclick="startDraw()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold">＋ Draw AOI</button>
         <button id="btn-finish" onclick="finishDraw()" class="hidden px-3 py-1.5 rounded-lg bg-amber-600 text-xs font-semibold">✔ Finish</button>
@@ -157,35 +174,35 @@
 
     <!-- LABORATORY ANALYTICS SIDEBAR -->
     <div class="p-3 border-b border-slate-800 flex-none">
-      <div class="text-[10px] uppercase tracking-widest text-slate-500 mb-2">🧪 Laboratory Analytics</div>
-      <div class="grid grid-cols-4 gap-1.5 text-[11px]">
-        <label class="col-span-1"><span class="text-[9px] text-slate-500">pH</span>
+      <div class="text-sm font-extrabold uppercase tracking-wide text-violet-300 mb-2">🧪 Laboratory Analytics</div>
+      <div class="grid grid-cols-4 gap-2 text-sm">
+        <label class="col-span-1"><span class="text-xs font-semibold text-slate-300">pH</span>
           <input id="lab-ph" inputmode="decimal" placeholder="7.4" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1.5"/></label>
-        <label class="col-span-1"><span class="text-[9px] text-slate-500">EC dS/m</span>
+        <label class="col-span-1"><span class="text-xs font-semibold text-slate-300">EC dS/m</span>
           <input id="lab-ec" inputmode="decimal" placeholder="1.2" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1.5"/></label>
-        <label class="col-span-1"><span class="text-[9px] text-slate-500">OM %</span>
+        <label class="col-span-1"><span class="text-xs font-semibold text-slate-300">OM %</span>
           <input id="lab-om" inputmode="decimal" placeholder="1.0" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1.5"/></label>
-        <label class="col-span-1"><span class="text-[9px] text-slate-500">&nbsp;</span>
-          <div class="px-1 py-1.5 text-[9px] text-slate-600">measured</div></label>
+        <label class="col-span-1"><span class="text-xs font-semibold text-slate-300">&nbsp;</span>
+          <div class="px-1 py-1.5 text-xs text-slate-400">measured</div></label>
         <label class="col-span-4 grid grid-cols-3 gap-1.5">
-          <span><span class="text-[9px] text-slate-500">N nitrate ppm</span>
+          <span><span class="text-xs font-semibold text-slate-300">N nitrate ppm</span>
             <input id="lab-n" inputmode="decimal" placeholder="e.g. 18" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1.5"/></span>
-          <span><span class="text-[9px] text-slate-500">P olsen ppm</span>
+          <span><span class="text-xs font-semibold text-slate-300">P olsen ppm</span>
             <input id="lab-p" inputmode="decimal" placeholder="e.g. 9" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1.5"/></span>
-          <span><span class="text-[9px] text-slate-500">K exch. ppm</span>
+          <span><span class="text-xs font-semibold text-slate-300">K exch. ppm</span>
             <input id="lab-k" inputmode="decimal" placeholder="e.g. 140" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1.5"/></span>
         </label>
       </div>
       <div class="mt-1.5 flex gap-1.5">
-        <input id="client-name" placeholder="Client / farmer name" oninput="saveClient()" class="flex-1 bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-[11px]"/>
+        <input id="client-name" placeholder="Client / farmer name" oninput="saveClient()" class="flex-1 bg-slate-900 border border-slate-700 rounded px-2.5 py-2 text-sm"/>
       </div>
       <div class="mt-2 grid grid-cols-2 gap-1.5">
-        <button onclick="applyLab()" title="Manual field-kit entry always overrides" class="px-3 py-1.5 rounded-lg bg-sky-700 hover:bg-sky-600 text-white text-xs font-semibold">✏️ Apply manual sample</button>
-        <button onclick="autoLab()" title="Auto-generate from FAO/IIASA HWSD v2.0" class="px-3 py-1.5 rounded-lg bg-violet-700 hover:bg-violet-600 text-white text-xs font-semibold">🛰 Auto-fill (HWSD)</button>
-        <button onclick="issueCertificate()" class="col-span-2 px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold">📜 Generate Digital Certificate</button>
+        <button onclick="applyLab()" title="Manual field-kit entry always overrides" class="px-3 py-2 rounded-lg bg-sky-700 hover:bg-sky-600 text-white text-sm font-semibold">✏️ Apply manual sample</button>
+        <button onclick="autoLab()" title="Auto-generate from FAO/IIASA HWSD v2.0" class="px-3 py-2 rounded-lg bg-violet-700 hover:bg-violet-600 text-white text-sm font-semibold">🛰 Auto-fill (HWSD)</button>
+        <button onclick="issueCertificate()" class="col-span-2 px-3 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold">📜 Generate Digital Certificate</button>
       </div>
-      <label class="mt-1.5 flex items-center gap-1.5 text-[10px] text-slate-500 select-none"><input type="checkbox" id="lab-auto-aoi" checked/> auto-sample HWSD v2.0 for every new polygon</label>
-      <div id="lab-verdict" class="mt-1.5 text-[10px] text-slate-600">Manual entry wins · if blank, pH/OM/N are generated from the FAO/IIASA HWSD v2.0 raster.</div>
+      <label class="mt-2 flex items-center gap-2 text-xs font-medium text-slate-300 select-none"><input type="checkbox" id="lab-auto-aoi" checked/> auto-sample HWSD v2.0 for every new polygon</label>
+      <div id="lab-verdict" class="mt-2 text-sm leading-relaxed text-slate-300">Manual entry wins · if blank, pH/OM/N are generated from the FAO/IIASA HWSD v2.0 raster.</div>
     </div>
 
     <!-- HISTORICAL DATA LOG -->
@@ -208,19 +225,27 @@
   </aside>
   <div id="left-scrim" onclick="toggleLeft()" class="hidden absolute inset-0 bg-black/50 z-10 lg:hidden"></div>
 
-  <!-- ══ MAP ══ -->
-  <main class="flex-1 min-w-0 relative"><div id="map" class="absolute inset-0"></div></main>
+  <!-- ══ COMPACT MAP WORKSPACE ══ -->
+  <main id="map-shell" class="flex-1 min-w-0 relative flex items-center justify-center p-2 sm:p-3">
+    <div class="map-frame relative w-full overflow-hidden rounded-2xl border border-slate-700/80 bg-slate-950">
+      <div id="map" class="absolute inset-0"></div>
+      <div class="pointer-events-none absolute left-3 top-3 z-[500] rounded-xl border border-white/20 bg-slate-950/90 px-3 py-2 shadow-xl backdrop-blur">
+        <div class="text-sm font-extrabold text-white">Compact Field Map</div>
+        <div class="text-xs font-medium text-slate-300">Laboratories · AOIs · soil annotations</div>
+      </div>
+    </div>
+  </main>
 
   <!-- ══ RIGHT SIDEBAR ══ -->
-  <aside id="right" class="w-[430px] bg-slate-950 border-l border-slate-800 flex flex-col z-20 flex-none
-         absolute right-0 h-full translate-x-full lg:translate-x-0 lg:static transition-transform">
+  <aside id="right" class="w-[470px] bg-slate-950 border-l border-slate-800 flex flex-col z-20 flex-none
+         absolute right-0 h-full translate-x-full xl:translate-x-0 xl:static transition-transform">
     <div class="p-3 border-b border-slate-800 flex-none">
       <div class="flex items-center justify-between">
         <div>
           <div class="font-bold text-emerald-300 text-sm">Global Crops · Fruits · Vegetables</div>
           <div class="text-[11px] text-slate-500">152-entry seed · tap an item → simulation sizes to your polygon</div>
         </div>
-        <button onclick="toggleRight()" class="lg:hidden text-slate-500">✕</button>
+        <button onclick="toggleRight()" class="xl:hidden text-slate-500">✕</button>
       </div>
       <input id="flora-search" oninput="onSearch()" placeholder="Search Somali / English / scientific…"
              aria-label="Search flora database" class="mt-2 w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm placeholder:text-slate-600"/>
@@ -337,11 +362,25 @@ let activeBase="Esri World Imagery";
 const baseBox=document.getElementById("basemaps");
 Object.keys(BASES).forEach(n=>{
  const b=document.createElement("button");b.textContent=n;b.dataset.name=n;
- b.className="px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-[11px] hover:border-emerald-500 "+(n===activeBase?"base-active":"");
+ b.className="px-2.5 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm font-semibold hover:border-emerald-500 "+(n===activeBase?"base-active":"");
  b.onclick=()=>{if(n===activeBase)return;map.removeLayer(BASES[activeBase]);BASES[n].addTo(map);activeBase=n;
   baseBox.querySelectorAll("button").forEach(x=>x.classList.toggle("base-active",x.dataset.name===n));};
  baseBox.appendChild(b);});
 BASES[activeBase].addTo(map);
+
+/* High-visibility laboratory reference points */
+const LAB_SITES=[
+ {name:"Afgooye Soil Laboratory",type:"Soil chemistry · LIMS",lat:2.0467,lon:45.3174,color:"#a78bfa",direction:"top"},
+ {name:"Shabelle Field Lab",type:"Water & nutrient diagnostics",lat:2.0439,lon:45.3201,color:"#38bdf8",direction:"right"},
+ {name:"Crop Health Unit",type:"Pathology & treatment",lat:2.0490,lon:45.3208,color:"#f59e0b",direction:"right"},
+];
+const labLayer=L.layerGroup().addTo(map);
+LAB_SITES.forEach(site=>{
+ L.circleMarker([site.lat,site.lon],{radius:8,color:"#fff",weight:2,fillColor:site.color,fillOpacity:1})
+  .bindTooltip(`<strong>${site.name}</strong><small>${site.type}</small>`,{
+    permanent:true,direction:site.direction,className:"lab-map-label",offset:[0,-8],opacity:1
+  }).addTo(labLayer);
+});
 
 /* FAO HWSD v2.0 topsoil-pH overlay (pre-rendered from the Somalia clip) */
 const PH_BOUNDS=[[-1.8,40.9],[12.2,51.5]];
@@ -361,23 +400,23 @@ let _probeBusy=false;
 function probeSoil(latlng){
  if(_probeBusy||!phOverlay)return;_probeBusy=true;
  const base=apiBase||location.origin;
- const pop=L.popup({maxWidth:280}).setLatLng(latlng).setContent("<div class='text-xs p-1'>⏳ Sampling FAO HWSD v2.0 topsoil…</div>").openOn(map);
+ const pop=L.popup({maxWidth:280}).setLatLng(latlng).setContent("<div class='text-sm font-semibold p-2'>⏳ Sampling FAO HWSD v2.0 topsoil…</div>").openOn(map);
  fetch(base+"/api/v1/lab/hwsd/sample?lat="+latlng.lat.toFixed(6)+"&lon="+latlng.lng.toFixed(6))
  .then(r=>r.json()).then(j=>{
-  if(!j.available){pop.setContent("<div class='text-xs p-1'>HWSD dataset not mounted on this server.</div>");return;}
+  if(!j.available){pop.setContent("<div class='text-sm font-semibold p-2'>HWSD dataset not mounted on this server.</div>");return;}
   const s=j.sample;
-  if(!s||s.ph==null){pop.setContent("<div class='text-xs p-1'>Outside the soil grid at this point.</div>");return;}
+  if(!s||s.ph==null){pop.setContent("<div class='text-sm font-semibold p-2'>Outside the soil grid at this point.</div>");return;}
   const phCol=s.ph<5.5?"#2d9c3c":s.ph<6.5?"#7bc043":s.ph<7?"#c8da48":s.ph<7.5?"#f4d03f":s.ph<8?"#f39c12":s.ph<8.5?"#e67e22":"#c0392b";
-  pop.setContent("<div class='p-1' style='font-size:12px;line-height:1.35'>"
+  pop.setContent("<div class='p-2' style='font-size:14px;line-height:1.5'>"
    +"<div style='font-weight:700;margin-bottom:2px'>🛰 FAO topsoil reading <span style='color:#64748b'>0–20 cm</span></div>"
-   +"<div style='font-size:22px;font-weight:700'><span style='display:inline-block;width:14px;height:14px;border-radius:3px;background:"+phCol+";margin-right:4px'></span>pH "+s.ph+"</div>"
+   +"<div style='font-size:26px;font-weight:800'><span style='display:inline-block;width:14px;height:14px;border-radius:3px;background:"+phCol+";margin-right:4px'></span>pH "+s.ph+"</div>"
    +"<div>Organic matter: <b>"+(s.om_pct??"—")+"%</b> · Total N: <b>"+(s.nitrogen_pct??"—")+"%</b></div>"
    +"<div>Texture: clay <b>"+(s.clay_pct??"—")+"%</b> · sand <b>"+(s.sand_pct??"—")+"%</b> · silt <b>"+(s.silt_pct??"—")+"%</b></div>"
    +"<div>CEC: <b>"+(s.cec??"—")+"</b> · WRB class: <b>"+(s.wrb??"—")+"</b> · MU "+s.mu_id+"</div>"
-   +"<div style='font-size:10px;color:#64748b;margin-top:2px'>"+s.source+(s.nearest_km?" · nearest profiled pixel "+s.nearest_km+" km away":"")+"</div>"
-   +"<button onclick='probeToLab()' class='mt-1 px-2 py-1 rounded' style='background:#6d28d9;color:#fff;font-size:11px;margin-top:4px'>⤵ Use as lab baseline</button></div>");
+   +"<div style='font-size:12px;font-weight:600;color:#64748b;margin-top:4px'>"+s.source+(s.nearest_km?" · nearest profiled pixel "+s.nearest_km+" km away":"")+"</div>"
+   +"<button onclick='probeToLab()' class='mt-1 px-2 py-1 rounded' style='background:#6d28d9;color:#fff;font-size:13px;font-weight:700;margin-top:6px'>⤵ Use as lab baseline</button></div>");
   window._probeSample=s;
- }).catch(()=>pop.setContent("<div class='text-xs p-1'>HWSD endpoint unreachable.</div>"))
+ }).catch(()=>pop.setContent("<div class='text-sm font-semibold p-2'>HWSD endpoint unreachable.</div>"))
  .finally(()=>{_probeBusy=false;});
 }
 function probeToLab(){
@@ -394,6 +433,11 @@ const fmtHa=m2=>(m2/1e4).toLocaleString(undefined,{maximumFractionDigits:2})+" h
 const fmtAc=m2=>(m2/4046.8564224).toLocaleString(undefined,{maximumFractionDigits:2})+" ac";
 const fnum=(x,d=1)=>x.toLocaleString(undefined,{maximumFractionDigits:d});
 function aoiM2(a){if(!a.dirty&&a._m2!=null)return a._m2;a._m2=ringAreaM2(a.poly.getLatLngs()[0]);a.dirty=false;return a._m2;}  /* cached: recompute only on vertex mutation */
+function updateAoiMapLabel(a){
+ const content=`<b>${a.name}</b><span>${fmtHa(aoiM2(a))}</span>`;
+ if(a.poly.getTooltip())a.poly.setTooltipContent(content);
+ else a.poly.bindTooltip(content,{permanent:true,direction:"center",className:"map-label",opacity:1,interactive:false});
+}
 
 /* ═══════════════ POLYGON ENGINE ═══════════════ */
 map.on("click",e=>{if(state.draw){state.draw.pts.push(e.latlng);rebuildDraft();return;}probeSoil(e.latlng);});
@@ -429,14 +473,14 @@ function dropVertex(a,i){const ll=a.poly.getLatLngs()[0];if(ll.length<=3){alert(
 function selectAoi(a){state.selected=a;state.aois.forEach(x=>{const on=x===a;x.poly.setStyle({weight:on?3:2,fillOpacity:on?.22:.15});if(x!==a&&x.editing)setEditable(x,false);});updateStats();listAois();}
 function updateStats(){document.getElementById("stat-count").textContent=state.aois.length;const a=state.selected;
  if(!a){document.getElementById("stat-ha").textContent="—";document.getElementById("stat-ac").textContent="select / draw a polygon";renderSim();return;}
- const m2=aoiM2(a);document.getElementById("stat-ha").textContent=fmtHa(m2);
+ const m2=aoiM2(a);updateAoiMapLabel(a);document.getElementById("stat-ha").textContent=fmtHa(m2);
  document.getElementById("stat-ac").textContent=fmtAc(m2)+" · "+fnum(m2,0)+" m²";
  const row=document.querySelector(`[data-aoi="${a.id}"] .aoi-area`);if(row)row.textContent=fmtHa(m2);renderSim();}
 function listAois(){const box=document.getElementById("aoi-list");box.innerHTML="";
  if(!state.aois.length){box.innerHTML='<div class="text-center text-slate-600 text-xs py-4">No areas yet — draw one or load the demo plot.</div>';return;}
  state.aois.forEach(a=>{const on=a===state.selected;const el=document.createElement("div");el.dataset.aoi=a.id;
   el.className="rounded-lg border p-2.5 mb-1.5 text-sm cursor-pointer "+(on?"border-emerald-600 bg-emerald-950/40":"border-slate-800 bg-slate-900 hover:border-slate-600");
-  el.innerHTML=`<div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full" style="background:${a.color}"></span><b>${a.name}</b><span class="flex-1"></span><span class="aoi-area text-emerald-300 font-mono text-xs">${fmtHa(aoiM2(a))}</span></div>
+  el.innerHTML=`<div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full" style="background:${a.color}"></span><b>${a.name}</b><span class="flex-1"></span><span class="aoi-area text-emerald-300 font-mono text-sm font-bold">${fmtHa(aoiM2(a))}</span></div>
    <div class="mt-1.5 flex gap-1.5 text-[11px]"><button class="px-2 py-0.5 rounded bg-slate-800 hover:bg-emerald-700" data-act="edit">${a.editing?"✔ done":"✎ vertices"}</button>
    <button class="px-2 py-0.5 rounded bg-slate-800 hover:bg-sky-700" data-act="zoom">⌖</button>
    <button class="px-2 py-0.5 rounded bg-slate-800 hover:bg-red-800 ml-auto" data-act="del">✕</button></div>`;

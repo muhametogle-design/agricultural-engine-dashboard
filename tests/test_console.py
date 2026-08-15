@@ -26,9 +26,13 @@ def test_dashboard_served():
     client = TestClient(app)
     r = client.get("/dashboard")
     assert r.status_code == 200
-    for marker in ("Native trees", "Ziziphus mauritiana", "base-active", "Soil engine",
-                   "Soil amendment required", "ringAreaM2", "renderSim",
-                   "World_Imagery", "mt{s}.google.com"):
+    for marker in (
+        "Native trees", "Ziziphus mauritiana", "base-active", "Soil engine",
+        "Soil amendment required", "ringAreaM2", "renderSim",
+        "World_Imagery", "mt{s}.google.com", "Compact Field Map",
+        "map-frame", "lab-map-label", "Afgooye Soil Laboratory",
+        "updateAoiMapLabel",
+    ):
         assert marker in r.text
 
 
