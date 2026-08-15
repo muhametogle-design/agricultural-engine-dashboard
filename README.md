@@ -311,6 +311,16 @@ arrive as `Decimal` (repository boundary now normalizes to float).
   distinguished from official Bulletin and Spatial Portal links.
 * Farm Fencing calculates geodesic perimeter, posts, strainers, gates, wire/mesh
   rolls, recommendations and equipment BOM for the selected polygon.
+* The aquifer-linked **Solar Pump Sizing** engine recalculates borehole TDH,
+  pressure head, target flow, submersible-pump HP/kW, configurable 400 W-default
+  PV module count, controller/inverter capacity, equipment and an itemized USD
+  setup estimate.
+* **Export PDF Report / Soo Dawi Warbixinta PDF** opens a self-contained,
+  exactly two-page A4 farm engineering report in the active English or Somali
+  language. It embeds the complete farm coordinates and a resolution-independent
+  SVG boundary/topographic/groundwater map, soil and nutrient results,
+  hydrogeology, crop/pathology advice and the linked solar-pump design. It uses
+  the browser print dialog (Save as PDF), so no external PDF CDN is required.
 * Monthly Farm Analytics uses `z-index: 99999`, above every Leaflet pane/control.
 
 ## Production notes
