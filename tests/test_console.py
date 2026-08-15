@@ -38,6 +38,7 @@ def test_dashboard_served():
         "alphaFlora", "plant-pathology-select", "Applicable pathology for",
         "agri.shared.js", "seedOils", "lang-toggle", "SOM | ENG",
         "indexedDB", "openFarmAnalytics", "recordFarmEvent", "restoreFarmRecords",
+        "z-index:99999", "#farm-analytics-modal", "synchronizedProduceCount",
         "overscroll-behavior:contain", "scrollbar-gutter:stable",
         "#left,#right,#map-shell", "overflow-y:auto!important",
     ):
@@ -70,6 +71,14 @@ def test_lims_dashboard_is_modular_and_offline_safe():
     assert "const profiles=" in shared.text
     assert "const names=" in shared.text
     assert "regionalProduceCount:produce.length" in shared.text
+
+    catalog = client.get("/web/regional_produce.json")
+    assert catalog.status_code == 200
+    payload = catalog.json()
+    assert payload["regionalProduceCount"] >= 200
+    assert payload["seedOilCount"] == 7
+    assert len(payload["records"]) >= 200
+    assert all(record.get("pathologies") for record in payload["records"])
 
     source = client.get("/web/lims.src.js")
     assert source.status_code == 200

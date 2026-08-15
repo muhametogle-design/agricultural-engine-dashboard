@@ -281,7 +281,8 @@ arrive as `Decimal` (repository boundary now normalizes to float).
   filters, and every planner season label accepts suggestions or custom text.
 * `app/web/agri.shared.js` is now the cross-module source of truth. It contributes
   215 named East African/Middle Eastern produce cultivars plus seven Seed Oil and
-  seven regional tree profiles to both GIS and LIMS in one update path.
+  seven regional tree profiles to both GIS and LIMS in one update path. A generated
+  `regional_produce.json` lookup exposes all 229 shared records and pathologies.
 * Seed Oil / `Saliidda Abuurka` includes sesame, oil palm, sunflower, castor,
   niger seed, olive and jojoba, each with linked `Cudurada` records. Every shared
   crop/tree carries selectable pathology cause, symptom and response data.
@@ -293,6 +294,8 @@ arrive as `Decimal` (repository boundary now normalizes to float).
   pH/N/P/K and Cudurada aggregates across tenant Beer records.
 * GIS retains isolated scroll regions and a seven-range FAO/HWSD pH pane; its
   alphabetized text-only plant cards expose species-specific pathology selectors.
+  Monthly Farm Analytics is forced into a top-level `z-index: 99999` overlay so no
+  Leaflet pane, map canvas or control can obscure the dashboard.
 
 ## Production notes
 

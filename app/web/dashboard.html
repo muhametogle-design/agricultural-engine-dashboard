@@ -25,6 +25,9 @@
 
   /* Compact, high-contrast map workspace */
   #workspace{width:100%;min-width:0;overflow:hidden}
+  #farm-analytics-modal{position:fixed!important;inset:0!important;z-index:99999!important;isolation:isolate}
+  #farm-analytics-modal>div{position:relative;z-index:100000}
+  #cert-modal{z-index:99998!important}
   #left,#right,#map-shell{overflow-y:auto!important;overscroll-behavior:contain;scrollbar-gutter:stable}
   #map-shell{background:linear-gradient(145deg,#111827,#0f172a);display:flex;flex-direction:column;justify-content:flex-start}
   .map-frame{width:min(100%,620px);height:auto!important;max-height:none!important;aspect-ratio:1/1;flex:none;box-shadow:0 18px 55px rgba(2,6,23,.48)}
@@ -271,7 +274,7 @@
       <div class="flex items-center justify-between">
         <div>
           <div class="font-bold text-emerald-300 text-sm">Global Crops · Fruits · Vegetables</div>
-          <div class="text-[11px] text-slate-500">152-entry seed · tap an item → simulation sizes to your polygon</div>
+          <div id="produce-count" class="text-xs text-slate-400">Loading synchronized regional catalog…</div>
         </div>
         <button onclick="toggleRight()" class="xl:hidden text-slate-500">✕</button>
       </div>
@@ -306,7 +309,7 @@
 </footer>
 
 <!-- ══ MONTHLY FARM ANALYTICS MODAL ══ -->
-<div id="farm-analytics-modal" class="hidden fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Monthly Farm Analytics">
+<div id="farm-analytics-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center p-4" style="z-index:99999" role="dialog" aria-modal="true" aria-label="Monthly Farm Analytics">
   <div class="w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-2xl border border-sky-700/60 bg-slate-950 shadow-2xl">
     <div class="sticky top-0 z-10 flex items-center gap-3 border-b border-slate-800 bg-slate-950/95 px-5 py-4 backdrop-blur">
       <div><h2 data-i18n="analytics" class="text-xl font-black text-white">Monthly Farm Analytics</h2><p class="text-sm text-slate-400">Permanent polygon coordinates · Ciid tests · pH/nutrient trends · Cudurada alerts</p></div>
@@ -1022,6 +1025,8 @@ const DB={
  crops:CROPS_JSON.map(e=>enrich(e,"crop","crop")).concat(SHARED_CATALOG.filter(item=>item.category==="Field Crops").map(sharedFlora)),
  vegetables:VEG_JSON.map(e=>enrich(e,"crop","veg")).concat(SHARED_CATALOG.filter(item=>item.category==="Vegetables").map(sharedFlora)),
 };
+const synchronizedProduceCount=DB.nativeTrees.length+DB.fruitGroups.reduce((sum,[,items])=>sum+items.length,0)+DB.seedOils.length+DB.crops.length+DB.vegetables.length;
+const produceCountNode=document.getElementById("produce-count");if(produceCountNode)produceCountNode.textContent=`${synchronizedProduceCount} synchronized entries · A–Z · linked Cudurada`;
 
 /* ═══════ SPEC-5 · LAB OVERRIDE + NPK sufficiency + health score ═══════ */
 const N_BAND=v=>v==null?["untested","slate"]:v<10?["LOW","red"]:v<=25?["adequate","emerald"]:["HIGH","sky"];
