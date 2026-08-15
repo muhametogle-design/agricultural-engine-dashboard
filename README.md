@@ -276,7 +276,10 @@ arrive as `Decimal` (repository boundary now normalizes to float).
   pathology/treatment logging, and CSV-driven five-year rotation planning.
 * Farmer/client names are writable, diagnoses stay linked to active pathology
   filters, and every planner season label accepts suggestions or custom text.
-  Structured and wide-matrix CSV imports flag pH and consecutive-family risk.
+* The enterprise five-year planner ships 51 fallback crop rules (21 vegetables,
+  14 fruits), maps family/root-depth/nitrogen/pH/maturity CSV columns, supports
+  search/filter/sort and drag/drop, and projects lifecycle, diversity and field
+  health. Compliance flags family repetition, sequential heavy feeders and pH.
 * The GIS link detects standalone `/web` hosting and opens the bundled dashboard
   instead of the FastAPI-only route.
 

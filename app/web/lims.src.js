@@ -182,33 +182,72 @@ const ENGINEERS = [
 ];
 
 /* ═════════ MODULE 6 · FIVE-YEAR ROTATION DATA ENGINE ═════════ */
-const SEASONS = ["Gu","Deyr"];
 const SEASON_SUGGESTIONS = ["Gu","Deyr","Xagaa","Jilaal","Hagaa","Rabi","Kharif","Dry season","Wet season"];
+function crop(id,name,category,family,rootDepth,nitrogenDemand,minPh,maxPh,maturityDays,seasons,color){
+  return {id,name,category,family,rootDepth,nitrogenDemand,minPh,maxPh,maturityDays,seasons,color};
+}
 const CROP_LIBRARY = [
-  {id:"maize",name:"Maize",family:"Poaceae",minPh:5.5,maxPh:7.5,color:"#f59e0b"},
-  {id:"sorghum",name:"Sorghum",family:"Poaceae",minPh:5.5,maxPh:8.5,color:"#fb923c"},
-  {id:"pearl_millet",name:"Pearl Millet",family:"Poaceae",minPh:5.0,maxPh:8.5,color:"#eab308"},
-  {id:"cowpea",name:"Cowpea",family:"Fabaceae",minPh:5.5,maxPh:7.5,color:"#22c55e"},
-  {id:"beans",name:"Beans",family:"Fabaceae",minPh:5.5,maxPh:7.5,color:"#10b981"},
-  {id:"mung_bean",name:"Mung Bean",family:"Fabaceae",minPh:6.0,maxPh:7.5,color:"#34d399"},
-  {id:"groundnut",name:"Groundnut",family:"Fabaceae",minPh:5.8,maxPh:7.2,color:"#84cc16"},
-  {id:"sesame",name:"Sesame",family:"Pedaliaceae",minPh:5.5,maxPh:8.0,color:"#facc15"},
-  {id:"tomato",name:"Tomato",family:"Solanaceae",minPh:5.5,maxPh:7.5,color:"#ef4444"},
-  {id:"onion",name:"Onion",family:"Amaryllidaceae",minPh:6.0,maxPh:7.2,color:"#a78bfa"},
-  {id:"garlic",name:"Garlic",family:"Amaryllidaceae",minPh:6.0,maxPh:7.5,color:"#c4b5fd"},
-  {id:"watermelon",name:"Watermelon",family:"Cucurbitaceae",minPh:5.5,maxPh:7.5,color:"#f43f5e"},
-  {id:"butternut",name:"Butternut",family:"Cucurbitaceae",minPh:5.8,maxPh:7.2,color:"#f97316"},
-  {id:"red_kuri",name:"Red Kuri",family:"Cucurbitaceae",minPh:5.8,maxPh:7.2,color:"#dc2626"},
-  {id:"cabbage",name:"Cabbage",family:"Brassicaceae",minPh:6.0,maxPh:7.5,color:"#14b8a6"},
-  {id:"green_manure",name:"Green Manure",family:"Fabaceae",minPh:5.5,maxPh:7.8,color:"#059669"},
-  {id:"banana",name:"Banana",family:"Musaceae",minPh:5.5,maxPh:7.5,color:"#fde047"},
-  {id:"mango",name:"Mango",family:"Anacardiaceae",minPh:5.5,maxPh:8.0,color:"#fbbf24"},
+  crop("maize","Maize","Cereal","Poaceae","Medium","Heavy Feeder",5.5,7.5,90,["Gu","Deyr"],"#f59e0b"),
+  crop("sorghum","Sorghum","Cereal","Poaceae","Deep","Light Feeder",5.5,8.5,110,["Gu","Xagaa"],"#fb923c"),
+  crop("pearl_millet","Pearl Millet","Cereal","Poaceae","Medium","Light Feeder",5.0,8.5,75,["Gu","Xagaa"],"#eab308"),
+  crop("rice","Rice","Cereal","Poaceae","Shallow","Heavy Feeder",5.5,7.0,120,["Gu","Deyr"],"#fde047"),
+  crop("wheat","Wheat","Cereal","Poaceae","Medium","Heavy Feeder",6.0,7.5,120,["Jilaal","Rabi"],"#d6b981"),
+  crop("barley","Barley","Cereal","Poaceae","Medium","Light Feeder",6.0,8.0,100,["Jilaal","Rabi"],"#c4a46b"),
+  crop("cowpea","Cowpea","Legume","Fabaceae","Deep","Nitrogen Fixer",5.5,7.5,75,["Gu","Deyr"],"#22c55e"),
+  crop("beans","Common Beans","Legume","Fabaceae","Medium","Nitrogen Fixer",5.5,7.5,85,["Gu","Deyr"],"#10b981"),
+  crop("mung_bean","Mung Bean","Legume","Fabaceae","Medium","Nitrogen Fixer",6.0,7.5,65,["Gu","Deyr"],"#34d399"),
+  crop("groundnut","Groundnut","Legume","Fabaceae","Medium","Nitrogen Fixer",5.8,7.2,110,["Gu"],"#84cc16"),
+  crop("soybean","Soybean","Legume","Fabaceae","Deep","Nitrogen Fixer",6.0,7.0,120,["Gu"],"#65a30d"),
+  crop("chickpea","Chickpea","Legume","Fabaceae","Deep","Nitrogen Fixer",6.0,8.0,110,["Jilaal","Rabi"],"#a3e635"),
+  crop("pigeon_pea","Pigeon Pea","Legume","Fabaceae","Deep","Nitrogen Fixer",5.0,8.0,180,["Gu"],"#4d7c0f"),
+  crop("green_manure","Green Manure","Cover Crop","Fabaceae","Medium","Nitrogen Fixer",5.5,7.8,60,["Any window"],"#059669"),
+  crop("sesame","Sesame","Oilseed","Pedaliaceae","Deep","Light Feeder",5.5,8.0,100,["Gu","Deyr"],"#facc15"),
+  crop("sunflower","Sunflower","Oilseed","Asteraceae","Deep","Heavy Feeder",6.0,7.5,110,["Gu"],"#fbbf24"),
+
+  crop("tomato","Tomato","Vegetable","Solanaceae","Deep","Heavy Feeder",5.5,7.5,100,["Deyr","Irrigated Jilaal"],"#ef4444"),
+  crop("onion","Onion","Vegetable","Amaryllidaceae","Shallow","Heavy Feeder",6.0,7.2,120,["Deyr","Jilaal"],"#a78bfa"),
+  crop("garlic","Garlic","Vegetable","Amaryllidaceae","Shallow","Heavy Feeder",6.0,7.5,150,["Jilaal"],"#c4b5fd"),
+  crop("watermelon","Watermelon","Vegetable","Cucurbitaceae","Deep","Heavy Feeder",5.5,7.5,90,["Gu","Xagaa"],"#f43f5e"),
+  crop("butternut","Butternut Squash","Vegetable","Cucurbitaceae","Deep","Heavy Feeder",5.8,7.2,110,["Gu","Deyr"],"#f97316"),
+  crop("red_kuri","Red Kuri Squash","Vegetable","Cucurbitaceae","Deep","Heavy Feeder",5.8,7.2,100,["Gu","Deyr"],"#dc2626"),
+  crop("pumpkin","Pumpkin","Vegetable","Cucurbitaceae","Deep","Heavy Feeder",5.8,7.5,110,["Gu"],"#ea580c"),
+  crop("zucchini","Zucchini","Vegetable","Cucurbitaceae","Medium","Heavy Feeder",6.0,7.5,55,["Gu","Deyr"],"#4ade80"),
+  crop("cucumber","Cucumber","Vegetable","Cucurbitaceae","Shallow","Heavy Feeder",5.8,7.0,65,["Gu","Deyr"],"#2dd4bf"),
+  crop("cabbage","Cabbage","Vegetable","Brassicaceae","Shallow","Heavy Feeder",6.0,7.5,100,["Deyr","Jilaal"],"#14b8a6"),
+  crop("cauliflower","Cauliflower","Vegetable","Brassicaceae","Shallow","Heavy Feeder",6.0,7.5,100,["Deyr","Jilaal"],"#e2e8f0"),
+  crop("broccoli","Broccoli","Vegetable","Brassicaceae","Shallow","Heavy Feeder",6.0,7.5,90,["Deyr","Jilaal"],"#16a34a"),
+  crop("carrot","Carrot","Vegetable","Apiaceae","Medium","Light Feeder",6.0,7.0,90,["Deyr","Jilaal"],"#fb923c"),
+  crop("potato","Potato","Vegetable","Solanaceae","Shallow","Heavy Feeder",5.0,6.5,100,["Deyr","Jilaal"],"#ca8a04"),
+  crop("sweet_potato","Sweet Potato","Vegetable","Convolvulaceae","Deep","Heavy Feeder",5.5,6.8,120,["Gu","Deyr"],"#c2410c"),
+  crop("okra","Okra","Vegetable","Malvaceae","Deep","Light Feeder",6.0,7.5,70,["Gu","Xagaa"],"#22c55e"),
+  crop("eggplant","Eggplant","Vegetable","Solanaceae","Deep","Heavy Feeder",5.5,7.2,120,["Gu","Deyr"],"#7c3aed"),
+  crop("chili_pepper","Chili Pepper","Vegetable","Solanaceae","Medium","Heavy Feeder",5.8,7.0,120,["Gu","Deyr"],"#dc2626"),
+  crop("lettuce","Lettuce","Vegetable","Asteraceae","Shallow","Heavy Feeder",6.0,7.0,50,["Deyr","Jilaal"],"#86efac"),
+  crop("spinach","Spinach","Vegetable","Amaranthaceae","Shallow","Heavy Feeder",6.0,7.5,45,["Deyr","Jilaal"],"#15803d"),
+  crop("beetroot","Beetroot","Vegetable","Amaranthaceae","Medium","Heavy Feeder",6.0,7.5,70,["Deyr","Jilaal"],"#be123c"),
+
+  crop("banana","Banana","Fruit","Musaceae","Shallow","Heavy Feeder",5.5,7.5,365,["Year-round irrigation"],"#fde047"),
+  crop("mango","Mango","Fruit","Anacardiaceae","Deep","Light Feeder",5.5,8.0,1095,["Gu establishment"],"#fbbf24"),
+  crop("papaya","Papaya","Fruit","Caricaceae","Medium","Heavy Feeder",5.5,7.0,270,["Gu","Year-round irrigation"],"#f97316"),
+  crop("orange","Sweet Orange","Fruit","Rutaceae","Deep","Heavy Feeder",5.5,7.5,730,["Gu establishment"],"#fb923c"),
+  crop("lime","Lime","Fruit","Rutaceae","Deep","Heavy Feeder",5.5,7.5,600,["Gu establishment"],"#84cc16"),
+  crop("guava","Guava","Fruit","Myrtaceae","Deep","Light Feeder",5.0,7.5,730,["Gu","Deyr establishment"],"#4ade80"),
+  crop("avocado","Avocado","Fruit","Lauraceae","Deep","Heavy Feeder",5.5,7.0,1095,["Gu establishment"],"#65a30d"),
+  crop("date_palm","Date Palm","Fruit","Arecaceae","Deep","Heavy Feeder",7.0,8.5,1825,["Irrigated establishment"],"#a16207"),
+  crop("pomegranate","Pomegranate","Fruit","Lythraceae","Deep","Light Feeder",5.5,7.5,730,["Gu establishment"],"#e11d48"),
+  crop("passion_fruit","Passion Fruit","Fruit","Passifloraceae","Medium","Heavy Feeder",5.5,6.8,300,["Gu","Deyr"],"#9333ea"),
+  crop("pineapple","Pineapple","Fruit","Bromeliaceae","Shallow","Heavy Feeder",4.5,6.5,540,["Gu establishment"],"#eab308"),
+  crop("strawberry","Strawberry","Fruit","Rosaceae","Shallow","Heavy Feeder",5.5,6.8,120,["Deyr","Jilaal"],"#f43f5e"),
+  crop("melon","Melon","Fruit","Cucurbitaceae","Medium","Heavy Feeder",5.8,7.2,80,["Gu","Xagaa"],"#fcd34d"),
+  crop("coconut","Coconut","Fruit","Arecaceae","Deep","Heavy Feeder",5.5,8.0,1825,["Gu establishment"],"#92400e"),
 ];
 const CROP_ALIASES = {
   corn:"maize",cornmeal:"maize",millet:"pearl_millet",pearlmillet:"pearl_millet",
   bean:"beans",commonbean:"beans",greenbeans:"beans",mungbean:"mung_bean",
-  peanuts:"groundnut",peanut:"groundnut",sesame:"sesame",onions:"onion",
-  wmelon:"watermelon",melon:"watermelon",butternuts:"butternut",redkuri:"red_kuri",
+  peanuts:"groundnut",peanut:"groundnut",soya:"soybean",pigeonpea:"pigeon_pea",
+  onions:"onion",wmelon:"watermelon",butternuts:"butternut",redkuri:"red_kuri",
+  squash:"butternut",pepper:"chili_pepper",chilli:"chili_pepper",chilies:"chili_pepper",
+  sweetpotato:"sweet_potato",passionfruit:"passion_fruit",datepalm:"date_palm",
   greenmanure:"green_manure",covercrop:"green_manure",
 };
 function slug(value){
@@ -238,21 +277,50 @@ function csvRows(text){
   return rows;
 }
 function rotationSlots(){
-  const out=[];
-  for(let year=1;year<=5;year+=1)SEASONS.forEach(function(season){out.push({key:"y"+year+"-"+season.toLowerCase(),year,season,cropId:""});});
-  return out;
+  const defaultSeasons=["Gu","Deyr","Gu","Deyr","Gu"];
+  return defaultSeasons.map(function(season,index){return {key:"y"+(index+1),year:index+1,season,cropId:""};});
 }
 function defaultRotation(){
-  const ids=["maize","cowpea","sorghum","groundnut","sesame","mung_bean","pearl_millet","beans","tomato","green_manure"];
+  const ids=["maize","cowpea","sorghum","groundnut","sesame"];
   return rotationSlots().map(function(slot,i){return Object.assign({},slot,{cropId:ids[i]});});
 }
-function cropRecord(raw,family,minPh,maxPh){
+function normalizedRoot(value,fallback){
+  const key=compact(value);
+  if(key.includes("deep"))return "Deep";
+  if(key.includes("shallow"))return "Shallow";
+  if(key.includes("medium"))return "Medium";
+  return fallback||"Medium";
+}
+function normalizedDemand(value,fallback){
+  const key=compact(value);
+  if(key.includes("fixer")||key.includes("fixing"))return "Nitrogen Fixer";
+  if(key.includes("heavy"))return "Heavy Feeder";
+  if(key.includes("light"))return "Light Feeder";
+  return fallback||"Light Feeder";
+}
+function maturitySeason(days){
+  const value=Number(days)||90;
+  if(value<=60)return "Short-cycle relay window";
+  if(value<=95)return "Gu / Deyr short-rain window";
+  if(value<=150)return "Full primary rainy season";
+  if(value<=365)return "Early Gu establishment";
+  return "Perennial establishment / irrigated";
+}
+function seasonList(value,fallback){
+  const items=String(value||"").split(/[|;/]+/).map(function(x){return x.trim();}).filter(Boolean);
+  return items.length?items:(fallback||["Gu"]);
+}
+function cropRecord(raw,family,rootDepth,nitrogenDemand,minPh,maxPh,maturityDays,seasons,category){
   const known=libraryCrop(raw);
-  if(known)return Object.assign({},known,{family:family||known.family,
-    minPh:Number.isFinite(minPh)?minPh:known.minPh,maxPh:Number.isFinite(maxPh)?maxPh:known.maxPh});
-  const name=String(raw||"").trim();
-  return {id:slug(name)||"crop_"+Date.now(),name,family:family||"Unclassified",
-    minPh:Number.isFinite(minPh)?minPh:5.5,maxPh:Number.isFinite(maxPh)?maxPh:7.5,color:"#64748b"};
+  const base=known||crop(slug(raw)||"crop_"+Date.now(),String(raw||"").trim(),category||"Imported",family||"Unclassified",
+    normalizedRoot(rootDepth),normalizedDemand(nitrogenDemand),5.5,7.5,Number(maturityDays)||90,[maturitySeason(maturityDays)],"#64748b");
+  const result=Object.assign({},base,{category:category||base.category,family:family||base.family,
+    rootDepth:normalizedRoot(rootDepth,base.rootDepth),nitrogenDemand:normalizedDemand(nitrogenDemand,base.nitrogenDemand),
+    minPh:Number.isFinite(minPh)?minPh:base.minPh,maxPh:Number.isFinite(maxPh)?maxPh:base.maxPh,
+    maturityDays:Number.isFinite(maturityDays)&&maturityDays>0?Math.round(maturityDays):base.maturityDays,
+    seasons:seasonList(seasons,base.seasons)});
+  if(result.minPh>result.maxPh){const swap=result.minPh;result.minPh=result.maxPh;result.maxPh=swap;}
+  return result;
 }
 function parseCropPlan(text){
   const rows=csvRows(text);
@@ -262,21 +330,24 @@ function parseCropPlan(text){
   if(headerIndex>=0){
     const headers=rows[headerIndex].map(compact);
     const at=function(names){return headers.findIndex(function(h){return names.includes(h);});};
-    const cropAt=at(["crop","cropname","name"]), familyAt=at(["family","cropfamily"]);
-    const minAt=at(["minph","phmin","minimumph"]), maxAt=at(["maxph","phmax","maximumph"]);
-    const yearAt=at(["year","planyear"]), seasonAt=at(["season","cycle"]);
+    const cropAt=at(["crop","cropname","name"]), familyAt=at(["family","cropfamily","botanicalfamily"]);
+    const rootAt=at(["rootdepthprofile","rootdepth","rootprofile"]);
+    const demandAt=at(["nitrogendemandcategory","nitrogendemand","nutrientdemand","feedercategory"]);
+    const minAt=at(["minph","phmin","minimumph","minimumsoilphthreshold"]), maxAt=at(["maxph","phmax","maximumph","maximumsoilphthreshold"]);
+    const maturityAt=at(["averagematuritytimeline","averagematuritytimelinedaystoharvest","daystoharvest","maturitydays","maturitytimeline"]);
+    const yearAt=at(["year","planyear"]), seasonAt=at(["season","cycle","idealseason","plantingwindow"]), categoryAt=at(["category","croptype"]);
     const data=rows.slice(headerIndex+1).filter(function(row){return row[cropAt]&&row[cropAt].trim();});
     const rawYears=data.map(function(r){return Number(r[yearAt]);}).filter(Number.isFinite);
     const actualYears=Array.from(new Set(rawYears.filter(function(y){return y>5;}))).sort();
     data.forEach(function(row){
-      const crop=cropRecord(row[cropAt],row[familyAt],parseFloat(row[minAt]),parseFloat(row[maxAt]));
+      const crop=cropRecord(row[cropAt],row[familyAt],row[rootAt],row[demandAt],parseFloat(row[minAt]),parseFloat(row[maxAt]),
+        parseFloat(row[maturityAt]),row[seasonAt],row[categoryAt]);
       catalog.push(crop);sequence.push(crop.id);
       let yr=Number(row[yearAt]);
       if(yr>5)yr=actualYears.indexOf(yr)+1;
       if(yr>=1&&yr<=5){
-        const season=String(row[seasonAt]||"Gu").trim()||"Gu";
-        const slotName=season.toLowerCase().includes("deyr")?"deyr":"gu";
-        assignments.push({key:"y"+yr+"-"+slotName,cropId:crop.id,season:season});
+        const season=String(row[seasonAt]||crop.seasons[0]||"Gu").trim()||"Gu";
+        assignments.push({key:"y"+yr,cropId:crop.id,season:season});
       }
     });
   }else{
@@ -352,98 +423,238 @@ function EngineerPanel(props){
             e("span",{className:"flex items-center justify-center gap-1.5"},e(Icon,{name:"user-plus",cls:"w-3.5 h-3.5"}),"Add & activate"))),
         e("div",{className:"mt-2 text-[10px] text-slate-500"},props.engineers.length+" engineers in local roster · duty changes apply instantly"))));
 }
-function RotationPlanner(){
+function RotationPlanner(props){
+  const derivedFields=(props.samples||[]).slice(0,5).map(function(sample,index){
+    return {id:sample.id,name:sample.farmer+" · "+sample.location,ph:Number(sample.ph),texture:sample.texture,
+      organicMatter:Number(sample.om)||1.2,nitrogenReserve:Math.max(35,72-index*7)};
+  });
+  const fallbackFields=derivedFields.length?derivedFields:[
+    {id:"plot-a",name:"North Demonstration Plot",ph:6.4,texture:"sandy loam",organicMatter:1.5,nitrogenReserve:68},
+    {id:"plot-b",name:"River Irrigation Block",ph:7.7,texture:"alluvial silt",organicMatter:1.2,nitrogenReserve:61},
+    {id:"plot-c",name:"Upland Trial Field",ph:5.3,texture:"red loam",organicMatter:0.9,nitrogenReserve:48},
+  ];
   const [catalog,setCatalog]=useState(function(){
-    try{const saved=JSON.parse(localStorage.getItem("lims_crop_catalog"));return Array.isArray(saved)&&saved.length?saved:CROP_LIBRARY;}catch(_){return CROP_LIBRARY;}
+    try{const saved=JSON.parse(localStorage.getItem("lims_strategic_crop_catalog_v2"));return Array.isArray(saved)&&saved.length?saved:CROP_LIBRARY;}catch(_){return CROP_LIBRARY;}
   });
   const [rotation,setRotation]=useState(function(){
-    try{const saved=JSON.parse(localStorage.getItem("lims_rotation"));return Array.isArray(saved)&&saved.length===10?saved:defaultRotation();}catch(_){return defaultRotation();}
+    try{const saved=JSON.parse(localStorage.getItem("lims_strategic_rotation_v2"));return Array.isArray(saved)&&saved.length===5?saved:defaultRotation();}catch(_){return defaultRotation();}
   });
-  const [fieldPh,setFieldPh]=useState(function(){return localStorage.getItem("lims_rotation_ph")||"6.5";});
-  const [importState,setImportState]=useState({kind:"idle",message:"Upload a crop CSV or use the starter rotation."});
-  useEffect(function(){localStorage.setItem("lims_crop_catalog",JSON.stringify(catalog));},[catalog]);
-  useEffect(function(){localStorage.setItem("lims_rotation",JSON.stringify(rotation));},[rotation]);
-  useEffect(function(){localStorage.setItem("lims_rotation_ph",fieldPh);},[fieldPh]);
-  const byId=useMemo(function(){const out={};catalog.forEach(function(c){out[c.id]=c;});return out;},[catalog]);
-  const phNum=parseFloat(fieldPh);
-  const warnings=useMemo(function(){
+  const [fields,setFields]=useState(function(){
+    try{const saved=JSON.parse(localStorage.getItem("lims_strategic_fields_v2"));return Array.isArray(saved)&&saved.length?saved:fallbackFields;}catch(_){return fallbackFields;}
+  });
+  const [fieldId,setFieldId]=useState(function(){return localStorage.getItem("lims_strategic_field_id")||fallbackFields[0].id;});
+  const [search,setSearch]=useState("");
+  const [familyFilter,setFamilyFilter]=useState("All families");
+  const [demandFilter,setDemandFilter]=useState("All demands");
+  const [sortMode,setSortMode]=useState("name");
+  const [selectedCropId,setSelectedCropId]=useState("");
+  const [dragOver,setDragOver]=useState("");
+  const [importState,setImportState]=useState({kind:"idle",message:"Fallback enterprise catalog active — upload or drop a CSV to replace it."});
+
+  useEffect(function(){localStorage.setItem("lims_strategic_crop_catalog_v2",JSON.stringify(catalog));},[catalog]);
+  useEffect(function(){localStorage.setItem("lims_strategic_rotation_v2",JSON.stringify(rotation));},[rotation]);
+  useEffect(function(){localStorage.setItem("lims_strategic_fields_v2",JSON.stringify(fields));},[fields]);
+  useEffect(function(){localStorage.setItem("lims_strategic_field_id",fieldId);},[fieldId]);
+  useEffect(function(){
+    setFields(function(previous){
+      const additions=derivedFields.filter(function(field){return !previous.some(function(saved){return saved.id===field.id;});});
+      return additions.length?previous.concat(additions):previous;
+    });
+  },[props.samples]);
+
+  const activeField=fields.find(function(field){return field.id===fieldId;})||fields[0];
+  const byId=useMemo(function(){const out={};catalog.forEach(function(crop){out[crop.id]=crop;});return out;},[catalog]);
+  const families=useMemo(function(){return Array.from(new Set(catalog.map(function(crop){return crop.family;}))).sort();},[catalog]);
+  const filteredCrops=useMemo(function(){
+    const query=search.trim().toLowerCase();
+    const rows=catalog.filter(function(crop){
+      const matchesSearch=!query||(crop.name+" "+crop.family+" "+crop.category+" "+crop.rootDepth+" "+crop.nitrogenDemand).toLowerCase().includes(query);
+      return matchesSearch&&(familyFilter==="All families"||crop.family===familyFilter)&&(demandFilter==="All demands"||crop.nitrogenDemand===demandFilter);
+    });
+    return rows.sort(function(a,b){
+      if(sortMode==="maturity")return a.maturityDays-b.maturityDays;
+      if(sortMode==="family")return a.family.localeCompare(b.family)||a.name.localeCompare(b.name);
+      return a.name.localeCompare(b.name);
+    });
+  },[catalog,search,familyFilter,demandFilter,sortMode]);
+
+  const risks=useMemo(function(){
     const out=[];
     rotation.forEach(function(slot,index){
-      const crop=byId[slot.cropId]; if(!crop)return;
-      if(Number.isFinite(phNum)&&(phNum<crop.minPh||phNum>crop.maxPh))out.push({key:slot.key,type:"pH",
-        message:"Year "+slot.year+" "+slot.season+": "+crop.name+" prefers pH "+crop.minPh+"–"+crop.maxPh+" (field "+phNum.toFixed(1)+")."});
-      const previous=index>0?byId[rotation[index-1].cropId]:null;
-      if(previous&&previous.family===crop.family)out.push({key:slot.key,type:"family",
-        message:"Year "+slot.year+" "+slot.season+": back-to-back "+crop.family+" after "+previous.name+" raises pest and nutrient risk."});
+      const current=byId[slot.cropId]; if(!current)return;
+      if(activeField&&(activeField.ph<current.minPh||activeField.ph>current.maxPh))out.push({year:slot.year,key:slot.key,type:"pH",severity:"high",
+        message:current.name+" requires pH "+current.minPh+"–"+current.maxPh+"; "+activeField.name+" is pH "+Number(activeField.ph).toFixed(1)+"."});
+      const previous=index?byId[rotation[index-1].cropId]:null;
+      if(previous&&previous.family===current.family)out.push({year:slot.year,key:slot.key,type:"Family conflict",severity:"high",
+        message:previous.name+" and "+current.name+" are both "+current.family+" in back-to-back years."});
+      if(previous&&previous.nitrogenDemand==="Heavy Feeder"&&current.nitrogenDemand==="Heavy Feeder")out.push({year:slot.year,key:slot.key,type:"Nutrient depletion",severity:"medium",
+        message:"Sequential heavy feeders ("+previous.name+" → "+current.name+") need a nitrogen fixer or fallow year between them."});
     });
     return out;
-  },[rotation,byId,phNum]);
-  const warningKeys=useMemo(function(){const out={};warnings.forEach(function(w){out[w.key]=(out[w.key]||[]).concat(w.type);});return out;},[warnings]);
-  function setCrop(key,cropId){setRotation(function(prev){return prev.map(function(slot){return slot.key===key?Object.assign({},slot,{cropId}):slot;});});}
-  function setSeason(key,season){setRotation(function(prev){return prev.map(function(slot){return slot.key===key?Object.assign({},slot,{season}):slot;});});}
+  },[rotation,byId,activeField]);
+  const risksByYear=useMemo(function(){const out={};risks.forEach(function(risk){out[risk.year]=(out[risk.year]||[]).concat(risk);});return out;},[risks]);
+  const healthMatrix=useMemo(function(){
+    let nitrogen=activeField?Number(activeField.nitrogenReserve)||60:60;
+    let previous=null;
+    return rotation.map(function(slot){
+      const crop=byId[slot.cropId], yearRisks=risksByYear[slot.year]||[];
+      if(!crop){nitrogen=Math.min(100,nitrogen+10);previous=null;return {year:slot.year,nitrogen:Math.round(nitrogen),health:Math.min(100,78+slot.year*2),phFit:true,rootMix:true};}
+      nitrogen+=crop.nitrogenDemand==="Nitrogen Fixer"?16:crop.nitrogenDemand==="Heavy Feeder"?-18:-7;
+      nitrogen=Math.max(5,Math.min(100,nitrogen));
+      const phFit=!activeField||(activeField.ph>=crop.minPh&&activeField.ph<=crop.maxPh);
+      const rootMix=!previous||previous.rootDepth!==crop.rootDepth;
+      const organicBonus=!activeField?0:activeField.organicMatter>=2?6:activeField.organicMatter>=1?2:-5;
+      const health=Math.max(10,Math.min(100,82-yearRisks.length*14+(crop.nitrogenDemand==="Nitrogen Fixer"?8:0)+(rootMix?4:-4)+organicBonus));
+      previous=crop;return {year:slot.year,nitrogen:Math.round(nitrogen),health:Math.round(health),phFit,rootMix};
+    });
+  },[rotation,byId,risksByYear,activeField]);
+  const forecast=useMemo(function(){
+    const selected=rotation.map(function(slot){return byId[slot.cropId];}).filter(Boolean);
+    const windows=Array.from(new Set(selected.flatMap(function(crop){return crop.seasons||[];})));
+    return {days:selected.reduce(function(sum,crop){return sum+(Number(crop.maturityDays)||0);},0),
+      families:new Set(selected.map(function(crop){return crop.family;})).size,windows,
+      compliance:Math.max(0,100-risks.filter(function(risk){return risk.severity==="high";}).length*18-risks.filter(function(risk){return risk.severity!=="high";}).length*10)};
+  },[rotation,byId,risks]);
+
+  function assignCrop(key,cropId){setRotation(function(previous){return previous.map(function(slot){return slot.key===key?Object.assign({},slot,{cropId}):slot;});});}
+  function setSeason(key,season){setRotation(function(previous){return previous.map(function(slot){return slot.key===key?Object.assign({},slot,{season}):slot;});});}
+  function updateField(name,value){setFields(function(previous){return previous.map(function(field){return field.id===fieldId?Object.assign({},field,{[name]:value}):field;});});}
   function autoBalance(){
-    const suitable=catalog.filter(function(c){return !Number.isFinite(phNum)||(phNum>=c.minPh&&phNum<=c.maxPh);});
-    const choices=suitable.length?suitable:catalog; let cursor=0,previous=null;
-    const base=rotationSlots().map(function(slot,index){return Object.assign({},slot,{season:(rotation[index]&&rotation[index].season)||slot.season});});
-    setRotation(base.map(function(slot){
-      let crop=choices[cursor%choices.length];
-      for(let tries=0;tries<choices.length&&previous&&crop.family===previous.family;tries+=1){cursor+=1;crop=choices[cursor%choices.length];}
-      cursor+=1;previous=crop;return Object.assign({},slot,{cropId:crop.id});
-    }));
-    setImportState({kind:"ok",message:"Auto-balanced by soil pH and crop family."});
+    const compatible=catalog.filter(function(crop){return !activeField||(activeField.ph>=crop.minPh&&activeField.ph<=crop.maxPh);});
+    const choices=compatible.length?compatible:catalog; let previous=null,cursor=0;
+    const next=rotationSlots().map(function(slot,index){
+      slot.season=(rotation[index]&&rotation[index].season)||slot.season;
+      let candidate=choices[cursor%choices.length];
+      for(let tries=0;tries<choices.length;tries+=1){
+        const familySafe=!previous||candidate.family!==previous.family;
+        const nutrientSafe=!previous||previous.nitrogenDemand!=="Heavy Feeder"||candidate.nitrogenDemand!=="Heavy Feeder";
+        if(familySafe&&nutrientSafe)break;
+        cursor+=1;candidate=choices[cursor%choices.length];
+      }
+      cursor+=1;previous=candidate;slot.cropId=candidate.id;return slot;
+    });
+    setRotation(next);setImportState({kind:"ok",message:"Auto-balanced against pH, family and nitrogen-demand rules."});
   }
-  async function importCsv(ev){
-    const file=ev.target.files&&ev.target.files[0]; if(!file)return;
-    setImportState({kind:"loading",message:"Reading "+file.name+"…"});
+  async function importFile(file){
+    if(!file)return;
+    setImportState({kind:"loading",message:"Parsing and validating "+file.name+"…"});
     try{
       const result=parseCropPlan(await file.text());
-      setCatalog(result.catalog);setRotation(result.slots);
-      setImportState({kind:"ok",message:"Loaded "+result.catalog.length+" crops from "+result.rowCount+" CSV rows."});
-    }catch(err){setImportState({kind:"error",message:err.message||"Unable to read crop CSV."});}
-    ev.target.value="";
+      setCatalog(result.catalog);setRotation(result.slots);setSelectedCropId("");
+      setImportState({kind:"ok",message:"Mapped "+result.catalog.length+" crop rules from "+result.rowCount+" CSV rows."});
+    }catch(error){setImportState({kind:"error",message:error.message||"Unable to parse this CSV."});}
   }
-  return e(Panel,{title:"5-Year Crop Rotation Planner",icon:"calendar-range",cls:"2xl:col-span-2",
-    right:e("span",{className:"text-[10px] text-slate-500"},"10 crop slots · every season name is editable")},
-    e("div",{className:"grid grid-cols-1 lg:grid-cols-[1.3fr_170px_auto] gap-2 items-end"},
-      e("label",{className:"rounded-xl border border-dashed border-slate-600 hover:border-emerald-500 bg-slate-800/50 px-3 py-2 cursor-pointer"},
-        e("span",{className:"flex items-center gap-2 text-xs font-semibold"},e(Icon,{name:"file-up",cls:"w-4 h-4 text-emerald-300"}),"Load crop CSV data"),
-        e("span",{className:"block text-[10px] text-slate-500 mt-0.5"},"Supports crop/family/min_ph/max_ph/year/season rows and matrix templates"),
-        e("input",{type:"file",accept:".csv,text/csv",onChange:importCsv,className:"hidden"})),
-      e("label",{className:"text-[10px] uppercase tracking-widest text-slate-500"},"Field soil pH",
-        e("input",{value:fieldPh,onChange:function(ev){setFieldPh(ev.target.value);},type:"number",min:"3",max:"11",step:"0.1",
-          className:"mt-1 w-full bg-slate-950 border border-slate-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm text-slate-100"})),
-      e("div",{className:"flex gap-2"},
-        e("button",{onClick:autoBalance,className:"flex-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3 py-2 text-xs font-bold text-white flex items-center justify-center gap-1.5"},e(Icon,{name:"shuffle",cls:"w-3.5 h-3.5"}),"Auto-balance"),
-        e("button",{onClick:function(){setRotation(function(prev){return prev.map(function(slot){return Object.assign({},slot,{cropId:""});});});},title:"Clear crops but keep season names",className:"rounded-lg border border-slate-700 hover:border-red-500 px-3 py-2 text-slate-400"},e(Icon,{name:"trash-2",cls:"w-3.5 h-3.5"})))),
-    e("datalist",{id:"rotation-season-options"},SEASON_SUGGESTIONS.map(function(season){return e("option",{key:season,value:season});})),
-    e("div",{className:"mt-2 text-[11px] "+(importState.kind==="error"?"text-red-300":importState.kind==="ok"?"text-emerald-300":"text-slate-500")},
-      importState.kind==="loading"&&e(Icon,{name:"loader-circle",cls:"inline w-3.5 h-3.5 mr-1 animate-spin"}),importState.message),
-    e("div",{className:"mt-3 overflow-x-auto pb-2"},
-      e("div",{className:"min-w-[980px] grid grid-cols-5 gap-2"},[1,2,3,4,5].map(function(year){
-        return e("div",{key:year,className:"rounded-xl border border-slate-700 bg-slate-950/70 p-2"},
-          e("div",{className:"flex items-center justify-between mb-2"},e("b",{className:"text-xs text-slate-200"},"Year "+year),
-            e("span",{className:"text-[9px] text-slate-600 font-mono"},"Y"+year)),
-          rotation.filter(function(slot){return slot.year===year;}).map(function(slot){
-            const crop=byId[slot.cropId], flags=warningKeys[slot.key]||[];
-            return e("div",{key:slot.key,className:"mb-2 last:mb-0 rounded-lg border p-2 "+(flags.length?"border-amber-600/70 bg-amber-950/20":"border-slate-800 bg-slate-900/70"),
-              style:crop?{borderLeftColor:crop.color,borderLeftWidth:"3px"}:null},
-              e("div",{className:"flex items-end justify-between gap-1 mb-1.5"},
-                e("label",{className:"text-[9px] uppercase tracking-widest text-slate-500 flex-1"},"Season",
-                  e("input",{value:slot.season,list:"rotation-season-options",onChange:function(ev){setSeason(slot.key,ev.target.value);},
-                    "aria-label":"Season for year "+year,className:"mt-0.5 w-full bg-slate-950 border border-slate-700 focus:border-emerald-500 rounded px-1.5 py-1 text-[10px] normal-case tracking-normal text-slate-200"})),
-                flags.length?e(Icon,{name:"triangle-alert",cls:"w-3.5 h-3.5 text-amber-300 mb-1"}):e(Icon,{name:"circle-check",cls:"w-3.5 h-3.5 text-emerald-500 mb-1"})),
-              e("select",{value:slot.cropId,onChange:function(ev){setCrop(slot.key,ev.target.value);},
-                className:"w-full bg-slate-950 border border-slate-700 rounded-md px-2 py-1.5 text-xs"},
-                e("option",{value:""},"— fallow —"),catalog.map(function(c){return e("option",{key:c.id,value:c.id},c.name);})),
-              crop&&e("div",{className:"mt-1.5 text-[9px] text-slate-500 leading-relaxed"},crop.family+" · pH "+crop.minPh+"–"+crop.maxPh));
-          }));
-      }))),
-    e("div",{className:"mt-2 grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-3"},
-      e("div",{className:"flex gap-2 text-[10px]"},
-        e("span",{className:"rounded-full border border-amber-700 bg-amber-950/30 text-amber-200 px-2 py-1"},warnings.length+" warning"+(warnings.length===1?"":"s")),
-        e("span",{className:"rounded-full border border-slate-700 text-slate-400 px-2 py-1"},catalog.length+" crops available")),
-      warnings.length?e("div",{className:"max-h-24 overflow-y-auto space-y-1 pr-1"},warnings.map(function(w,i){return e("div",{key:w.key+"-"+w.type+"-"+i,className:"text-[10px] text-amber-200 flex gap-1.5"},e(Icon,{name:w.type==="pH"?"flask-conical":"repeat-2",cls:"w-3 h-3 flex-none mt-0.5"}),w.message);}))
-        :e("div",{className:"text-[11px] text-emerald-300 flex items-center gap-1.5"},e(Icon,{name:"badge-check",cls:"w-3.5 h-3.5"}),"Rotation passes pH and consecutive-family checks.")));
+  function handleFileInput(event){const file=event.target.files&&event.target.files[0];importFile(file);event.target.value="";}
+  function handleFileDrop(event){event.preventDefault();importFile(event.dataTransfer.files&&event.dataTransfer.files[0]);}
+  function downloadTemplate(){
+    const content=["Crop Name,Botanical Family,Root Depth Profile,Nitrogen Demand Category,Minimum Soil pH Threshold,Maximum Soil pH Threshold,Average Maturity Timeline (Days to Harvest),Ideal Season,Year",
+      "Maize,Poaceae,Medium,Heavy Feeder,5.5,7.5,90,Gu,1","Cowpea,Fabaceae,Deep,Nitrogen Fixer,5.5,7.5,75,Deyr,2","Tomato,Solanaceae,Deep,Heavy Feeder,5.5,7.5,100,Irrigated Jilaal,3"].join("\r\n");
+    const link=document.createElement("a");link.href=URL.createObjectURL(new Blob([content],{type:"text/csv"}));link.download="strategic-crop-plan-template.csv";
+    document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(link.href);
+  }
+  function dropCrop(event,key){event.preventDefault();const cropId=event.dataTransfer.getData("text/crop-id");if(cropId)assignCrop(key,cropId);setDragOver("");}
+
+  return e(Panel,{title:"5-Year Strategic Crop Planning & Rotation",icon:"calendar-range",cls:"2xl:col-span-2",
+    right:e("span",{className:"text-[10px] text-slate-500"},catalog.length+" crop rules · drag, drop or select")},
+    e("div",{className:"grid grid-cols-1 xl:grid-cols-[300px_minmax(0,1fr)] gap-4"},
+      e("aside",{className:"rounded-xl border border-slate-700 bg-slate-950/70 p-3"},
+        e("div",{onDragOver:function(event){event.preventDefault();},onDrop:handleFileDrop,
+          className:"rounded-xl border border-dashed border-emerald-700/70 bg-emerald-950/20 p-3 text-center"},
+          e(Icon,{name:"file-up",cls:"w-5 h-5 text-emerald-300 mx-auto"}),
+          e("div",{className:"mt-1 text-xs font-bold"},"CSV rules importer"),
+          e("div",{className:"text-[10px] text-slate-500"},"Drop a multi-column CSV here or choose a file"),
+          e("label",{className:"inline-flex mt-2 cursor-pointer rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 text-[10px] font-bold text-white"},"Choose CSV",
+            e("input",{type:"file",accept:".csv,text/csv",onChange:handleFileInput,className:"hidden"})),
+          e("button",{onClick:downloadTemplate,className:"ml-2 rounded-lg border border-slate-700 hover:border-emerald-500 px-2 py-1.5 text-[10px] text-slate-300"},"Download template")),
+        e("div",{className:"mt-2 text-[10px] "+(importState.kind==="error"?"text-red-300":importState.kind==="ok"?"text-emerald-300":"text-slate-500")},importState.message),
+        e("div",{className:"relative mt-3"},e(Icon,{name:"search",cls:"absolute left-2.5 top-2.5 w-3.5 h-3.5 text-slate-500"}),
+          e("input",{value:search,onChange:function(event){setSearch(event.target.value);},placeholder:"Search crop, family or category…",
+            className:"w-full bg-slate-900 border border-slate-700 rounded-lg pl-8 pr-2 py-2 text-xs"})),
+        e("div",{className:"grid grid-cols-2 gap-1.5 mt-2"},
+          e("select",{value:familyFilter,onChange:function(event){setFamilyFilter(event.target.value);},className:"bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-[10px]"},
+            e("option",null,"All families"),families.map(function(family){return e("option",{key:family,value:family},family);})),
+          e("select",{value:demandFilter,onChange:function(event){setDemandFilter(event.target.value);},className:"bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-[10px]"},
+            ["All demands","Heavy Feeder","Light Feeder","Nitrogen Fixer"].map(function(value){return e("option",{key:value,value},value);})),
+          e("select",{value:sortMode,onChange:function(event){setSortMode(event.target.value);},className:"col-span-2 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-[10px]"},
+            e("option",{value:"name"},"Sort: Crop name"),e("option",{value:"family"},"Sort: Botanical family"),e("option",{value:"maturity"},"Sort: Fastest maturity"))),
+        e("div",{className:"mt-2 flex items-center justify-between text-[10px] text-slate-500"},
+          e("span",null,filteredCrops.length+" matching crops"),e("span",null,catalog.filter(function(c){return c.category==="Vegetable";}).length+" vegetables · "+catalog.filter(function(c){return c.category==="Fruit";}).length+" fruits")),
+        e("div",{className:"mt-2 max-h-[38rem] overflow-y-auto space-y-1.5 pr-1"},filteredCrops.map(function(crop){
+          const selected=selectedCropId===crop.id;
+          return e("button",{key:crop.id,draggable:true,onDragStart:function(event){event.dataTransfer.setData("text/crop-id",crop.id);event.dataTransfer.effectAllowed="copy";},
+            onClick:function(){setSelectedCropId(selected?"":crop.id);},
+            className:"w-full rounded-lg border p-2 text-left transition "+(selected?"border-emerald-500 bg-emerald-950/30":"border-slate-800 bg-slate-900/70 hover:border-slate-600")},
+            e("div",{className:"flex items-center gap-2"},e("span",{className:"w-2.5 h-2.5 rounded-full",style:{backgroundColor:crop.color}}),
+              e("b",{className:"text-xs"},crop.name),e("span",{className:"ml-auto text-[9px] text-slate-500"},crop.maturityDays+" d")),
+            e("div",{className:"mt-1 text-[9px] text-slate-500"},crop.category+" · "+crop.family+" · "+crop.rootDepth+" root"),
+            e("div",{className:"mt-1 flex flex-wrap gap-1"},
+              e("span",{className:"rounded-full border border-slate-700 px-1.5 py-0.5 text-[8px] "+(crop.nitrogenDemand==="Nitrogen Fixer"?"text-emerald-300":crop.nitrogenDemand==="Heavy Feeder"?"text-amber-300":"text-sky-300")},crop.nitrogenDemand),
+              e("span",{className:"rounded-full border border-slate-700 px-1.5 py-0.5 text-[8px] text-slate-400"},"pH "+crop.minPh+"–"+crop.maxPh)));
+        }))),
+      e("div",null,
+        e("div",{className:"rounded-xl border border-slate-700 bg-slate-950/70 p-3"},
+          e("div",{className:"grid grid-cols-1 md:grid-cols-[1.2fr_110px_110px_110px_auto] gap-2 items-end"},
+            e("label",{className:"text-[9px] uppercase tracking-widest text-slate-500"},"Active plot / LIMS profile",
+              e("select",{value:activeField.id,onChange:function(event){setFieldId(event.target.value);},className:"mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-xs"},
+                fields.map(function(field){return e("option",{key:field.id,value:field.id},field.name);}))),
+            e("label",{className:"text-[9px] uppercase tracking-widest text-slate-500"},"Soil pH",
+              e("input",{value:activeField.ph,type:"number",step:"0.1",min:"3",max:"11",onChange:function(event){updateField("ph",Number(event.target.value));},className:"mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-xs"})),
+            e("label",{className:"text-[9px] uppercase tracking-widest text-slate-500"},"Organic matter %",
+              e("input",{value:activeField.organicMatter,type:"number",step:"0.1",min:"0",onChange:function(event){updateField("organicMatter",Number(event.target.value));},className:"mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-xs"})),
+            e("label",{className:"text-[9px] uppercase tracking-widest text-slate-500"},"N reserve %",
+              e("input",{value:activeField.nitrogenReserve,type:"number",step:"1",min:"0",max:"100",onChange:function(event){updateField("nitrogenReserve",Number(event.target.value));},className:"mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-xs"})),
+            e("button",{onClick:autoBalance,className:"rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3 py-2 text-xs font-bold text-white flex justify-center items-center gap-1.5"},e(Icon,{name:"sparkles",cls:"w-3.5 h-3.5"}),"Optimize")),
+          e("div",{className:"mt-2 text-[10px] text-slate-500"},"Texture: "+activeField.texture+" · profile inherited from the LIMS sample ledger and editable for scenario planning.")),
+        e("div",{className:"mt-3 grid grid-cols-2 lg:grid-cols-4 gap-2"},
+          [["Lifecycle days",forecast.days.toLocaleString(),"timer"],["Family diversity",forecast.families+" unique","network"],["Compliance",forecast.compliance+"%","shield-check"],["Planting windows",forecast.windows.length,"calendar-clock"]]
+            .map(function(card){return e("div",{key:card[0],className:"rounded-xl border border-slate-700 bg-slate-900/70 p-3"},
+              e("div",{className:"text-[9px] uppercase tracking-widest text-slate-500 flex items-center gap-1"},e(Icon,{name:card[2],cls:"w-3 h-3"}),card[0]),
+              e("div",{className:"mt-1 text-lg font-bold text-slate-100"},card[1]));})),
+        e("div",{className:"mt-2 rounded-lg border border-slate-700 bg-slate-900/50 px-3 py-2 text-[10px] text-slate-400"},
+          e("b",{className:"text-sky-300"},"Ideal season forecast: "),forecast.windows.length?forecast.windows.join(" · "):"Assign crops to calculate planting windows."),
+        selectedCropId&&e("div",{className:"mt-2 rounded-lg border border-emerald-700/50 bg-emerald-950/20 px-3 py-2 text-[10px] text-emerald-200"},
+          "Selected ",e("b",null,byId[selectedCropId]?byId[selectedCropId].name:"crop")," — click Assign on a year card or drag it into the timeline."),
+        e("datalist",{id:"rotation-season-options"},SEASON_SUGGESTIONS.map(function(season){return e("option",{key:season,value:season});})),
+        e("div",{className:"mt-3 overflow-x-auto pb-2"},
+          e("div",{className:"min-w-[900px] grid grid-cols-5 gap-2"},rotation.map(function(slot){
+            const crop=byId[slot.cropId],yearRisks=risksByYear[slot.year]||[],isOver=dragOver===slot.key;
+            return e("div",{key:slot.key,onDragOver:function(event){event.preventDefault();setDragOver(slot.key);},onDragLeave:function(){setDragOver("");},onDrop:function(event){dropCrop(event,slot.key);},
+              className:"relative rounded-xl border p-2 transition "+(isOver?"border-emerald-400 bg-emerald-950/40 scale-[1.01]":yearRisks.length?"border-amber-700/70 bg-amber-950/15":"border-slate-700 bg-slate-950/70")},
+              e("div",{className:"h-1 rounded-full mb-2",style:{backgroundColor:crop?crop.color:"#334155"}}),
+              e("div",{className:"flex items-center justify-between"},e("b",{className:"text-xs"},"Year "+slot.year),
+                e("span",{className:"text-[9px] "+(yearRisks.length?"text-amber-300":"text-emerald-400")},yearRisks.length?yearRisks.length+" alert"+(yearRisks.length>1?"s":""):"compliant")),
+              e("label",{className:"block mt-2 text-[8px] uppercase tracking-widest text-slate-500"},"Planting season",
+                e("input",{value:slot.season,list:"rotation-season-options",onChange:function(event){setSeason(slot.key,event.target.value);},className:"mt-0.5 w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-[10px] normal-case tracking-normal"})),
+              e("select",{value:slot.cropId,onChange:function(event){assignCrop(slot.key,event.target.value);},className:"mt-2 w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-xs"},
+                e("option",{value:""},"— Fallow year —"),catalog.map(function(item){return e("option",{key:item.id,value:item.id},item.name);})),
+              crop?e("div",{className:"mt-2"},
+                e("div",{className:"font-bold text-sm",style:{color:crop.color}},crop.name),
+                e("div",{className:"text-[9px] text-slate-500"},crop.family+" · "+crop.rootDepth+" root · "+crop.maturityDays+" days"),
+                e("span",{className:"inline-block mt-1 rounded-full border border-slate-700 px-1.5 py-0.5 text-[8px]"},crop.nitrogenDemand))
+                :e("div",{className:"mt-2 min-h-12 border border-dashed border-slate-800 rounded-lg grid place-items-center text-[9px] text-slate-600"},"Drop crop or leave fallow"),
+              e("div",{className:"mt-2 flex gap-1"},
+                selectedCropId&&e("button",{onClick:function(){assignCrop(slot.key,selectedCropId);},className:"flex-1 rounded bg-emerald-700 hover:bg-emerald-600 px-1.5 py-1 text-[9px] text-white"},"Assign selected"),
+                slot.cropId&&e("button",{onClick:function(){assignCrop(slot.key,"");},className:"rounded border border-slate-700 hover:border-red-500 px-1.5 py-1 text-[9px] text-slate-400"},"Clear")));
+          }))),
+        e("div",{className:"mt-3"},
+          e("div",{className:"text-[10px] uppercase tracking-widest text-slate-500 mb-1.5"},"Field Health Matrix · projected decision-support index"),
+          e("div",{className:"grid grid-cols-1 sm:grid-cols-5 gap-2"},healthMatrix.map(function(item){return e("div",{key:item.year,className:"rounded-lg border border-slate-700 bg-slate-900/70 p-2"},
+            e("div",{className:"flex justify-between text-[9px]"},e("b",null,"Year "+item.year),e("span",{className:item.health>=70?"text-emerald-300":item.health>=45?"text-amber-300":"text-red-300"},item.health+"/100")),
+            e("div",{className:"mt-1 text-[8px] text-slate-500"},"Nitrogen reserve "+item.nitrogen+"%"),
+            e("div",{className:"mt-1 h-1.5 rounded-full bg-slate-800 overflow-hidden"},e("div",{className:"h-full "+(item.nitrogen>=60?"bg-emerald-500":item.nitrogen>=35?"bg-amber-500":"bg-red-500"),style:{width:item.nitrogen+"%"}})),
+            e("div",{className:"mt-1.5 flex flex-wrap gap-1 text-[7px]"},
+              e("span",{className:"rounded border px-1 py-0.5 "+(item.phFit?"border-emerald-700 text-emerald-300":"border-red-700 text-red-300")},item.phFit?"pH fit":"pH mismatch"),
+              e("span",{className:"rounded border px-1 py-0.5 "+(item.rootMix?"border-sky-700 text-sky-300":"border-amber-700 text-amber-300")},item.rootMix?"root diversity":"same root depth")));
+          }))),
+        e("div",{className:"mt-3 rounded-xl border p-3 "+(risks.length?"border-amber-700/70 bg-amber-950/15":"border-emerald-700/60 bg-emerald-950/20")},
+          e("div",{className:"flex items-center gap-2"},e(Icon,{name:risks.length?"triangle-alert":"badge-check",cls:"w-4 h-4 "+(risks.length?"text-amber-300":"text-emerald-300")}),
+            e("b",{className:"text-xs"},risks.length?risks.length+" active agronomic risk"+(risks.length>1?"s":""):"Plan passes all active compliance rules")),
+          risks.length?e("div",{className:"mt-2 max-h-36 overflow-y-auto space-y-1.5"},risks.map(function(risk,index){return e("div",{key:risk.key+"-"+risk.type+"-"+index,className:"rounded-lg border border-slate-700 bg-slate-950/60 px-2.5 py-2 text-[10px]"},
+            e("span",{className:"mr-2 rounded-full px-1.5 py-0.5 "+(risk.type==="pH"?"bg-violet-900/50 text-violet-200":risk.type==="Family conflict"?"bg-red-900/50 text-red-200":"bg-amber-900/50 text-amber-200")},risk.type),risk.message);}))
+            :e("div",{className:"mt-1 text-[10px] text-emerald-200"},"Botanical families, feeder sequence and pH compatibility are compliant."))
+      )
+    )
+  );
 }
 
 /* ═════════ CERTIFICATE MODAL (Module 2) ═════════ */
@@ -791,7 +1002,7 @@ function App(){
                 e(Line,{type:"monotone",dataKey:"collected",name:"Income collected",stroke:"#34d399",strokeWidth:2.4,dot:{r:2.5}}),
                 e(Line,{type:"monotone",dataKey:"pending",name:"Outstanding balances",stroke:"#f59e0b",strokeWidth:2.2,strokeDasharray:"6 4",dot:{r:2.2}})))),
 
-        e(RotationPlanner),
+        e(RotationPlanner,{samples:samples}),
 
         /* Module 5 — CROP PATHOLOGY · asynchronous dictionary */
         e(Panel,{title:"Crop Pathology Log · Disease & Treatment Intelligence",icon:"stethoscope",cls:"2xl:col-span-2"},
