@@ -36,7 +36,8 @@ def test_dashboard_served():
         "Local HWSD pH overlay", "local-sampler=v1",
         "hwsdPhPane", "hwsd-ph-raster", "ph-ranges=v2", "Distinct pH ranges",
         "alphaFlora", "plant-pathology-select", "Applicable pathology for",
-        "agri.shared.js", "agri.store.js", "seedOils", "lang-toggle", "SOM | ENG",
+        "agri.shared.js", "agri.store.js", "agri.i18n.js", "seedOils", "lang-toggle", "Soomaali | English",
+        "left-collapsed", "sidebar-toggle", "restoreLeftSidebar", "map.invalidateSize",
         "AGRI_DATA_STORE", "AQUIFERS", "assessGroundwater", "Underground aquifer detected",
         "GROUNDWATER_NETWORK", "hourlyStations:40", "weeklyBoreholes:609",
         "renderGroundwaterStation", "Conductivity", "Local water price",
@@ -52,6 +53,8 @@ def test_dashboard_served():
     assert "GRP_ICON" not in r.text
     assert "Demo plot" not in r.text
     assert "demoPlot" not in r.text
+    assert "Loading synchronized regional catalog" not in r.text
+    assert "Regional seed catalog ready" in r.text
 
 
 def test_lims_dashboard_is_modular_and_offline_safe():
@@ -65,6 +68,7 @@ def test_lims_dashboard_is_modular_and_offline_safe():
     assert "/web/lims.src.js" in page.text
     assert "/web/agri.shared.js" in page.text
     assert "/web/agri.store.js" in page.text
+    assert "/web/agri.i18n.js" in page.text
     assert "/web/vendor/react.min.js" in page.text
     assert ".strategic-planner h2" in page.text
     assert "font-size:19px" in page.text
@@ -80,8 +84,13 @@ def test_lims_dashboard_is_modular_and_offline_safe():
 
     store = client.get("/web/agri.store.js")
     assert store.status_code == 200
-    for marker in ("agri-unified-catalog", "BroadcastChannel", "upsertMany", "catalog-changed", "memoryCatalog", "synchronous fallback remains active"):
+    for marker in ("agri-unified-catalog", "BroadcastChannel", "upsertMany", "catalog-changed", "memoryCatalog", "synchronous fallback remains active", "mergeMaster"):
         assert marker in store.text
+
+    i18n = client.get("/web/agri.i18n.js")
+    assert i18n.status_code == 200
+    for marker in ("MutationObserver", "Soomaali", "Khariidadda & Beeraha", "Falanqaynta Billaha Beeraha", "Dayrka Beeraha", "Cudurada", "Saliidda Abuurka"):
+        assert marker in i18n.text
 
     catalog = client.get("/web/regional_produce.json")
     assert catalog.status_code == 200
@@ -126,7 +135,7 @@ def test_lims_dashboard_is_modular_and_offline_safe():
         "linkedPathologies",
         "Associated pathology selection",
         "Seed Oil",
-        "SOM",
+        "Soomaali",
         "strategic-planner",
         "NO TAX · NO FEES",
         "GIS_ENGINE_URL",

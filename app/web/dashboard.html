@@ -7,6 +7,7 @@
 <script src="/web/vendor/tailwind.js"></script>
 <script src="/web/agri.shared.js"></script>
 <script src="/web/agri.store.js"></script>
+<script src="/web/agri.i18n.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -26,6 +27,8 @@
 
   /* Compact, high-contrast map workspace */
   #workspace{width:100%;min-width:0;overflow:hidden}
+  #workspace.left-collapsed #left{display:none!important}
+  #workspace.left-collapsed #left-scrim{display:none!important}
   #farm-analytics-modal{position:fixed!important;inset:0!important;z-index:99999!important;isolation:isolate}
   #farm-analytics-modal>div{position:relative;z-index:100000}
   #cert-modal{z-index:99998!important}
@@ -57,6 +60,7 @@
   .leaflet-tooltip-left.lab-map-label:before{border-left-color:rgba(6,78,59,.96)}
   @media (min-width:1280px){
     #workspace{display:grid!important;grid-template-columns:340px minmax(420px,min(36vw,620px)) minmax(430px,1fr);align-items:stretch}
+    #workspace.left-collapsed{grid-template-columns:minmax(520px,min(52vw,820px)) minmax(430px,1fr)}
     #left,#right,#map-shell{position:relative!important;inset:auto!important;width:auto!important;min-width:0!important;max-width:none!important;height:100%!important;transform:none!important}
     #map-shell{padding:12px!important}
     .map-frame,.map-summary{width:100%}
@@ -109,7 +113,7 @@
 <body class="bg-slate-900 text-slate-200 h-screen overflow-hidden flex flex-col">
 
 <header class="h-12 bg-slate-950 border-b border-slate-800 flex items-center gap-3 px-4 z-30 flex-none">
-  <button onclick="toggleLeft()" aria-label="Toggle left panel" class="p-1.5 rounded hover:bg-slate-800"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+  <button id="sidebar-toggle" onclick="toggleLeft()" aria-label="Toggle left sidebar" aria-expanded="true" class="p-2 rounded-lg border border-slate-800 hover:border-emerald-500 hover:bg-slate-800"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
   <div class="flex items-center gap-2.5 select-none" id="brand">
     <svg width="30" height="30" viewBox="0 0 48 48" class="flex-none" role="img" aria-label="Orbital satellite logo">
       <defs><linearGradient id="plg" x1="0" y1="0" x2="1" y2="1">
@@ -131,7 +135,7 @@
   <div class="flex-1"></div>
   <a href="/web/lims.html" title="Laboratory Information Management System"
      class="px-2 py-1.5 rounded-lg border border-slate-800 hover:border-violet-500 text-xs text-slate-400">Lab LIMS</a>
-  <button id="lang-toggle" onclick="toggleLanguage()" class="rounded-lg border border-emerald-700/70 bg-emerald-950/30 px-3 py-1.5 text-xs font-black text-emerald-200" title="SOM | ENG">SOM | ENG</button>
+  <button id="lang-toggle" onclick="toggleLanguage()" class="min-w-[168px] whitespace-nowrap rounded-lg border border-emerald-700/70 bg-emerald-950/30 px-4 py-2 text-sm font-black text-emerald-200" title="Soomaali | English">Soomaali | English</button>
   <div class="flex items-center gap-1.5 text-[11px] text-slate-500"><span id="api-led" class="w-2 h-2 rounded-full bg-slate-600"></span><span id="api-text">API…</span></div>
   <button id="theme-btn" onclick="toggleTheme()" role="switch" aria-checked="true" aria-label="Switch to light mode" title="Toggle light / dark mode"
           class="px-2.5 py-1.5 rounded-lg border border-slate-800 hover:border-emerald-500 text-sm">🌙</button>
@@ -308,7 +312,7 @@
       <div class="flex items-center justify-between">
         <div>
           <div class="font-bold text-emerald-300 text-sm">Global Crops · Fruits · Vegetables</div>
-          <div id="produce-count" class="text-xs text-slate-400">Loading synchronized regional catalog…</div>
+          <div id="produce-count" class="text-xs text-slate-400">Regional seed catalog ready · synchronizing local additions…</div>
         </div>
         <button onclick="toggleRight()" class="xl:hidden text-slate-500">✕</button>
       </div>
@@ -386,8 +390,8 @@ function applyLanguage(){
  document.documentElement.lang=uiLang;
  document.querySelectorAll("[data-i18n]").forEach(node=>{node.textContent=tr(node.dataset.i18n);});
  document.querySelectorAll("[data-i18n-placeholder]").forEach(node=>{node.placeholder=tr(node.dataset.i18nPlaceholder);});
- const button=document.getElementById("lang-toggle");if(button)button.innerHTML=`<span class="${uiLang==="so"?"text-white":"text-slate-500"}">SOM</span> | <span class="${uiLang==="en"?"text-white":"text-slate-500"}">ENG</span>`;
- renderTabs();if(document.getElementById("flora-body"))renderFlora();
+ const button=document.getElementById("lang-toggle");if(button)button.innerHTML=`<span class="${uiLang==="so"?"text-white":"text-slate-500"}">Soomaali</span> | <span class="${uiLang==="en"?"text-white":"text-slate-500"}">English</span>`;
+ renderTabs();if(document.getElementById("flora-body"))renderFlora();if(window.AGRI_I18N)AGRI_I18N.setLanguage(uiLang);
 }
 function toggleLanguage(){uiLang=uiLang==="en"?"so":"en";localStorage.setItem("agri_lang",uiLang);applyLanguage();}
 const STANDALONE_GIS=location.pathname.indexOf("/web/")===0;
@@ -783,7 +787,9 @@ function listAois(){const box=document.getElementById("aoi-list");box.innerHTML=
    if(act==="del"){if(a.handles)a.handles.remove();a.poly.remove();state.aois=state.aois.filter(x=>x!==a);deleteFarmRecord(a.id).catch(console.warn);if(state.selected===a)state.selected=state.aois[0]||null;listAois();updateStats();logEv("Deleted farm record "+a.name);return;}
    selectAoi(a);};
   box.appendChild(el);});}
-function toggleLeft(){document.getElementById("left").classList.toggle("-translate-x-full");document.getElementById("left-scrim").classList.toggle("hidden");}
+function setLeftSidebar(collapsed){const workspace=document.getElementById("workspace"),left=document.getElementById("left"),scrim=document.getElementById("left-scrim"),button=document.getElementById("sidebar-toggle");workspace.classList.toggle("left-collapsed",collapsed);left.classList.toggle("-translate-x-full",collapsed);if(window.innerWidth<1024)scrim.classList.toggle("hidden",collapsed);else scrim.classList.add("hidden");button.setAttribute("aria-expanded",collapsed?"false":"true");localStorage.setItem("gis_left_collapsed",collapsed?"1":"0");setTimeout(()=>map.invalidateSize(),50);}
+function toggleLeft(){setLeftSidebar(!document.getElementById("workspace").classList.contains("left-collapsed"));}
+function restoreLeftSidebar(){const saved=localStorage.getItem("gis_left_collapsed")==="1";setLeftSidebar(saved||window.innerWidth<1024);}
 function toggleRight(){document.getElementById("right").classList.toggle("translate-x-full");}
 async function pingApi(){if(STANDALONE_GIS&&!apiBase){document.getElementById("api-led").className="w-2 h-2 rounded-full bg-amber-500";document.getElementById("api-text").textContent="Standalone GIS";return;}const base=apiBase||location.origin;try{const r=await fetch(base+"/healthz");if(!r.ok)throw 0;document.getElementById("api-led").className="w-2 h-2 rounded-full bg-emerald-500";document.getElementById("api-text").textContent="API online";}catch{document.getElementById("api-led").className="w-2 h-2 rounded-full bg-slate-600";document.getElementById("api-text").textContent="API offline";}}
 pingApi();
@@ -1133,7 +1139,7 @@ const DB={
 const BASE_GIS_NATIVE=DB.nativeTrees.filter(item=>!item.catalogId),BASE_GIS_FRUIT_GROUPS=DB.fruitGroups.filter(([,items])=>!items.some(item=>item.catalogId)),BASE_GIS_CROPS=DB.crops.filter(item=>!item.catalogId),BASE_GIS_VEGETABLES=DB.vegetables.filter(item=>!item.catalogId);
 function updateProduceCount(){const count=DB.nativeTrees.length+DB.fruitGroups.reduce((sum,[,items])=>sum+items.length,0)+DB.seedOils.length+DB.crops.length+DB.vegetables.length;const node=document.getElementById("produce-count");if(node)node.textContent=`${count} synchronized entries · A–Z · linked Cudurada`;}
 function syncUnifiedCatalog(records){
- records=Array.isArray(records)&&records.length?records:SHARED_CATALOG;
+ const merged=new Map(SHARED_CATALOG.map(item=>[item.id,item]));(Array.isArray(records)?records:[]).forEach(item=>merged.set(item.id,item));records=Array.from(merged.values()).sort((a,b)=>a.name.localeCompare(b.name));
  const converted=records.map(sharedFlora);
  DB.nativeTrees=BASE_GIS_NATIVE.concat(converted.filter((_,index)=>records[index].category==="Tree"));
  DB.fruitGroups=BASE_GIS_FRUIT_GROUPS.concat([["Unified Regional Catalog","regional",converted.filter((_,index)=>records[index].category==="Fruits")]]);
@@ -1433,7 +1439,7 @@ function logSimOnce(a,f,plants){
  const k=a.id+"|"+f.sci+"|"+plants+"|"+state.soil;if(k===_lastSimKey)return;_lastSimKey=k;
  logEv(`Simulated soil-crop diagnostic — ${f.en} on ${a.name} → ${fnum(plants,0)} units`,{area:fmtHa(aoiM2(a)),flora:f.en,rating:healthScore(SOILS[state.soil]),src:"SSB smart engine · geodesic area"});}
 
-applyLanguage();renderSim();listAois();restoreFarmRecords();
+applyLanguage();restoreLeftSidebar();renderSim();listAois();restoreFarmRecords();
 </script>
 </body>
 </html>

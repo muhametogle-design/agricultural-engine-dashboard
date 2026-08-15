@@ -4,7 +4,9 @@
   const DB_NAME="agri-unified-catalog",STORE="produce",META="metadata",CHANNEL="agri-catalog-sync";
   const channel=typeof BroadcastChannel!=="undefined"?new BroadcastChannel(CHANNEL):null;
   let dbPromise=null;
-  let memoryCatalog=((global.AGRI_SHARED&&global.AGRI_SHARED.catalog)||[]).slice().sort((a,b)=>a.name.localeCompare(b.name));
+  const masterCatalog=((global.AGRI_SHARED&&global.AGRI_SHARED.catalog)||[]).slice();
+  function mergeMaster(rows){const merged=new Map(masterCatalog.map(item=>[item.id,Object.assign({catalogSource:"shared-seed"},item)]));(rows||[]).forEach(item=>merged.set(item.id,item));return Array.from(merged.values()).sort((a,b)=>a.name.localeCompare(b.name));}
+  let memoryCatalog=mergeMaster([]);
   function open(){
     if(dbPromise)return dbPromise;
     dbPromise=new Promise((resolve,reject)=>{
@@ -19,13 +21,13 @@
     const db=await open();return new Promise((resolve,reject)=>{const tx=db.transaction(storeName,mode),req=action(tx.objectStore(storeName));req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});
   }
   async function persistedRows(){const rows=await request(STORE,"readonly",store=>store.getAll());return rows.sort((a,b)=>a.name.localeCompare(b.name));}
-  async function all(){try{const rows=await persistedRows();if(rows.length){memoryCatalog=rows;return rows;}}catch(error){console.warn("Catalog database unavailable; using shared fallback",error);}return memoryCatalog.slice();}
+  async function all(){try{const rows=await persistedRows();memoryCatalog=mergeMaster(rows);return memoryCatalog.slice();}catch(error){console.warn("Catalog database unavailable; using shared fallback",error);return mergeMaster(memoryCatalog);}}
   async function seed(){
     const shared=global.AGRI_SHARED;if(!shared)return memoryCatalog;
-    memoryCatalog=shared.catalog.slice().sort((a,b)=>a.name.localeCompare(b.name));
+    memoryCatalog=mergeMaster([]);
     try{
       const version=await request(META,"readonly",store=>store.get("catalog-version")),rows=await persistedRows();
-      if(version&&version.value===shared.version&&rows.length){memoryCatalog=rows;return rows;}
+      if(version&&version.value===shared.version&&rows.length){memoryCatalog=mergeMaster(rows);return memoryCatalog.slice();}
       const db=await open();await new Promise((resolve,reject)=>{const tx=db.transaction([STORE,META],"readwrite"),produce=tx.objectStore(STORE),meta=tx.objectStore(META);produce.clear();shared.catalog.forEach(item=>produce.put(Object.assign({catalogSource:"shared-seed"},item)));meta.put({key:"catalog-version",value:shared.version,seededAt:new Date().toISOString()});tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});
       return persistedRows();
     }catch(error){console.warn("Catalog seed failed; synchronous fallback remains active",error);return memoryCatalog.slice();}

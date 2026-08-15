@@ -755,7 +755,7 @@ function RotationPlanner(props){
   useEffect(function(){localStorage.setItem("lims_strategic_field_id",fieldId);},[fieldId]);
   useEffect(function(){
     if(!window.AGRI_DATA_STORE)return;
-    const merge=function(records){records=Array.isArray(records)&&records.length?records:SHARED_AGRI.catalog;setCatalog(function(previous){const map=new Map(previous.map(function(item){return [item.id,item];}));records.map(sharedCropRecord).forEach(function(item){map.set(item.id,item);});return Array.from(map.values()).sort(function(a,b){return a.name.localeCompare(b.name);});});};
+    const merge=function(records){const master=new Map(SHARED_AGRI.catalog.map(function(item){return [item.id,item];}));(Array.isArray(records)?records:[]).forEach(function(item){master.set(item.id,item);});const synchronized=Array.from(master.values());setCatalog(function(previous){const map=new Map(previous.map(function(item){return [item.id,item];}));synchronized.map(sharedCropRecord).forEach(function(item){map.set(item.id,item);});return Array.from(map.values()).sort(function(a,b){return a.name.localeCompare(b.name);});});};
     AGRI_DATA_STORE.ready.then(merge).catch(console.warn);return AGRI_DATA_STORE.subscribe(merge);
   },[]);
   useEffect(function(){
@@ -1059,7 +1059,7 @@ function App(){
   const [issueFeed, setIssueFeed] = useState([]);
 
   useEffect(function(){ localStorage.setItem("lims_spectrum",spectrum); },[spectrum]);
-  useEffect(function(){localStorage.setItem("agri_lang",lang);},[lang]);
+  useEffect(function(){localStorage.setItem("agri_lang",lang);if(window.AGRI_I18N)AGRI_I18N.setLanguage(lang);},[lang]);
   useEffect(function(){ localStorage.setItem("lims_engineers",JSON.stringify(engineers)); },[engineers]);
   useEffect(function(){ localStorage.setItem("lims_duty",String(duty.id)); },[duty.id]);
 
@@ -1188,8 +1188,8 @@ function App(){
           e("span",{className:"animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"}),
           e("span",{className:"relative inline-flex rounded-full h-2 w-2 bg-emerald-400"})),
         e("span",{className:"text-xs"},lang==="so"?"Shaqada: ":"On duty: ",e("b",null,duty.name), e("span",{className:"text-slate-400 font-mono text-[10px] ml-1"},duty.license))),
-      e("button",{onClick:function(){setLang(lang==="en"?"so":"en");},title:"SOM | ENG",className:"rounded-lg border border-emerald-700/70 bg-emerald-950/30 px-3 py-1.5 text-xs font-black text-emerald-200"},
-        e("span",{className:lang==="so"?"text-white":"text-slate-500"},"SOM")," | ",e("span",{className:lang==="en"?"text-white":"text-slate-500"},"ENG")),
+      e("button",{onClick:function(){setLang(lang==="en"?"so":"en");},title:"Soomaali | English",className:"min-w-[168px] whitespace-nowrap rounded-lg border border-emerald-700/70 bg-emerald-950/30 px-4 py-2 text-sm font-black text-emerald-200"},
+        e("span",{className:lang==="so"?"text-white":"text-slate-500"},"Soomaali")," | ",e("span",{className:lang==="en"?"text-white":"text-slate-500"},"English")),
       e("div",{className:"relative"},
         e("button",{onClick:function(){setSpectrumOpen(!spectrumOpen);},"aria-label":"Background spectrum","aria-expanded":spectrumOpen,
           className:"p-2 rounded-lg border border-slate-600 hover:border-emerald-500"},e(Icon,{name:"palette"})),

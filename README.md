@@ -293,10 +293,13 @@ arrive as `Decimal` (repository boundary now normalizes to float).
   IndexedDB and, when an API JWT is configured, synchronize to PostGIS plus the
   revision-0005 history API. Monthly Farm Analytics can consume local or server
   pH/N/P/K and Cudurada aggregates across tenant Beer records.
-* GIS retains isolated scroll regions and a seven-range FAO/HWSD pH pane; its
-  alphabetized text-only cards expose species-specific pathology selectors. Catalog
-  startup renders synchronous shared fallback records before IndexedDB seeding, so
-  an empty/corrupt browser store cannot produce a blank catalog screen.
+* GIS retains isolated scroll regions and a seven-range FAO/HWSD pH pane. Catalog
+  startup now master-merges shared seeds with cached/custom rows, so empty, partial
+  or corrupt IndexedDB state cannot remove trees or leave the catalog blank.
+* `agri.i18n.js` applies the shared Somali dictionary to static and dynamically
+  inserted text/attributes via MutationObserver. Wide `Soomaali | English` controls
+  synchronize language across tabs. The GIS hamburger persists a true collapsed
+  workspace state and invalidates Leaflet sizing when the map expands.
 * The hydrogeology layer renders boundaries, depth and yield plus an attributed
   FAO SWALIM-compatible monitoring view: 40 hourly telemetric stations and 609
   weekly strategic boreholes, with water-level trend, functionality, price,
