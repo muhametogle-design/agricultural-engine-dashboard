@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Somali SpatialBio Engine · Unified GIS & Agricultural ERP</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<script src="/web/vendor/tailwind.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -94,7 +94,7 @@
     </div>
   </div>
   <div class="flex-1"></div>
-  <a href="/lims" title="Laboratory Information Management System"
+  <a href="/web/lims.html" title="Laboratory Information Management System"
      class="px-2 py-1.5 rounded-lg border border-slate-800 hover:border-violet-500 text-xs text-slate-400">🧪 Lab LIMS</a>
   <div class="flex items-center gap-1.5 text-[11px] text-slate-500"><span id="api-led" class="w-2 h-2 rounded-full bg-slate-600"></span><span id="api-text">API…</span></div>
   <button id="theme-btn" onclick="toggleTheme()" role="switch" aria-checked="true" aria-label="Switch to light mode" title="Toggle light / dark mode"
@@ -279,6 +279,7 @@ applyTheme();
 
 /* ═══════════════ CONFIG / STATE ═══════════════ */
 const HOME=[2.046,45.318];
+const STANDALONE_GIS=location.pathname.indexOf("/web/")===0;
 let apiBase=(localStorage.getItem("agri_api_base")||"").replace(/\/+$/,"");
 function setApiBase(v){let s=(v||"").trim().replace(/\/+$/,"");try{s=new URL(s).origin}catch{}apiBase=s;localStorage.setItem("agri_api_base",s);pingApi();}
 document.getElementById("api-base").value=apiBase;
@@ -447,7 +448,7 @@ function listAois(){const box=document.getElementById("aoi-list");box.innerHTML=
   box.appendChild(el);});}
 function toggleLeft(){document.getElementById("left").classList.toggle("-translate-x-full");document.getElementById("left-scrim").classList.toggle("hidden");}
 function toggleRight(){document.getElementById("right").classList.toggle("translate-x-full");}
-async function pingApi(){const base=apiBase||location.origin;try{const r=await fetch(base+"/healthz");if(!r.ok)throw 0;document.getElementById("api-led").className="w-2 h-2 rounded-full bg-emerald-500";document.getElementById("api-text").textContent="API online";}catch{document.getElementById("api-led").className="w-2 h-2 rounded-full bg-slate-600";document.getElementById("api-text").textContent="API offline";}}
+async function pingApi(){if(STANDALONE_GIS&&!apiBase){document.getElementById("api-led").className="w-2 h-2 rounded-full bg-amber-500";document.getElementById("api-text").textContent="Standalone GIS";return;}const base=apiBase||location.origin;try{const r=await fetch(base+"/healthz");if(!r.ok)throw 0;document.getElementById("api-led").className="w-2 h-2 rounded-full bg-emerald-500";document.getElementById("api-text").textContent="API online";}catch{document.getElementById("api-led").className="w-2 h-2 rounded-full bg-slate-600";document.getElementById("api-text").textContent="API offline";}}
 pingApi();
 
 /* ═══════════════════════════════════════════════════════════════════════

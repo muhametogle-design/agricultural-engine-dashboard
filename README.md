@@ -273,9 +273,12 @@ arrive as `Decimal` (repository boundary now normalizes to float).
 * Interactive modules cover six-color themes, on-duty engineer management,
   clickable soil certificates with pH-driven lime advice, monthly lab/revenue
   analytics, USD cash intake with six Somali payment rails, asynchronous crop
-  pathology/treatment logging, and CSV-driven Gu/Deyr rotation planning.
-* The five-year planner recognizes both structured crop CSVs and wide matrix
-  templates, then flags pH incompatibility and consecutive crop-family risk.
+  pathology/treatment logging, and CSV-driven five-year rotation planning.
+* Farmer/client names are writable, diagnoses stay linked to active pathology
+  filters, and every planner season label accepts suggestions or custom text.
+  Structured and wide-matrix CSV imports flag pH and consecutive-family risk.
+* The GIS link detects standalone `/web` hosting and opens the bundled dashboard
+  instead of the FastAPI-only route.
 
 ## Production notes
 

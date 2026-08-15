@@ -3,6 +3,8 @@ const { useState, useMemo, useEffect } = React;
 const e = React.createElement;
 const { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, Legend,
         CartesianGrid, ResponsiveContainer } = Recharts;
+const STANDALONE_WEB = window.location.pathname.indexOf("/web/")===0;
+const GIS_ENGINE_URL = STANDALONE_WEB ? "/web/dashboard.html" : "/dashboard";
 
 /* ═════════ MODULE 1 · BACKGROUND SPECTRUM ═════════ */
 const SPECTRUM = [
@@ -181,6 +183,7 @@ const ENGINEERS = [
 
 /* ═════════ MODULE 6 · FIVE-YEAR ROTATION DATA ENGINE ═════════ */
 const SEASONS = ["Gu","Deyr"];
+const SEASON_SUGGESTIONS = ["Gu","Deyr","Xagaa","Jilaal","Hagaa","Rabi","Kharif","Dry season","Wet season"];
 const CROP_LIBRARY = [
   {id:"maize",name:"Maize",family:"Poaceae",minPh:5.5,maxPh:7.5,color:"#f59e0b"},
   {id:"sorghum",name:"Sorghum",family:"Poaceae",minPh:5.5,maxPh:8.5,color:"#fb923c"},
@@ -271,8 +274,9 @@ function parseCropPlan(text){
       let yr=Number(row[yearAt]);
       if(yr>5)yr=actualYears.indexOf(yr)+1;
       if(yr>=1&&yr<=5){
-        const season=String(row[seasonAt]||"Gu").toLowerCase().includes("deyr")?"Deyr":"Gu";
-        assignments.push({key:"y"+yr+"-"+season.toLowerCase(),cropId:crop.id});
+        const season=String(row[seasonAt]||"Gu").trim()||"Gu";
+        const slotName=season.toLowerCase().includes("deyr")?"deyr":"gu";
+        assignments.push({key:"y"+yr+"-"+slotName,cropId:crop.id,season:season});
       }
     });
   }else{
@@ -287,7 +291,7 @@ function parseCropPlan(text){
   catalog=catalog.filter(function(c,i,all){return all.findIndex(function(x){return x.id===c.id;})===i;});
   if(!catalog.length)throw new Error("No crop names were recognized. Include a 'crop' column or common crop names.");
   const slots=rotationSlots();
-  if(assignments.length){assignments.forEach(function(a){const slot=slots.find(function(s){return s.key===a.key;});if(slot)slot.cropId=a.cropId;});}
+  if(assignments.length){assignments.forEach(function(a){const slot=slots.find(function(s){return s.key===a.key;});if(slot){slot.cropId=a.cropId;slot.season=a.season||slot.season;}});}
   let seqAt=0;
   slots.forEach(function(slot){if(!slot.cropId){slot.cropId=(sequence[seqAt%sequence.length]||catalog[seqAt%catalog.length].id);seqAt+=1;}});
   return {catalog,slots,rowCount:rows.length};
@@ -376,10 +380,12 @@ function RotationPlanner(){
   },[rotation,byId,phNum]);
   const warningKeys=useMemo(function(){const out={};warnings.forEach(function(w){out[w.key]=(out[w.key]||[]).concat(w.type);});return out;},[warnings]);
   function setCrop(key,cropId){setRotation(function(prev){return prev.map(function(slot){return slot.key===key?Object.assign({},slot,{cropId}):slot;});});}
+  function setSeason(key,season){setRotation(function(prev){return prev.map(function(slot){return slot.key===key?Object.assign({},slot,{season}):slot;});});}
   function autoBalance(){
     const suitable=catalog.filter(function(c){return !Number.isFinite(phNum)||(phNum>=c.minPh&&phNum<=c.maxPh);});
     const choices=suitable.length?suitable:catalog; let cursor=0,previous=null;
-    setRotation(rotationSlots().map(function(slot){
+    const base=rotationSlots().map(function(slot,index){return Object.assign({},slot,{season:(rotation[index]&&rotation[index].season)||slot.season});});
+    setRotation(base.map(function(slot){
       let crop=choices[cursor%choices.length];
       for(let tries=0;tries<choices.length&&previous&&crop.family===previous.family;tries+=1){cursor+=1;crop=choices[cursor%choices.length];}
       cursor+=1;previous=crop;return Object.assign({},slot,{cropId:crop.id});
@@ -397,7 +403,7 @@ function RotationPlanner(){
     ev.target.value="";
   }
   return e(Panel,{title:"5-Year Crop Rotation Planner",icon:"calendar-range",cls:"2xl:col-span-2",
-    right:e("span",{className:"text-[10px] text-slate-500"},"10 seasonal slots · Gu + Deyr")},
+    right:e("span",{className:"text-[10px] text-slate-500"},"10 crop slots · every season name is editable")},
     e("div",{className:"grid grid-cols-1 lg:grid-cols-[1.3fr_170px_auto] gap-2 items-end"},
       e("label",{className:"rounded-xl border border-dashed border-slate-600 hover:border-emerald-500 bg-slate-800/50 px-3 py-2 cursor-pointer"},
         e("span",{className:"flex items-center gap-2 text-xs font-semibold"},e(Icon,{name:"file-up",cls:"w-4 h-4 text-emerald-300"}),"Load crop CSV data"),
@@ -408,7 +414,8 @@ function RotationPlanner(){
           className:"mt-1 w-full bg-slate-950 border border-slate-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm text-slate-100"})),
       e("div",{className:"flex gap-2"},
         e("button",{onClick:autoBalance,className:"flex-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3 py-2 text-xs font-bold text-white flex items-center justify-center gap-1.5"},e(Icon,{name:"shuffle",cls:"w-3.5 h-3.5"}),"Auto-balance"),
-        e("button",{onClick:function(){setRotation(rotationSlots());},title:"Clear timeline",className:"rounded-lg border border-slate-700 hover:border-red-500 px-3 py-2 text-slate-400"},e(Icon,{name:"trash-2",cls:"w-3.5 h-3.5"})))),
+        e("button",{onClick:function(){setRotation(function(prev){return prev.map(function(slot){return Object.assign({},slot,{cropId:""});});});},title:"Clear crops but keep season names",className:"rounded-lg border border-slate-700 hover:border-red-500 px-3 py-2 text-slate-400"},e(Icon,{name:"trash-2",cls:"w-3.5 h-3.5"})))),
+    e("datalist",{id:"rotation-season-options"},SEASON_SUGGESTIONS.map(function(season){return e("option",{key:season,value:season});})),
     e("div",{className:"mt-2 text-[11px] "+(importState.kind==="error"?"text-red-300":importState.kind==="ok"?"text-emerald-300":"text-slate-500")},
       importState.kind==="loading"&&e(Icon,{name:"loader-circle",cls:"inline w-3.5 h-3.5 mr-1 animate-spin"}),importState.message),
     e("div",{className:"mt-3 overflow-x-auto pb-2"},
@@ -420,8 +427,11 @@ function RotationPlanner(){
             const crop=byId[slot.cropId], flags=warningKeys[slot.key]||[];
             return e("div",{key:slot.key,className:"mb-2 last:mb-0 rounded-lg border p-2 "+(flags.length?"border-amber-600/70 bg-amber-950/20":"border-slate-800 bg-slate-900/70"),
               style:crop?{borderLeftColor:crop.color,borderLeftWidth:"3px"}:null},
-              e("div",{className:"flex items-center justify-between mb-1"},e("span",{className:"text-[10px] uppercase tracking-widest text-slate-500"},slot.season),
-                flags.length?e(Icon,{name:"triangle-alert",cls:"w-3.5 h-3.5 text-amber-300"}):e(Icon,{name:"circle-check",cls:"w-3.5 h-3.5 text-emerald-500"})),
+              e("div",{className:"flex items-end justify-between gap-1 mb-1.5"},
+                e("label",{className:"text-[9px] uppercase tracking-widest text-slate-500 flex-1"},"Season",
+                  e("input",{value:slot.season,list:"rotation-season-options",onChange:function(ev){setSeason(slot.key,ev.target.value);},
+                    "aria-label":"Season for year "+year,className:"mt-0.5 w-full bg-slate-950 border border-slate-700 focus:border-emerald-500 rounded px-1.5 py-1 text-[10px] normal-case tracking-normal text-slate-200"})),
+                flags.length?e(Icon,{name:"triangle-alert",cls:"w-3.5 h-3.5 text-amber-300 mb-1"}):e(Icon,{name:"circle-check",cls:"w-3.5 h-3.5 text-emerald-500 mb-1"})),
               e("select",{value:slot.cropId,onChange:function(ev){setCrop(slot.key,ev.target.value);},
                 className:"w-full bg-slate-950 border border-slate-700 rounded-md px-2 py-1.5 text-xs"},
                 e("option",{value:""},"— fallow —"),catalog.map(function(c){return e("option",{key:c.id,value:c.id},c.name);})),
@@ -636,7 +646,7 @@ function App(){
       e("div",{className:"font-extrabold tracking-widest text-xs sm:text-sm"},
         e("span",{className:"text-emerald-400"},"SOMALI "),e("span",null,"SPATIALBIO "),e("span",{className:"text-sky-400"},"ENGINE"),
         e("span",{className:"hidden sm:inline text-slate-400 font-normal ml-2 text-xs"},"· LabOps LIMS")),
-      e("a",{href:"/dashboard",title:"Open GIS Engine",className:"text-xs px-2.5 py-1.5 rounded-lg border border-slate-600 hover:border-emerald-500 text-slate-300 flex items-center gap-1"},e(Icon,{name:"map",cls:"w-3.5 h-3.5"}),e("span",{className:"hidden sm:inline"},"GIS Engine")),
+      e("a",{href:GIS_ENGINE_URL,title:"Open GIS Engine",className:"text-xs px-2.5 py-1.5 rounded-lg border border-slate-600 hover:border-emerald-500 text-slate-300 flex items-center gap-1"},e(Icon,{name:"map",cls:"w-3.5 h-3.5"}),e("span",{className:"hidden sm:inline"},"GIS Engine")),
       e("div",{className:"flex-1"}),
       e("div",{className:"hidden md:flex items-center gap-2 rounded-full border border-emerald-600/50 bg-emerald-900/30 px-3 py-1.5"},
         e("span",{className:"relative flex h-2 w-2"},
@@ -814,12 +824,15 @@ function App(){
               /* Farmer Field Issue integration */
               e("div",{className:"mt-3 rounded-xl border border-slate-700 bg-slate-800/50 p-3"},
                 e("div",{className:"text-[10px] uppercase tracking-widest text-slate-500 mb-2 flex items-center gap-1.5"},
-                  e(Icon,{name:"clipboard-list",cls:"w-3.5 h-3.5"}),"Farmer Field Issue Logger"),
-                e("select",{value:issueClient,onChange:function(ev){setIssueClient(ev.target.value);},className:"w-full mb-1.5 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-xs"},
-                  FARMERS.map(function(f){return e("option",{key:f[0],value:f[0]},f[0]+" · "+f[1]);})),
+                  e(Icon,{name:"clipboard-list",cls:"w-3.5 h-3.5"}),"Writable Farmer Field Issue Logger"),
+                e("input",{value:issueClient,onChange:function(ev){setIssueClient(ev.target.value);},list:"farmer-client-suggestions",
+                  placeholder:"Type farmer or client name","aria-label":"Farmer or client name",
+                  className:"w-full mb-1.5 bg-slate-900 border border-slate-700 focus:border-emerald-500 rounded-lg px-2.5 py-2 text-xs"}),
+                e("datalist",{id:"farmer-client-suggestions"},FARMERS.map(function(f){return e("option",{key:f[0],value:f[0]},f[1]);})),
                 e("select",{value:issueDisease,onChange:function(ev){setIssueDisease(ev.target.value);},className:"w-full mb-1.5 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-xs"},
                   e("option",{value:""},"— link a filtered disease card —"),
                   diseaseFiltered.map(function(d){return e("option",{key:d.disease+"|"+d.plant,value:d.disease+"|"+d.plant},d.plant+" — "+d.disease);})),
+                e("div",{className:"mb-1.5 text-[9px] text-slate-500"},diseaseFiltered.length+" diagnoses linked to the current pathology filters; clicking a diagnosis selects it here."),
                 e("button",{onClick:logIssue,disabled:!issueClient.trim()||!issueDisease,
                   className:"w-full rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 text-white text-xs font-semibold px-3 py-2"},
                   "Log Field Issue & Issue Treatment Sheet")),
@@ -841,7 +854,7 @@ function App(){
               : e("div",null,
                 e("div",{className:"text-[10px] uppercase tracking-widest text-slate-500 mb-1.5"},"Step 2 · "+selHost+" diagnoses — click any card to open its treatment manifest"),
                 e("div",{className:"space-y-1.5 max-h-[26rem] overflow-y-auto pr-1"},
-                  ((hostGroups.filter(function(g){return g.plant===selHost;})[0])||{items:[]}).items.map(function(d){return e("button",{key:d.disease,onClick:function(){setManifest(d);},
+                  ((hostGroups.filter(function(g){return g.plant===selHost;})[0])||{items:[]}).items.map(function(d){return e("button",{key:d.disease,onClick:function(){setIssueDisease(d.disease+"|"+d.plant);setManifest(d);},
                     className:"w-full rounded-xl border border-slate-700 bg-slate-800/60 hover:border-amber-500 px-3 py-3 text-left transition"},
                     e("div",{className:"text-sm font-bold text-amber-300 flex items-center gap-2"},
                       e(Icon,{name:"bug",cls:"w-4 h-4"}),d.disease,

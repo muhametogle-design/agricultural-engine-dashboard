@@ -55,13 +55,24 @@ def test_lims_dashboard_is_modular_and_offline_safe():
         '"ZAAD","SAHAL","EDAHAB","CASH","EVCPLUS","BANK"',
         "Crop Pathology Log",
         "loadDiseaseDictionary",
+        "Writable Farmer Field Issue Logger",
+        "linked to the current pathology filters",
         "5-Year Crop Rotation Planner",
         "parseCropPlan",
+        "rotation-season-options",
+        "setSeason",
         "back-to-back",
         "Field soil pH",
+        "GIS_ENGINE_URL",
     ):
         assert marker in source.text
     assert "CREDIT CARD" not in source.text
+
+    gis = client.get("/web/dashboard.html")
+    assert gis.status_code == 200
+    assert '/web/vendor/tailwind.js' in gis.text
+    assert 'href="/web/lims.html"' in gis.text
+    assert "L.map(" in gis.text
 
 
 def test_landing_links():
