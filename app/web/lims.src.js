@@ -34,16 +34,10 @@ const TIERS = {
   "Full Micronutrient Sweep": 85, "Heavy Metal Scan": 120,
 };
 const PAYMENT_METHODS = ["ZAAD","SAHAL","EDAHAB","CASH","EVCPLUS","BANK"];
-const GATEWAYS = {
-  ZAAD:0.010, SAHAL:0.012, EDAHAB:0.008,
-  CASH:0.000, EVCPLUS:0.010, BANK:0.015,
-};
-const TAX = 0.05;
 const money = x => "$"+Number(x).toFixed(2);
-function calcInvoice(base, gateway){
-  const fee=(GATEWAYS[gateway]!=null?GATEWAYS[gateway]:0);
-  const tax = base*TAX, gwFee = base*fee;
-  return {subtotal:base, tax, fee:gwFee, total:base+tax+gwFee};
+function calcInvoice(base){
+  const subtotal=Math.max(0,Number(base)||0);
+  return {subtotal:subtotal,total:subtotal};
 }
 function invStatus(total, paid){
   if (paid <= 0) return "PENDING";
@@ -55,7 +49,7 @@ function invStatus(total, paid){
 const DISEASE_CATEGORIES = ["All","Fruit Trees","Citrus","Grains & Crops","Vegetables","Legumes"];
 const DISEASE_CAT_ICONS = {"All":"layers","Fruit Trees":"apple","Citrus":"citrus","Grains & Crops":"wheat","Vegetables":"carrot","Legumes":"sprout"};
 /* schema: { cat, plant, disease, cause, symptoms:[…], immediate:[…], remedy } */
-const DISEASE_VECTOR = [
+const BASE_DISEASE_VECTOR = [
  {cat:"Fruit Trees",plant:"Mango",disease:"Anthracnose",cause:"Colletotrichum gloeosporioides (Fungus)",
   symptoms:["Black tear-streak lesions on ripening fruit","Blossom blight and flower drop","Tar-spot leaf lesions"],
   immediate:["Prune dead panicles and open canopy airflow","Collect and destroy all mummified fruit"],
@@ -117,6 +111,76 @@ const DISEASE_VECTOR = [
   immediate:["Strip heavily pustuled lower leaves between rows","Irrigate mornings only — dry foliage by dusk"],
   remedy:"Triadimefon (systemic) at first pustules, or mancozeb protectant weekly through pod fill."},
 ];
+function pathology(cat,plant,disease,cause,symptomA,symptomB,immediate,remedy){
+  return {cat,plant,disease,cause,symptoms:[symptomA,symptomB],immediate:[immediate],remedy};
+}
+const DISEASE_EXPANSION = [
+  pathology("Fruit Trees","Mango","Powdery Mildew","Oidium mangiferae (Fungus)","White powder on flowers and young leaves","Poor fruit set and flower drop","Remove heavily infected panicles and improve canopy airflow","Use locally registered sulfur or biological protectants at early bloom according to label guidance."),
+  pathology("Fruit Trees","Mango","Bacterial Black Spot","Xanthomonas citri pv. mangiferaeindicae (Bacterium)","Angular black leaf lesions","Raised cracks on fruit skin","Prune infected twigs only during dry weather","Use clean nursery stock, disinfect tools and follow local copper-product guidance."),
+  pathology("Fruit Trees","Banana","Black Sigatoka","Pseudocercospora fijiensis (Fungus)","Dark streaks expanding across leaves","Premature collapse of functional leaves","Remove badly spotted leaves without damaging young foliage","Improve spacing and drainage; rotate locally registered fungicide groups when thresholds are exceeded."),
+  pathology("Fruit Trees","Banana","Banana Bunchy Top","Banana bunchy top virus (Aphid-vectored virus)","Narrow upright bunched leaves","Dark green dot-dash streaks on veins","Quarantine and destroy confirmed mats with extension guidance","Replant certified virus-free material and manage banana aphid vectors."),
+  pathology("Fruit Trees","Papaya","Papaya Anthracnose","Colletotrichum gloeosporioides (Fungus)","Sunken dark fruit lesions","Orange spore masses in humid weather","Remove infected ripe fruit and sanitize harvest crates","Improve field sanitation and apply registered post-flowering protectants when forecast risk is high."),
+  pathology("Fruit Trees","Papaya","Papaya Dieback","Phytoplasma or mixed crown infection","Rapid crown yellowing","Stem tip necrosis and plant collapse","Rogue collapsing plants and disinfect cutting tools","Use clean seedlings, control suspected vectors and confirm cause through a diagnostic laboratory."),
+  pathology("Fruit Trees","Avocado","Phytophthora Root Rot","Phytophthora cinnamomi (Oomycete)","Sparse pale canopy","Black decayed feeder roots","Prevent irrigation runoff from moving between blocks","Use clean plants, raised drainage, mulch management and registered phosphonate programs where permitted."),
+  pathology("Fruit Trees","Avocado","Persea Mite Damage","Oligonychus perseae (Mite)","Brown feeding patches along leaf veins","Webbing and premature leaf drop","Monitor leaf undersides and conserve predatory mites","Use selective miticides only at local economic thresholds and rotate modes of action."),
+  pathology("Fruit Trees","Guava","Guava Wilt","Fusarium and Nalanthamala species complex","One-sided branch yellowing","Brown vascular discoloration","Remove dead trees with surrounding infected roots","Improve drainage, avoid root injury and plant tolerant clean nursery material."),
+  pathology("Fruit Trees","Guava","Oriental Fruit Fly","Bactrocera dorsalis (Insect)","Oviposition punctures on fruit","Soft fruit containing white larvae","Collect and destroy fallen fruit every week","Use sanitation, protein bait stations and approved male lures within an area-wide program."),
+  pathology("Fruit Trees","Pineapple","Phytophthora Heart Rot","Phytophthora nicotianae or P. cinnamomi","Soft water-soaked central leaves","Foul-smelling heart that pulls free","Remove affected plants and drain standing water","Plant treated clean material on raised beds and use locally registered oomycete controls if required."),
+  pathology("Fruit Trees","Pineapple","Mealybug Wilt","Pineapple mealybug wilt-associated viruses","Reddish leaf margins curling downward","Root decline with mealybug colonies","Control ants that protect mealybugs","Use clean planting slips and integrated ant and mealybug management."),
+  pathology("Fruit Trees","Passion Fruit","Fusarium Wilt","Fusarium oxysporum f. sp. passiflorae","Sudden vine wilting","Brown vascular tissue at collar","Remove infected vines and avoid moving infested soil","Use resistant rootstocks, clean transplants and long non-host rotations."),
+  pathology("Fruit Trees","Passion Fruit","Passion Fruit Woodiness","Cowpea aphid-borne mosaic virus complex","Hard deformed fruit","Mosaic and blistered leaves","Rogue symptomatic vines promptly","Use virus-tested seedlings, sanitize tools and manage aphid vectors and weed hosts."),
+  pathology("Fruit Trees","Pomegranate","Bacterial Blight","Xanthomonas axonopodis pv. punicae","Oily leaf and fruit spots","Fruit cracking around black lesions","Prune infected twigs and destroy mummified fruit","Use clean cuttings, avoid overhead irrigation and follow registered copper guidance."),
+  pathology("Fruit Trees","Date Palm","Bayoud Disease","Fusarium oxysporum f. sp. albedinis","Progressive one-sided frond whitening","Internal reddish-brown vascular streaks","Quarantine suspected palms and restrict offshoot movement","Confirm diagnosis officially and use certified resistant planting material; no curative field treatment is reliable."),
+  pathology("Fruit Trees","Coconut","Lethal Yellowing","Phytoplasma transmitted by planthoppers","Premature nut fall","Progressive frond yellowing from lower canopy","Report and remove confirmed palms under local guidance","Plant tolerant cultivars and manage vector habitat as directed by plant-health authorities."),
+  pathology("Fruit Trees","Strawberry","Gray Mold","Botrytis cinerea (Fungus)","Gray fuzzy growth on fruit","Flower blight and soft rot","Remove diseased fruit and improve airflow","Keep fruit dry, use clean mulch and rotate registered botrytis products by resistance group."),
+  pathology("Citrus","Orange","Citrus Tristeza","Citrus tristeza virus (Aphid-vectored virus)","Tree decline on susceptible rootstock","Stem pitting and small fruit","Remove severe confirmed sources","Use certified budwood, tolerant rootstocks and regional aphid management."),
+  pathology("Citrus","Orange","Citrus Black Spot","Phyllosticta citricarpa (Fungus)","Hard black fruit lesions","Premature fruit drop","Remove dead twigs and fallen infected fruit","Improve canopy hygiene and follow local protectant timing from fruit set onward."),
+  pathology("Vegetables","Tomato","Bacterial Wilt","Ralstonia solanacearum (Bacterium)","Rapid wilt while leaves remain green","Milky bacterial streaming from cut stem","Remove plants with roots and stop runoff movement","Use clean transplants, resistant varieties, sanitation and multi-year non-host rotation."),
+  pathology("Vegetables","Tomato","Fusarium Wilt","Fusarium oxysporum f. sp. lycopersici","Lower-leaf yellowing on one side","Brown vascular rings in stem","Remove infected residue and sanitize equipment","Use resistant cultivars, grafted plants and long rotation with non-host crops."),
+  pathology("Vegetables","Tomato","Tomato Leafminer","Tuta absoluta (Insect)","Serpentine leaf mines","Pinholes and galleries in fruit","Remove mined leaves and infested fruit","Use pheromone monitoring, exclusion, biological control and selective registered insecticides only at thresholds."),
+  pathology("Vegetables","Potato","Early Blight","Alternaria solani (Fungus)","Concentric target spots on older leaves","Dark sunken tuber lesions","Remove volunteer plants and infected haulms","Maintain balanced fertility and rotate protectant products according to local recommendations."),
+  pathology("Vegetables","Potato","Potato Bacterial Wilt","Ralstonia solanacearum species complex","Sudden whole-plant wilt","Brown vascular ring and bacterial ooze","Quarantine seed lots and sanitize tools","Use certified seed, clean irrigation water and extended rotation; report regulated outbreaks."),
+  pathology("Vegetables","Onion","Downy Mildew","Peronospora destructor (Oomycete)","Pale elongated leaf patches","Purple-gray sporulation in cool humidity","Improve ventilation and avoid evening irrigation","Rotate allium fields and use locally registered protectants based on weather risk."),
+  pathology("Vegetables","Garlic","White Rot","Sclerotium cepivorum (Fungus)","White cottony growth at bulb base","Tiny black sclerotia and leaf collapse","Remove infected bulbs with surrounding soil","Use clean sets and long allium-free rotation; apply approved soil treatments only with specialist guidance."),
+  pathology("Vegetables","Cabbage","Black Rot","Xanthomonas campestris pv. campestris","V-shaped yellow lesions from leaf edge","Blackened veins","Remove infected residues and avoid working wet crops","Use hot-water-treated certified seed, rotate brassicas and avoid splash irrigation."),
+  pathology("Vegetables","Cabbage","Diamondback Moth","Plutella xylostella (Insect)","Window-pane feeding holes","Small green larvae wriggling on leaves","Scout weekly and conserve parasitoid wasps","Use netting, Bt products and rotate selective registered insecticides by mode of action."),
+  pathology("Vegetables","Cauliflower","Downy Mildew","Hyaloperonospora parasitica (Oomycete)","Yellow angular leaf patches","White-gray growth beneath leaves","Remove heavily infected leaves and reduce leaf wetness","Use resistant cultivars, wider spacing and registered protectants when conditions favor disease."),
+  pathology("Vegetables","Broccoli","Alternaria Leaf Spot","Alternaria brassicicola or A. brassicae","Dark concentric leaf spots","Black spotting on heads","Remove crop debris and infected seedlings","Use clean seed, brassica rotation and registered protectants if monitoring shows spread."),
+  pathology("Vegetables","Carrot","Alternaria Leaf Blight","Alternaria dauci (Fungus)","Brown-edged leaflet lesions","Leaf canopy browning and collapse","Remove infected tops and improve airflow","Use clean seed, rotation and protectant programs based on local disease forecasts."),
+  pathology("Vegetables","Carrot","Root-knot Nematode","Meloidogyne species","Forked or galled roots","Patchy stunting","Map affected beds and prevent contaminated soil movement","Rotate with poor hosts, use clean transplants and approved soil-health or biocontrol measures."),
+  pathology("Vegetables","Cucumber","Powdery Mildew","Podosphaera xanthii (Fungus)","White powdery leaf colonies","Premature leaf yellowing","Remove badly infected leaves and improve airflow","Use resistant cultivars and rotate registered sulfur, biological or systemic options."),
+  pathology("Vegetables","Cucumber","Cucumber Mosaic","Cucumber mosaic virus (Aphid-vectored virus)","Mottled distorted leaves","Stunted vines and malformed fruit","Rogue symptomatic plants and remove weed hosts","Use clean seed, reflective mulch and resistant cultivars; insecticides do not cure infected plants."),
+  pathology("Vegetables","Watermelon","Fusarium Wilt","Fusarium oxysporum f. sp. niveum","One-sided vine wilt","Brown vascular discoloration","Remove affected vines and avoid soil transfer","Use resistant varieties, grafting and long rotation outside cucurbit hosts."),
+  pathology("Vegetables","Watermelon","Gummy Stem Blight","Stagonosporopsis species (Fungus)","Brown leaf lesions","Gummy cankers on vines","Remove infected vines and cucurbit debris","Use clean seed, rotation, drip irrigation and resistance-managed registered fungicides."),
+  pathology("Vegetables","Pumpkin","Powdery Mildew","Podosphaera xanthii (Fungus)","White colonies on mature leaves","Early canopy senescence","Remove severe leaves and reduce dense canopy humidity","Use tolerant varieties and rotate locally registered mildew controls."),
+  pathology("Vegetables","Zucchini","Zucchini Yellow Mosaic","Zucchini yellow mosaic virus (Aphid-vectored virus)","Severe yellow mosaic","Narrow leaves and bumpy fruit","Rogue plants promptly and remove volunteer cucurbits","Use resistant seed, reflective mulch and clean field boundaries."),
+  pathology("Vegetables","Eggplant","Bacterial Wilt","Ralstonia solanacearum (Bacterium)","Rapid daytime wilt","Bacterial streaming from cut stems","Remove roots and isolate affected irrigation zones","Use resistant rootstocks, sanitation and non-solanaceous rotation."),
+  pathology("Vegetables","Chili Pepper","Bacterial Spot","Xanthomonas species complex","Small water-soaked leaf spots","Raised scabby fruit lesions","Remove infected transplants and avoid handling wet plants","Use clean seed, copper-tolerant integrated programs and rotate away from solanaceous hosts."),
+  pathology("Vegetables","Chili Pepper","Phytophthora Blight","Phytophthora capsici (Oomycete)","Dark collar lesions","Sudden wilt and fruit rot","Improve drainage and stop contaminated runoff","Use raised beds, resistant varieties and registered oomycete products within an integrated program."),
+  pathology("Vegetables","Okra","Yellow Vein Mosaic","Begomovirus complex (Whitefly-vectored virus)","Bright yellow vein network","Small malformed pods","Rogue early infections and remove weed reservoirs","Plant tolerant varieties and manage whitefly vectors with integrated methods."),
+  pathology("Vegetables","Lettuce","Downy Mildew","Bremia lactucae (Oomycete)","Angular yellow upper-leaf patches","White growth beneath leaves","Remove infected leaves and lower night humidity","Use resistant cultivars and rotate registered products according to local races."),
+  pathology("Vegetables","Spinach","Stemphylium Leaf Spot","Stemphylium botryosum complex","Small gray-brown leaf spots","Lesions merging on marketable leaves","Remove residues and avoid overhead irrigation","Use clean seed, rotation and registered protectants when necessary."),
+  pathology("Vegetables","Beetroot","Cercospora Leaf Spot","Cercospora beticola (Fungus)","Circular gray spots with red margins","Premature leaf loss","Remove infected leaves and control volunteer beets","Rotate non-hosts and use resistance-managed registered fungicides when thresholds are reached."),
+  pathology("Vegetables","Radish","Clubroot","Plasmodiophora brassicae (Soil-borne protist)","Swollen distorted roots","Stunting and midday wilt","Remove affected roots without spreading soil","Raise pH where agronomically suitable and maintain a long brassica-free rotation."),
+  pathology("Vegetables","Sweet Potato","Sweet Potato Weevil","Cylas formicarius (Insect)","Cracked roots with feeding tunnels","Bitter damaged storage roots","Destroy infested residues and promptly hill exposed roots","Use clean vines, pheromone monitoring, timely harvest and field sanitation."),
+  pathology("Vegetables","Sweet Potato","Sweet Potato Virus Disease","SPFMV and SPCSV virus complex","Severe leaf mosaic","Stunting and very low root yield","Rogue affected plants and volunteer hosts","Use virus-tested planting vines and manage whitefly and aphid vectors."),
+  pathology("Vegetables","Garden Pea","Powdery Mildew","Erysiphe pisi (Fungus)","White powder on leaves and pods","Premature leaf drying","Remove infected residue and avoid late dense planting","Use resistant cultivars and approved sulfur or systemic options when needed."),
+  pathology("Grains & Crops","Maize","Maize Streak Virus","Maize streak virus (Leafhopper-vectored virus)","Fine pale streaks along leaves","Severe early stunting","Remove volunteer cereals and very early infected plants","Use resistant varieties, synchronized planting and regional leafhopper management."),
+  pathology("Grains & Crops","Maize","Gray Leaf Spot","Cercospora zeae-maydis (Fungus)","Rectangular gray lesions between veins","Premature leaf blight","Bury or decompose infected residue where appropriate","Rotate crops, use tolerant hybrids and apply registered fungicides only when yield risk justifies them."),
+  pathology("Grains & Crops","Sorghum","Sorghum Anthracnose","Colletotrichum sublineola (Fungus)","Red-purple leaf lesions","Black fruiting bodies in lesion centers","Remove volunteer sorghum and infected residue","Use resistant cultivars, clean seed and crop rotation."),
+  pathology("Grains & Crops","Rice","Rice Blast","Magnaporthe oryzae (Fungus)","Spindle-shaped leaf lesions","Neck rot and empty panicles","Avoid excessive nitrogen and prolonged leaf wetness","Use resistant varieties and registered blast products guided by local forecasts."),
+  pathology("Grains & Crops","Wheat","Yellow Rust","Puccinia striiformis f. sp. tritici","Yellow stripe-like pustules","Early leaf drying","Monitor cool-season fields and remove volunteer wheat","Use resistant cultivars and timely registered triazoles when thresholds are exceeded."),
+  pathology("Legumes","Common Bean","Angular Leaf Spot","Pseudocercospora griseola (Fungus)","Angular brown lesions limited by veins","Pod spots with dark margins","Remove infected residue and avoid working wet beans","Use clean resistant seed and rotate away from beans for multiple seasons."),
+  pathology("Legumes","Common Bean","Common Bacterial Blight","Xanthomonas phaseoli pv. phaseoli","Water-soaked leaf lesions","Greasy pod spots","Use clean seed and sanitize tools","Avoid overhead irrigation and rotate non-hosts; copper may suppress spread where locally registered."),
+  pathology("Legumes","Cowpea","Cowpea Bacterial Blight","Xanthomonas axonopodis pv. vignicola","Angular leaf spots with yellow margins","Stem cankers and seed discoloration","Remove infected residues and avoid saving suspect seed","Use certified seed, tolerant varieties and crop rotation."),
+  pathology("Legumes","Soybean","Asian Soybean Rust","Phakopsora pachyrhizi (Fungus)","Tiny tan lesions on lower leaves","Dense pustules on leaf undersides","Scout lower canopy during humid weather","Use tolerant varieties and registered fungicides timed to regional alerts."),
+  pathology("Legumes","Groundnut","Early Leaf Spot","Passalora arachidicola (Fungus)","Brown spots with yellow halos","Progressive lower-leaf loss","Destroy volunteer groundnuts and rotate fields","Use resistant cultivars and locally recommended protectant schedules."),
+  pathology("Grains & Crops","Sesame","Sesame Phyllody","Phytoplasma transmitted by leafhoppers","Flowers transformed into leafy structures","Little or no capsule formation","Rogue affected plants before vectors spread","Use clean seed, control weed hosts and manage leafhopper vectors regionally."),
+  pathology("Grains & Crops","Sunflower","Sunflower Downy Mildew","Plasmopara halstedii (Oomycete)","Pale leaves with white underside growth","Systemic stunting and sterile heads","Remove systemic plants and control volunteers","Use resistant hybrids, treated seed where approved and long rotation."),
+  pathology("Legumes","Chickpea","Ascochyta Blight","Ascochyta rabiei (Fungus)","Circular leaf and pod lesions","Stem girdling and breakage","Remove infected residue and avoid contaminated seed","Use certified seed, resistant varieties and forecast-guided registered fungicides."),
+  pathology("Legumes","Pigeon Pea","Fusarium Wilt","Fusarium udum (Fungus)","Progressive branch wilt","Brown vascular tissue","Remove wilted plants with roots","Use resistant cultivars and long rotation with cereals."),
+];
+const DISEASE_VECTOR = BASE_DISEASE_VECTOR.concat(DISEASE_EXPANSION);
 function loadDiseaseDictionary(){
   return new Promise(function(resolve){setTimeout(function(){resolve(DISEASE_VECTOR.slice());},600);});
 }
@@ -147,11 +211,11 @@ function seedInvoices(samples){
   const methods = PAYMENT_METHODS;
   return samples.slice(0,7).map(function(s,i){
     const base = TIERS[s.tier], gw = methods[(i*3)%methods.length];
-    const c = calcInvoice(base, gw);
+    const c = calcInvoice(base);
     const paid = i%3===2 ? Math.round(c.total*0.4*100)/100 : c.total;   // seeded partials
     return {
       id:"INV-2026-"+String(101+i), farmer:s.farmer, tier:s.tier,
-      base:base, gw:gw, subtotal:c.subtotal, tax:c.tax, fee:c.fee, total:c.total,
+      base:base, gw:gw, subtotal:c.subtotal, total:c.total,
       paid:paid, balance:Math.max(0, c.total-paid), currency:"USD",
       status: invStatus(c.total, paid),
       method:(["ZAAD-TXN-8F2A9C","SAHAL-88231-Q","EDAHAB-2219K","CASH-RCP-041","EVC-CP-77220","BNK-TRANS-9912"])[i%6],
@@ -186,7 +250,7 @@ const SEASON_SUGGESTIONS = ["Gu","Deyr","Xagaa","Jilaal","Hagaa","Rabi","Kharif"
 function crop(id,name,category,family,rootDepth,nitrogenDemand,minPh,maxPh,maturityDays,seasons,color){
   return {id,name,category,family,rootDepth,nitrogenDemand,minPh,maxPh,maturityDays,seasons,color};
 }
-const CROP_LIBRARY = [
+const BASE_CROP_LIBRARY = [
   crop("maize","Maize","Cereal","Poaceae","Medium","Heavy Feeder",5.5,7.5,90,["Gu","Deyr"],"#f59e0b"),
   crop("sorghum","Sorghum","Cereal","Poaceae","Deep","Light Feeder",5.5,8.5,110,["Gu","Xagaa"],"#fb923c"),
   crop("pearl_millet","Pearl Millet","Cereal","Poaceae","Medium","Light Feeder",5.0,8.5,75,["Gu","Xagaa"],"#eab308"),
@@ -241,6 +305,89 @@ const CROP_LIBRARY = [
   crop("melon","Melon","Fruit","Cucurbitaceae","Medium","Heavy Feeder",5.8,7.2,80,["Gu","Xagaa"],"#fcd34d"),
   crop("coconut","Coconut","Fruit","Arecaceae","Deep","Heavy Feeder",5.5,8.0,1825,["Gu establishment"],"#92400e"),
 ];
+function cropVariety(id,name,baseId,maturityDays,seasons){
+  const base=BASE_CROP_LIBRARY.find(function(item){return item.id===baseId;});
+  return Object.assign({},base,{id,name,maturityDays:maturityDays||base.maturityDays,seasons:seasons||base.seasons});
+}
+const CROP_VARIETY_EXPANSION = [
+  cropVariety("tomato_roma_vf","Tomato · Roma VF","tomato",85),
+  cropVariety("tomato_money_maker","Tomato · Money Maker","tomato",90),
+  cropVariety("tomato_cherry_sweet_100","Tomato · Cherry Sweet 100","tomato",70),
+  cropVariety("tomato_rio_grande","Tomato · Rio Grande","tomato",95),
+  cropVariety("tomato_marglobe","Tomato · Marglobe","tomato",80),
+  cropVariety("onion_red_creole","Onion · Red Creole","onion",115),
+  cropVariety("onion_texas_grano","Onion · Texas Grano","onion",110),
+  cropVariety("onion_bombay_red","Onion · Bombay Red","onion",120),
+  cropVariety("onion_white_lisbon","Onion · White Lisbon","onion",65),
+  cropVariety("pepper_california_wonder","Pepper · California Wonder","chili_pepper",75),
+  cropVariety("pepper_cayenne_long_slim","Pepper · Cayenne Long Slim","chili_pepper",80),
+  cropVariety("pepper_scotch_bonnet","Pepper · Scotch Bonnet","chili_pepper",100),
+  cropVariety("pepper_birds_eye","Pepper · Bird's Eye","chili_pepper",95),
+  cropVariety("cabbage_copenhagen_market","Cabbage · Copenhagen Market","cabbage",72),
+  cropVariety("cabbage_gloria_f1","Cabbage · Gloria F1","cabbage",80),
+  cropVariety("cabbage_drumhead","Cabbage · Drumhead","cabbage",105),
+  cropVariety("cabbage_red_acre","Cabbage · Red Acre","cabbage",76),
+  cropVariety("carrot_nantes","Carrot · Nantes","carrot",75),
+  cropVariety("carrot_chantenay","Carrot · Chantenay","carrot",70),
+  cropVariety("carrot_kuroda","Carrot · Kuroda","carrot",90),
+  cropVariety("potato_desiree","Potato · Desiree","potato",110),
+  cropVariety("potato_shangi","Potato · Shangi","potato",90),
+  cropVariety("potato_kenya_mpya","Potato · Kenya Mpya","potato",100),
+  cropVariety("sweet_potato_beauregard","Sweet Potato · Beauregard","sweet_potato",105),
+  cropVariety("sweet_potato_kabode","Sweet Potato · Kabode","sweet_potato",120),
+  cropVariety("sweet_potato_vita","Sweet Potato · Vita","sweet_potato",115),
+  cropVariety("cucumber_marketmore_76","Cucumber · Marketmore 76","cucumber",65),
+  cropVariety("cucumber_poinsett_76","Cucumber · Poinsett 76","cucumber",60),
+  cropVariety("cucumber_ashley","Cucumber · Ashley","cucumber",65),
+  cropVariety("watermelon_crimson_sweet","Watermelon · Crimson Sweet","watermelon",85),
+  cropVariety("watermelon_sugar_baby","Watermelon · Sugar Baby","watermelon",75),
+  cropVariety("watermelon_charleston_gray","Watermelon · Charleston Gray","watermelon",95),
+  cropVariety("pumpkin_musquee_provence","Pumpkin · Musquée de Provence","pumpkin",120),
+  cropVariety("pumpkin_connecticut_field","Pumpkin · Connecticut Field","pumpkin",110),
+  cropVariety("eggplant_black_beauty","Eggplant · Black Beauty","eggplant",85),
+  cropVariety("eggplant_long_purple","Eggplant · Long Purple","eggplant",80),
+  cropVariety("okra_clemson_spineless","Okra · Clemson Spineless","okra",60),
+  cropVariety("okra_emerald_green","Okra · Emerald Green","okra",58),
+  cropVariety("lettuce_great_lakes","Lettuce · Great Lakes","lettuce",75),
+  cropVariety("lettuce_buttercrunch","Lettuce · Buttercrunch","lettuce",55),
+  cropVariety("spinach_fordhook_giant","Spinach · Fordhook Giant","spinach",50),
+  cropVariety("spinach_bloomsdale","Spinach · Bloomsdale","spinach",45),
+  cropVariety("cauliflower_snowball","Cauliflower · Snowball","cauliflower",85),
+  cropVariety("cauliflower_amazing","Cauliflower · Amazing","cauliflower",75),
+  cropVariety("broccoli_calabrese","Broccoli · Calabrese","broccoli",85),
+  cropVariety("broccoli_green_magic","Broccoli · Green Magic","broccoli",65),
+  cropVariety("beetroot_detroit_dark_red","Beetroot · Detroit Dark Red","beetroot",60),
+  cropVariety("beetroot_cylindra","Beetroot · Cylindra","beetroot",65),
+  crop("radish_cherry_belle","Radish · Cherry Belle","Vegetable","Brassicaceae","Shallow","Light Feeder",5.8,7.0,25,["Deyr","Jilaal"],"#ef4444"),
+  crop("radish_french_breakfast","Radish · French Breakfast","Vegetable","Brassicaceae","Shallow","Light Feeder",5.8,7.0,28,["Deyr","Jilaal"],"#fb7185"),
+  crop("garden_pea_lincoln","Garden Pea · Lincoln","Vegetable","Fabaceae","Medium","Nitrogen Fixer",6.0,7.5,70,["Jilaal","Rabi"],"#22c55e"),
+  crop("sugar_snap_pea","Garden Pea · Sugar Snap","Vegetable","Fabaceae","Medium","Nitrogen Fixer",6.0,7.5,65,["Jilaal","Rabi"],"#4ade80"),
+  cropVariety("mango_apple","Mango · Apple","mango",900),
+  cropVariety("mango_kent","Mango · Kent","mango",1000),
+  cropVariety("mango_keitt","Mango · Keitt","mango",1050),
+  cropVariety("mango_tommy_atkins","Mango · Tommy Atkins","mango",950),
+  cropVariety("banana_grand_nain","Banana · Grand Nain","banana",330),
+  cropVariety("banana_williams","Banana · Williams","banana",350),
+  cropVariety("banana_dwarf_cavendish","Banana · Dwarf Cavendish","banana",320),
+  cropVariety("papaya_solo_sunrise","Papaya · Solo Sunrise","papaya",260),
+  cropVariety("papaya_red_lady","Papaya · Red Lady","papaya",250),
+  cropVariety("orange_valencia","Orange · Valencia","orange",700),
+  cropVariety("orange_washington_navel","Orange · Washington Navel","orange",730),
+  cropVariety("avocado_hass","Avocado · Hass","avocado",1000),
+  cropVariety("avocado_fuerte","Avocado · Fuerte","avocado",950),
+  cropVariety("guava_allahabad_safeda","Guava · Allahabad Safeda","guava",650),
+  cropVariety("guava_ruby_supreme","Guava · Ruby Supreme","guava",680),
+  cropVariety("pineapple_smooth_cayenne","Pineapple · Smooth Cayenne","pineapple",520),
+  cropVariety("pineapple_md2","Pineapple · MD2","pineapple",500),
+  cropVariety("passion_purple_possum","Passion Fruit · Purple Possum","passion_fruit",290),
+  cropVariety("passion_yellow_giant","Passion Fruit · Yellow Giant","passion_fruit",310),
+  cropVariety("pomegranate_wonderful","Pomegranate · Wonderful","pomegranate",700),
+  cropVariety("date_medjool","Date Palm · Medjool","date_palm",1800),
+  cropVariety("date_barhi","Date Palm · Barhi","date_palm",1750),
+  cropVariety("strawberry_chandler","Strawberry · Chandler","strawberry",115),
+  cropVariety("strawberry_festival","Strawberry · Festival","strawberry",110),
+];
+const CROP_LIBRARY = BASE_CROP_LIBRARY.concat(CROP_VARIETY_EXPANSION);
 const CROP_ALIASES = {
   corn:"maize",cornmeal:"maize",millet:"pearl_millet",pearlmillet:"pearl_millet",
   bean:"beans",commonbean:"beans",greenbeans:"beans",mungbean:"mung_bean",
@@ -434,7 +581,7 @@ function RotationPlanner(props){
     {id:"plot-c",name:"Upland Trial Field",ph:5.3,texture:"red loam",organicMatter:0.9,nitrogenReserve:48},
   ];
   const [catalog,setCatalog]=useState(function(){
-    try{const saved=JSON.parse(localStorage.getItem("lims_strategic_crop_catalog_v2"));return Array.isArray(saved)&&saved.length?saved:CROP_LIBRARY;}catch(_){return CROP_LIBRARY;}
+    try{const saved=JSON.parse(localStorage.getItem("lims_strategic_crop_catalog_v4"));return Array.isArray(saved)&&saved.length?saved:CROP_LIBRARY;}catch(_){return CROP_LIBRARY;}
   });
   const [rotation,setRotation]=useState(function(){
     try{const saved=JSON.parse(localStorage.getItem("lims_strategic_rotation_v2"));return Array.isArray(saved)&&saved.length===5?saved:defaultRotation();}catch(_){return defaultRotation();}
@@ -451,7 +598,7 @@ function RotationPlanner(props){
   const [dragOver,setDragOver]=useState("");
   const [importState,setImportState]=useState({kind:"idle",message:"Fallback enterprise catalog active — upload or drop a CSV to replace it."});
 
-  useEffect(function(){localStorage.setItem("lims_strategic_crop_catalog_v2",JSON.stringify(catalog));},[catalog]);
+  useEffect(function(){localStorage.setItem("lims_strategic_crop_catalog_v4",JSON.stringify(catalog));},[catalog]);
   useEffect(function(){localStorage.setItem("lims_strategic_rotation_v2",JSON.stringify(rotation));},[rotation]);
   useEffect(function(){localStorage.setItem("lims_strategic_fields_v2",JSON.stringify(fields));},[fields]);
   useEffect(function(){localStorage.setItem("lims_strategic_field_id",fieldId);},[fieldId]);
@@ -795,16 +942,16 @@ function App(){
   /* payment intake — typed amounts */
   const baseNum = parseFloat(payBase)||0;
   const paidNum = payPaid===""?null:parseFloat(payPaid);
-  const live = calcInvoice(baseNum, payGw);
+  const live = calcInvoice(baseNum);
   const liveBalance = paidNum==null?live.total:Math.max(0, live.total-paidNum);
   const liveCredit  = paidNum==null?0:Math.max(0, paidNum-live.total);
   function pickTier(t){ setPayTier(t); setPayBase(String(TIERS[t])); }
   function receivePay(){
     if(!payName.trim()||baseNum<=0)return;
-    const c = calcInvoice(baseNum, payGw);
+    const c = calcInvoice(baseNum);
     const paid = paidNum==null?0:Math.max(0,paidNum);
     const inv={ id:"INV-2026-"+String(101+invoices.length), farmer:payName.trim(), tier:payTier,
-      base:baseNum, gw:payGw, subtotal:c.subtotal, tax:c.tax, fee:c.fee, total:c.total,
+      base:baseNum, gw:payGw, subtotal:c.subtotal, total:c.total,
       paid:paid, balance:Math.max(0,c.total-paid), currency:"USD",
       status:invStatus(c.total,paid),
       method:payGw+"-AUTO-"+Math.floor(Math.random()*89999+10000),
@@ -946,11 +1093,12 @@ function App(){
               e("button",{onClick:registerSample,className:"rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold"},"Add Sample"))))),
 
         /* Module 5 — invoices + typed payment intake */
-        e(Panel,{title:"Financial Ledger · Cash Intake",icon:"receipt"},
+        e(Panel,{title:"Financial Ledger · Cash Intake",icon:"receipt",
+          right:e("span",{className:"rounded-full border border-emerald-700/60 bg-emerald-950/30 px-2 py-1 text-[10px] font-bold text-emerald-300"},"NO TAX · NO FEES")},
           e("div",{className:"overflow-x-auto max-h-56 overflow-y-auto pr-1"},
             e("table",{className:"w-full text-xs"},
               e("thead",null,e("tr",{className:"text-left text-slate-500 border-b border-slate-700"},
-                ["Invoice","Client Name","Currency","Method","Charge","Tax 5%","Gateway Fee","Total USD","Paid","Balance","Status"].map(function(h){return e("th",{key:h,className:"py-2 pr-3 font-medium"},h);}))),
+                ["Invoice","Client Name","Currency","Method","Charge","Total USD","Paid","Balance","Status"].map(function(h){return e("th",{key:h,className:"py-2 pr-3 font-medium"},h);}))),
               e("tbody",null,invoices.map(function(v){
                 const chip=v.status==="PAID"?"border-emerald-700 bg-emerald-900/40 text-emerald-300":v.status==="PARTIAL"?"border-amber-700 bg-amber-900/40 text-amber-300":"border-red-800 bg-red-900/40 text-red-300";
                 return e("tr",{key:v.id,className:"border-b border-slate-800"},
@@ -959,8 +1107,6 @@ function App(){
                   e("td",{className:"py-1.5 pr-3 font-mono text-slate-400"},v.currency),
                   e("td",{className:"py-1.5 pr-3 text-slate-400"},v.gw),
                   e("td",{className:"py-1.5 pr-3"},money(v.subtotal)),
-                  e("td",{className:"py-1.5 pr-3"},money(v.tax)),
-                  e("td",{className:"py-1.5 pr-3 text-slate-400"},money(v.fee)+" ("+(GATEWAYS[v.gw]*100).toFixed(1)+"%)"),
                   e("td",{className:"py-1.5 pr-3 font-bold text-emerald-300"},money(v.total)),
                   e("td",{className:"py-1.5 pr-3"},money(v.paid)),
                   e("td",{className:"py-1.5 pr-3 "+(v.balance>0?"text-red-300":"text-slate-500")},money(v.balance)),
@@ -977,13 +1123,12 @@ function App(){
               e("input",{value:payBase,onChange:function(ev){setPayBase(ev.target.value);},type:"number",min:"0",step:"0.01","aria-label":"Charge in USD",title:"Charge in USD (tier is only a suggestion)",className:"bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2"}),
               e("input",{value:"USD",readOnly:true,"aria-label":"Currency",className:"bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 font-mono text-emerald-300"}),
               e("select",{value:payGw,onChange:function(ev){setPayGw(ev.target.value);},"aria-label":"Payment method",className:"bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2"},
-                PAYMENT_METHODS.map(function(g){return e("option",{key:g,value:g},g+" ("+(GATEWAYS[g]*100).toFixed(1)+"% fee)");})),
+                PAYMENT_METHODS.map(function(g){return e("option",{key:g,value:g},g);})),
               e("input",{value:payPaid,onChange:function(ev){setPayPaid(ev.target.value);},type:"number",min:"0",step:"0.01",placeholder:"Amount paid USD",title:"What the farmer handed over today",className:"bg-slate-900 border border-emerald-700 rounded-lg px-2.5 py-2"}),
               e("button",{onClick:receivePay,disabled:!payName.trim()||baseNum<=0,className:"rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 text-white font-semibold"},"Record")),
             e("div",{className:"mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px]"},
-              e("span",{className:"text-slate-400"},"Subtotal ",e("b",null,money(live.subtotal))),
-              e("span",{className:"text-slate-400"},"Gov. Tax 5% ",e("b",null,money(live.tax))),
-              e("span",{className:"text-slate-400"},"Gateway Fee ",e("b",null,money(live.fee))),
+              e("span",{className:"text-slate-400"},"Charge ",e("b",null,money(live.subtotal))),
+              e("span",{className:"rounded-full border border-emerald-700/60 bg-emerald-950/30 px-2 py-0.5 text-emerald-300"},"Tax disabled · gateway fees disabled"),
               e("span",{className:"text-slate-400"},"Total Due ",e("b",{className:"text-emerald-300"},money(live.total))," USD"),
               e("span",{className:paidNum==null?"text-slate-500":"text-amber-300"},"Paid ",e("b",null,paidNum==null?"—":money(paidNum))),
               liveCredit>0?e("span",{className:"text-sky-300"},"Change/Credit ",e("b",null,money(liveCredit)))
@@ -1005,7 +1150,8 @@ function App(){
         e(RotationPlanner,{samples:samples}),
 
         /* Module 5 — CROP PATHOLOGY · asynchronous dictionary */
-        e(Panel,{title:"Crop Pathology Log · Disease & Treatment Intelligence",icon:"stethoscope",cls:"2xl:col-span-2"},
+        e(Panel,{title:"Crop Pathology Log · Disease & Treatment Intelligence",icon:"stethoscope",cls:"2xl:col-span-2",
+          right:e("span",{className:"rounded-full border border-red-800/70 bg-red-950/30 px-2 py-1 text-[10px] font-bold text-red-200"},diseases?diseases.length+" classifications":"loading…")},
           /* control sector — category tabs with count badges + fuzzy search */
           e("div",{className:"flex flex-wrap items-center gap-1.5"},
             DISEASE_CATEGORIES.map(function(c){return e("button",{key:c,onClick:function(){setCatTab(c);},

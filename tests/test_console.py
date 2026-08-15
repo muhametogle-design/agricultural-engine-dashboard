@@ -34,6 +34,8 @@ def test_dashboard_served():
         "aspect-ratio:1/1", "grid-template-columns", "lab-map-label",
         "Afgooye Soil Laboratory", "updateAoiMapLabel", "localHwsdImagePromise",
         "Local HWSD pH overlay", "local-sampler=v1",
+        "overscroll-behavior:contain", "scrollbar-gutter:stable",
+        "#left,#right,#map-shell", "overflow-y:auto!important",
     ):
         assert marker in r.text
 
@@ -75,10 +77,16 @@ def test_lims_dashboard_is_modular_and_offline_safe():
         "All families",
         "Avocado",
         "Broccoli",
+        "CROP_VARIETY_EXPANSION",
+        "DISEASE_EXPANSION",
+        "NO TAX · NO FEES",
         "GIS_ENGINE_URL",
     ):
         assert marker in source.text
-    assert "CREDIT CARD" not in source.text
+    assert source.text.count("cropVariety(") >= 51
+    assert source.text.count("pathology(") >= 51
+    for removed in ("CREDIT CARD", "const TAX", "GATEWAYS", "Tax 5%", "% fee"):
+        assert removed not in source.text
 
     gis = client.get("/web/dashboard.html")
     assert gis.status_code == 200
