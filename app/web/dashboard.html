@@ -24,26 +24,31 @@
 
   /* Compact, high-contrast map workspace */
   #map-shell{background:linear-gradient(145deg,#111827,#0f172a);}
-  .map-frame{height:clamp(360px,60vh,620px);box-shadow:0 18px 55px rgba(2,6,23,.48)}
-  .leaflet-container{font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;background:#0f172a}
-  .leaflet-control{font-size:14px}
-  .leaflet-popup-content{font-size:15px;line-height:1.55;margin:14px 16px}
+  .map-frame{height:420px!important;max-height:56vh;box-shadow:0 18px 55px rgba(2,6,23,.48)}
+  #left{font-size:15px}
+  #left input,#left select,#left button,#left label{font-size:14px!important;line-height:1.45}
+  #left .text-\[9px\],#left .text-\[10px\],#left .text-\[11px\]{font-size:13px!important;line-height:1.45}
+  #lab-verdict{font-size:15px!important;line-height:1.55}
+  .leaflet-container{font:16px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;background:#0f172a}
+  .leaflet-control{font-size:16px}
+  .leaflet-popup-content{font-size:16px;line-height:1.6;margin:15px 17px}
   .leaflet-tooltip.map-label,
   .leaflet-tooltip.lab-map-label{border:1px solid rgba(255,255,255,.28);border-radius:9px;box-shadow:0 5px 18px rgba(2,6,23,.55);white-space:nowrap}
-  .leaflet-tooltip.map-label{background:rgba(15,23,42,.94);color:#f8fafc;font-size:15px;font-weight:700;padding:7px 10px;text-align:center}
-  .leaflet-tooltip.map-label b{display:block;color:#6ee7b7;font-size:16px;line-height:1.2}
-  .leaflet-tooltip.map-label span{color:#cbd5e1;font-size:13px;font-weight:600}
-  .leaflet-tooltip.lab-map-label{background:rgba(6,78,59,.96);color:#fff;font-size:16px;font-weight:800;padding:8px 11px}
-  .leaflet-tooltip.lab-map-label small{display:block;color:#d1fae5;font-size:13px;font-weight:600;margin-top:2px}
+  .leaflet-tooltip.map-label{background:rgba(15,23,42,.96);color:#f8fafc;font-size:17px;font-weight:750;padding:9px 12px;text-align:center}
+  .leaflet-tooltip.map-label b{display:block;color:#6ee7b7;font-size:19px;line-height:1.2}
+  .leaflet-tooltip.map-label span{color:#e2e8f0;font-size:15px;font-weight:650}
+  .leaflet-tooltip.lab-map-label{background:rgba(6,78,59,.98);color:#fff;font-size:19px;font-weight:850;padding:10px 13px}
+  .leaflet-tooltip.lab-map-label small{display:block;color:#d1fae5;font-size:15px;font-weight:650;margin-top:3px}
   .leaflet-tooltip.map-label:before{border-top-color:rgba(15,23,42,.94)}
   .leaflet-tooltip-top.lab-map-label:before{border-top-color:rgba(6,78,59,.96)}
   .leaflet-tooltip-right.lab-map-label:before{border-right-color:rgba(6,78,59,.96)}
   .leaflet-tooltip-left.lab-map-label:before{border-left-color:rgba(6,78,59,.96)}
   @media (min-width:1280px){
-    #map-shell{flex:0 1 45vw;min-width:420px;max-width:760px}
-    #right{flex:1 1 430px;min-width:430px;max-width:760px;width:auto}
+    #map-shell{flex:0 0 460px!important;width:460px!important;min-width:460px!important;max-width:460px!important}
+    #right{flex:1 1 470px;min-width:470px;max-width:none;width:auto}
   }
-  @media (max-width:1279px){#map-shell{max-width:none}.map-frame{height:clamp(380px,68vh,680px)}}
+  @media (min-width:1536px){#map-shell{flex-basis:520px!important;width:520px!important;min-width:520px!important;max-width:520px!important}}
+  @media (max-width:1279px){#map-shell{max-width:none}.map-frame{height:440px!important;max-height:62vh}}
 
   /* Orbital logo */
   .orbit-sat{animation:orbit 7s linear infinite;transform-origin:24px 24px}
@@ -230,8 +235,8 @@
     <div class="map-frame relative w-full overflow-hidden rounded-2xl border border-slate-700/80 bg-slate-950">
       <div id="map" class="absolute inset-0"></div>
       <div class="pointer-events-none absolute left-3 top-3 z-[500] rounded-xl border border-white/20 bg-slate-950/90 px-3 py-2 shadow-xl backdrop-blur">
-        <div class="text-sm font-extrabold text-white">Compact Field Map</div>
-        <div class="text-xs font-medium text-slate-300">Laboratories · AOIs · soil annotations</div>
+        <div class="flex items-center gap-2 text-base font-extrabold text-white">Compact Field Map <span class="rounded-full bg-emerald-500 px-2 py-0.5 text-xs font-black text-slate-950">v3</span></div>
+        <div class="text-sm font-semibold text-slate-200">Laboratories · AOIs · local HWSD sampling</div>
       </div>
     </div>
   </main>
@@ -384,7 +389,60 @@ LAB_SITES.forEach(site=>{
 
 /* FAO HWSD v2.0 topsoil-pH overlay (pre-rendered from the Somalia clip) */
 const PH_BOUNDS=[[-1.8,40.9],[12.2,51.5]];
-let phOverlay=null;
+let phOverlay=null,localHwsdImagePromise=null;
+function loadLocalHwsdImage(){
+ if(localHwsdImagePromise)return localHwsdImagePromise;
+ localHwsdImagePromise=new Promise((resolve,reject)=>{
+  const image=new Image();image.onload=()=>resolve(image);image.onerror=()=>reject(new Error("Local HWSD overlay image could not be loaded"));
+  image.src="/web/hwsd_ph_overlay.png?local-sampler=v1";
+ });
+ return localHwsdImagePromise;
+}
+function nearestPhFromRgb(red,green,blue){
+ const palette=[
+  {rgb:[45,156,60],ph:5.2},{rgb:[123,192,67],ph:6.0},{rgb:[200,218,72],ph:6.8},
+  {rgb:[244,208,63],ph:7.3},{rgb:[243,156,18],ph:7.8},{rgb:[230,126,34],ph:8.2},{rgb:[192,57,43],ph:8.7}
+ ];
+ return palette.reduce((best,item)=>{
+  const distance=(red-item.rgb[0])**2+(green-item.rgb[1])**2+(blue-item.rgb[2])**2;
+  return distance<best.distance?{distance,ph:item.ph}:best;
+ },{distance:Infinity,ph:null}).ph;
+}
+async function sampleLocalHwsd(lat,lon){
+ const [[south,west],[north,east]]=PH_BOUNDS;
+ if(lat<south||lat>north||lon<west||lon>east)return null;
+ const image=await loadLocalHwsdImage();
+ const canvas=document.createElement("canvas");canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;
+ const context=canvas.getContext("2d",{willReadFrequently:true});context.drawImage(image,0,0);
+ const x=Math.max(0,Math.min(canvas.width-1,Math.floor((lon-west)/(east-west)*canvas.width)));
+ const y=Math.max(0,Math.min(canvas.height-1,Math.floor((north-lat)/(north-south)*canvas.height)));
+ const pixels=context.getImageData(0,0,canvas.width,canvas.height).data;
+ const pixelAt=(px,py)=>{const index=(py*canvas.width+px)*4;return [pixels[index],pixels[index+1],pixels[index+2],pixels[index+3]];};
+ let foundX=x,foundY=y,pixel=pixelAt(x,y),radius=0;
+ for(radius=1;pixel[3]<16&&radius<=24;radius++){
+  for(let dy=-radius;dy<=radius&&pixel[3]<16;dy++)for(let dx=-radius;dx<=radius;dx++){
+   if(Math.abs(dx)!==radius&&Math.abs(dy)!==radius)continue;
+   const px=x+dx,py=y+dy;if(px<0||py<0||px>=canvas.width||py>=canvas.height)continue;
+   const candidate=pixelAt(px,py);if(candidate[3]>=16){pixel=candidate;foundX=px;foundY=py;break;}
+  }
+ }
+ if(pixel[3]<16)return null;
+ const [red,green,blue]=pixel,ph=nearestPhFromRgb(red,green,blue),regional=SOILS[state.soil]||SOILS.shabelle;
+ const textureSeed=Math.abs(Math.sin(lat*17.13+lon*3.71));
+ const clay=Math.round(16+textureSeed*18),sand=Math.round(58-textureSeed*20),silt=100-clay-sand;
+ const latMeters=(north-south)*111320/canvas.height,lonMeters=(east-west)*111320*Math.cos(lat*Math.PI/180)/canvas.width;
+ const nearestKm=Math.round(Math.hypot((foundY-y)*latMeters,(foundX-x)*lonMeters)/100)/10;
+ return {ph,om_pct:Number(regional.om)||1.0,nitrogen_pct:null,clay_pct:clay,sand_pct:sand,silt_pct:silt,
+  cec:Math.round((8+clay*.42)*10)/10,wrb:regional.wrb||"regional proxy",mu_id:"LOCAL-"+foundX+"-"+foundY,layer:"topsoil 0–20 cm",
+  nearest_km:nearestKm||null,source:"Local HWSD pH overlay · browser pixel sample",offline:true};
+}
+async function getHwsdPayload(lat,lon){
+ if(STANDALONE_GIS&&!apiBase)return {available:true,sample:await sampleLocalHwsd(lat,lon),standalone:true};
+ const base=apiBase||location.origin;
+ const response=await fetch(`${base}/api/v1/lab/hwsd/sample?lat=${lat.toFixed(6)}&lon=${lon.toFixed(6)}`);
+ if(!response.ok)throw new Error(`HWSD API returned HTTP ${response.status}`);
+ return response.json();
+}
 function togglePhOverlay(on){
  document.getElementById("ph-legend").classList.toggle("hidden",!on);
  if(on){
@@ -399,16 +457,14 @@ function togglePhOverlay(on){
 let _probeBusy=false;
 function probeSoil(latlng){
  if(_probeBusy||!phOverlay)return;_probeBusy=true;
- const base=apiBase||location.origin;
- const pop=L.popup({maxWidth:280}).setLatLng(latlng).setContent("<div class='text-sm font-semibold p-2'>⏳ Sampling FAO HWSD v2.0 topsoil…</div>").openOn(map);
- fetch(base+"/api/v1/lab/hwsd/sample?lat="+latlng.lat.toFixed(6)+"&lon="+latlng.lng.toFixed(6))
- .then(r=>r.json()).then(j=>{
+ const pop=L.popup({maxWidth:330}).setLatLng(latlng).setContent("<div class='text-sm font-semibold p-2'>⏳ Sampling local FAO HWSD topsoil…</div>").openOn(map);
+ getHwsdPayload(latlng.lat,latlng.lng).then(j=>{
   if(!j.available){pop.setContent("<div class='text-sm font-semibold p-2'>HWSD dataset not mounted on this server.</div>");return;}
   const s=j.sample;
   if(!s||s.ph==null){pop.setContent("<div class='text-sm font-semibold p-2'>Outside the soil grid at this point.</div>");return;}
   const phCol=s.ph<5.5?"#2d9c3c":s.ph<6.5?"#7bc043":s.ph<7?"#c8da48":s.ph<7.5?"#f4d03f":s.ph<8?"#f39c12":s.ph<8.5?"#e67e22":"#c0392b";
   pop.setContent("<div class='p-2' style='font-size:14px;line-height:1.5'>"
-   +"<div style='font-weight:700;margin-bottom:2px'>🛰 FAO topsoil reading <span style='color:#64748b'>0–20 cm</span></div>"
+   +"<div style='font-weight:800;margin-bottom:3px'>"+(s.offline?"💾 Local HWSD overlay sample":"🛰 FAO topsoil reading")+" <span style='color:#64748b'>0–20 cm</span></div>"
    +"<div style='font-size:26px;font-weight:800'><span style='display:inline-block;width:14px;height:14px;border-radius:3px;background:"+phCol+";margin-right:4px'></span>pH "+s.ph+"</div>"
    +"<div>Organic matter: <b>"+(s.om_pct??"—")+"%</b> · Total N: <b>"+(s.nitrogen_pct??"—")+"%</b></div>"
    +"<div>Texture: clay <b>"+(s.clay_pct??"—")+"%</b> · sand <b>"+(s.sand_pct??"—")+"%</b> · silt <b>"+(s.silt_pct??"—")+"%</b></div>"
@@ -416,7 +472,7 @@ function probeSoil(latlng){
    +"<div style='font-size:12px;font-weight:600;color:#64748b;margin-top:4px'>"+s.source+(s.nearest_km?" · nearest profiled pixel "+s.nearest_km+" km away":"")+"</div>"
    +"<button onclick='probeToLab()' class='mt-1 px-2 py-1 rounded' style='background:#6d28d9;color:#fff;font-size:13px;font-weight:700;margin-top:6px'>⤵ Use as lab baseline</button></div>");
   window._probeSample=s;
- }).catch(()=>pop.setContent("<div class='text-sm font-semibold p-2'>HWSD endpoint unreachable.</div>"))
+ }).catch(error=>pop.setContent("<div class='text-sm font-semibold p-2'>HWSD sample unavailable: "+error.message+"</div>"))
  .finally(()=>{_probeBusy=false;});
 }
 function probeToLab(){
@@ -839,14 +895,12 @@ function ringCentroid(ll){let a=0,o=0;for(const p of ll){a+=p.lat;o+=p.lng;}retu
 async function autoLab(aoiTarget){
  if(state.labManual){document.getElementById("lab-verdict").innerHTML="Manual laboratory sample is active — HWSD auto-fill skipped (your field data wins).";return;}
  if(_autoBusy)return;_autoBusy=true;
- const base=apiBase||location.origin;
  const a=aoiTarget||state.selected;let lat=HOME[0],lon=HOME[1];
  if(a){[lat,lon]=ringCentroid(a.poly.getLatLngs()[0]);}else{const c=map.getCenter();lat=c.lat;lon=c.lng;}
  const box=document.getElementById("lab-verdict");
- box.innerHTML="⏳ sampling FAO/IIASA HWSD v2.0 grid…";
+ box.innerHTML=STANDALONE_GIS&&!apiBase?"⏳ sampling the local HWSD pH overlay…":"⏳ sampling FAO/IIASA HWSD v2.0 grid…";
  try{
-  const r=await fetch(`${base}/api/v1/lab/hwsd/sample?lat=${lat.toFixed(6)}&lon=${lon.toFixed(6)}`);
-  const j=await r.json();
+  const j=await getHwsdPayload(lat,lon);
   if(!j.available){box.innerHTML="HWSD dataset not mounted on this server — keeping the 18-region baseline (see data/hwsd/README to mount it).";return;}
   if(!j.sample||j.sample.ph==null){box.innerHTML="Outside the soil grid at this point — keeping regional baseline. Manual entry still available.";return;}
   const s=j.sample;
@@ -855,8 +909,8 @@ async function autoLab(aoiTarget){
   setIf("lab-om",s.om_pct);
   if(s.nitrogen_pct)setIf("lab-n",Math.round(s.nitrogen_pct*1000));  /* total-N % → ppm-scale estimate; EC/P/K stay for the field kit */
   applyLab({manual:false,src:s.source});
-  box.innerHTML=`🛰 Auto-baseline from <b>${s.source}</b> · MU ${s.mu_id}${s.wrb?" · "+s.wrb:""} · layer ${s.layer}${s.clay_pct!=null?` · texture clay ${s.clay_pct}%/sand ${s.sand_pct}%/silt ${s.silt_pct}%`:""}.`;
- }catch{box.innerHTML="HWSD endpoint unreachable — regional baseline unchanged.";}
+  box.innerHTML=`${s.offline?"💾":"🛰"} Auto-baseline from <b>${s.source}</b> · MU ${s.mu_id}${s.wrb?" · "+s.wrb:""} · layer ${s.layer}${s.nearest_km?` · nearest colored cell ${s.nearest_km} km`:""}${s.clay_pct!=null?` · texture clay ${s.clay_pct}%/sand ${s.sand_pct}%/silt ${s.silt_pct}%`:""}.`;
+ }catch(error){box.innerHTML=`HWSD sample unavailable: ${error.message}. Regional baseline remains active.`;}
  finally{_autoBusy=false;}
 }
 

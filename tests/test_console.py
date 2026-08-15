@@ -31,7 +31,8 @@ def test_dashboard_served():
         "Soil amendment required", "ringAreaM2", "renderSim",
         "World_Imagery", "mt{s}.google.com", "Compact Field Map",
         "map-frame", "lab-map-label", "Afgooye Soil Laboratory",
-        "updateAoiMapLabel",
+        "updateAoiMapLabel", "localHwsdImagePromise",
+        "Local HWSD pH overlay", "flex:0 0 460px", "local-sampler=v1",
     ):
         assert marker in r.text
 

@@ -281,8 +281,10 @@ arrive as `Decimal` (repository boundary now normalizes to float).
   search/filter/sort and drag/drop, and projects lifecycle, diversity and field
   health. Compliance flags family repetition, sequential heavy feeders and pH.
 * The GIS link detects standalone `/web` hosting and opens the bundled dashboard
-  instead of the FastAPI-only route. Its map uses a compact responsive viewport,
-  high-contrast permanent laboratory/AOI labels and readable 14–16 px annotations.
+  instead of the FastAPI-only route. GIS compact-v3 uses an explicit 460–520 px
+  desktop map, 16–19 px permanent laboratory/AOI labels and larger lab controls.
+  Standalone mode samples pH directly from the local HWSD overlay image—no API
+  endpoint is required for map probing or laboratory auto-fill.
 
 ## Production notes
 
