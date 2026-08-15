@@ -38,6 +38,9 @@ def test_dashboard_served():
         "alphaFlora", "plant-pathology-select", "Applicable pathology for",
         "agri.shared.js", "agri.store.js", "seedOils", "lang-toggle", "SOM | ENG",
         "AGRI_DATA_STORE", "AQUIFERS", "assessGroundwater", "Underground aquifer detected",
+        "GROUNDWATER_NETWORK", "hourlyStations:40", "weeklyBoreholes:609",
+        "renderGroundwaterStation", "Conductivity", "Local water price",
+        "Somalia_Groundwater_Monitoring_Bulletin_23_Dec_2025.pdf", "spatial.faoswalim.org", "data.faoswalim.org:1080/gwater",
         "Farm Fencing", "fencingPlan", "ringPerimeterM",
         "indexedDB", "openFarmAnalytics", "recordFarmEvent", "restoreFarmRecords",
         "z-index:99999", "#farm-analytics-modal", "updateProduceCount",
@@ -77,7 +80,7 @@ def test_lims_dashboard_is_modular_and_offline_safe():
 
     store = client.get("/web/agri.store.js")
     assert store.status_code == 200
-    for marker in ("agri-unified-catalog", "BroadcastChannel", "upsertMany", "catalog-changed"):
+    for marker in ("agri-unified-catalog", "BroadcastChannel", "upsertMany", "catalog-changed", "memoryCatalog", "synchronous fallback remains active"):
         assert marker in store.text
 
     catalog = client.get("/web/regional_produce.json")

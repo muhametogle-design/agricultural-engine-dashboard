@@ -174,6 +174,15 @@
         <div class="mt-1 flex items-center gap-2"><i class="inline-block h-3 w-3 rounded-sm bg-cyan-500/60"></i> Aquifer boundary</div>
         <div class="mt-1">Depth labels in meters · yield in m³/hour</div>
       </div>
+      <label class="mt-2 flex items-center gap-2 text-sm font-medium text-sky-200 select-none cursor-pointer">
+        <input type="checkbox" id="ov-monitoring" checked onchange="toggleMonitoringLayer(this.checked)"/> SWALIM monitoring network
+      </label>
+      <div class="mt-2 rounded-lg border border-sky-800/60 bg-sky-950/20 p-2 text-xs text-sky-100">
+        <div class="font-bold">40 hourly telemetric stations · 609 weekly boreholes</div>
+        <div class="mt-1 text-slate-300">Levels · functionality · price · conductivity/salinity</div>
+        <div class="mt-1 flex flex-wrap gap-2"><a class="text-sky-300 underline" target="_blank" rel="noopener" href="https://faoswalim.org/resources/site_files/Somalia_Groundwater_Monitoring_Bulletin_23_Dec_2025.pdf">SWALIM Bulletin</a><a class="text-sky-300 underline" target="_blank" rel="noopener" href="https://spatial.faoswalim.org/">Spatial Portal</a><a class="text-sky-300 underline" target="_blank" rel="noopener" href="http://data.faoswalim.org:1080/gwater/">Groundwater Portal</a></div>
+      </div>
+      <div id="groundwater-station-card" class="hidden mt-2 rounded-lg border border-slate-700 bg-slate-900 p-2 text-xs"></div>
     </div>
     <div class="p-3 border-b border-slate-800 flex-none">
       <div data-i18n="farm" class="text-sm font-bold uppercase tracking-wide text-slate-300 mb-2">Farm</div>
@@ -329,8 +338,8 @@
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.6" aria-hidden="true">
     <rect x="9" y="9" width="6" height="6" rx="1" transform="rotate(20 12 12)"/>
     <path d="M4 6 9 11M20 18l-5-5"/><path d="M2 12h4M18 12h4" opacity=".6"/></svg>
-  <span>Data Processing Node powered by NASA FIRMS &amp; SMAP Global Soil Moisture Data Engine.</span>
-  <span class="ml-auto hidden md:inline text-slate-600">Lineage: NASA POWER · ISRIC SoilGrids v2 · AWS/SRTM · on-screen only — excluded from client prints.</span>
+  <span>Sources: FAO SWALIM Groundwater Bulletin &amp; Spatial Portal · NASA POWER · ISRIC SoilGrids.</span>
+  <span class="ml-auto hidden md:inline text-slate-600">Monitoring values marked demo/cached are integration previews—consult official portals for current observations.</span>
 </footer>
 
 <!-- ══ MONTHLY FARM ANALYTICS MODAL ══ -->
@@ -567,6 +576,30 @@ function assessGroundwater(latlng,source="coordinate"){
  alert.classList.remove("hidden");
 }
 function toggleAquiferLayer(on){if(on){aquiferLayer.addTo(map);}else{aquiferLayer.remove();document.getElementById("aquifer-alert").classList.add("hidden");if(aquiferAssessmentMarker){aquiferAssessmentMarker.remove();aquiferAssessmentMarker=null;}}}
+
+/* FAO SWALIM-compatible strategic groundwater monitoring network */
+map.createPane("monitoringPane");map.getPane("monitoringPane").style.zIndex="430";
+function telemetrySeries(base,count=24,amplitude=.45){return Array.from({length:count},(_,index)=>Math.round((base+Math.sin(index*.58)*amplitude+Math.cos(index*.21)*amplitude*.35)*100)/100);}
+const GROUNDWATER_NETWORK={source:"FAO SWALIM Groundwater Monitoring Bulletin",portal:"https://spatial.faoswalim.org/",hourlyStations:40,weeklyBoreholes:609,mode:"Representative cached integration preview",stations:[
+ {id:"preview-afgooye",name:"Afgooye Integration Preview",region:"Lower Shabelle",lat:2.046,lon:45.318,level:40.2,conductivity:1650,status:"Operational",price:0.62,update:"Hourly demo",trend:-0.3},
+ {id:"baraawe",name:"Baraawe",region:"Lower Shabelle",lat:1.11,lon:44.03,level:11.4,conductivity:1480,status:"Operational",price:0.74,update:"Hourly cached",trend:0.0},
+ {id:"buulo-burde",name:"Buulo Burde",region:"Hiiraan",lat:3.85,lon:45.57,level:8.7,conductivity:1908,status:"Operational",price:0.58,update:"Hourly cached",trend:0.2},
+ {id:"harfo",name:"Harfo",region:"Mudug",lat:6.32,lon:47.32,level:26.0,conductivity:1371,status:"Operational",price:0.81,update:"Weekly demo",trend:-0.4},
+ {id:"galkayo",name:"Galkayo South",region:"Mudug",lat:6.77,lon:47.43,level:20.5,conductivity:5119,status:"Salinity alert",price:1.15,update:"Hourly cached",trend:-0.6},
+ {id:"kismayo",name:"Kismaayo",region:"Lower Juba",lat:-.36,lon:42.55,level:31.0,conductivity:3428,status:"Operational",price:0.92,update:"Weekly demo",trend:0.1},
+ {id:"zeylac",name:"Zeylac",region:"Awdal",lat:11.35,lon:43.47,level:30.8,conductivity:3900,status:"Salinity alert",price:1.28,update:"Hourly cached",trend:-0.5},
+ {id:"bosaso",name:"Bosaso",region:"Bari",lat:11.28,lon:49.18,level:24.0,conductivity:1255,status:"Operational",price:0.88,update:"Hourly cached",trend:0.0},
+]};
+GROUNDWATER_NETWORK.stations.forEach(station=>{station.hourly=telemetrySeries(station.level,24,.32);station.weekly=telemetrySeries(station.level,12,.75);station.salinity=Math.round(station.conductivity*.00064*100)/100;});
+const monitoringLayer=L.layerGroup().addTo(map);
+function sparkline(values,width=230,height=48){const min=Math.min(...values),max=Math.max(...values),range=max-min||1,points=values.map((value,index)=>`${Math.round(index/(values.length-1)*width)},${Math.round(height-(value-min)/range*height)}`).join(" ");return `<svg viewBox="0 0 ${width} ${height}" class="mt-2 h-12 w-full" preserveAspectRatio="none"><polyline points="${points}" fill="none" stroke="#22d3ee" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>`;}
+function renderGroundwaterStation(station){
+ const card=document.getElementById("groundwater-station-card"),statusColor=station.status==="Operational"?"text-emerald-300":"text-red-300",trendText=station.trend>0?`rising ${station.trend} m`:station.trend<0?`declining ${Math.abs(station.trend)} m`:"stable";
+ card.classList.remove("hidden");card.innerHTML=`<div class="flex justify-between gap-2"><div><b class="text-sm text-sky-200">${station.name}</b><div class="text-slate-400">${station.region} · ${station.update}</div></div><span class="${statusColor} font-bold">${station.status}</span></div><div class="mt-2 grid grid-cols-2 gap-1.5"><div class="rounded bg-slate-950 p-1.5"><span class="text-slate-500">Water level</span><b class="block text-sky-300">${station.level} m</b></div><div class="rounded bg-slate-950 p-1.5"><span class="text-slate-500">30-day trend</span><b class="block text-amber-300">${trendText}</b></div><div class="rounded bg-slate-950 p-1.5"><span class="text-slate-500">Conductivity</span><b class="block text-violet-300">${station.conductivity} µS/cm</b></div><div class="rounded bg-slate-950 p-1.5"><span class="text-slate-500">Salinity</span><b class="block text-violet-300">${station.salinity} g/L</b></div><div class="rounded bg-slate-950 p-1.5 col-span-2"><span class="text-slate-500">Local water price</span><b class="ml-2 text-emerald-300">$${station.price.toFixed(2)}/m³</b></div></div><div class="mt-2 text-[9px] font-bold uppercase tracking-wide text-sky-300">24-hour groundwater-level trace</div>${sparkline(station.hourly)}<div class="text-[9px] text-slate-400">12-week historical range ${Math.min(...station.weekly).toFixed(1)}–${Math.max(...station.weekly).toFixed(1)} m</div><div class="mt-1 text-[9px] leading-snug text-slate-500">${GROUNDWATER_NETWORK.mode}. Source-compatible fields: ${GROUNDWATER_NETWORK.source}; verify current values in the official portal.</div>`;
+}
+GROUNDWATER_NETWORK.stations.forEach(station=>{const color=station.status==="Operational"?"#22c55e":"#ef4444",marker=L.circleMarker([station.lat,station.lon],{pane:"monitoringPane",radius:6,color:"#fff",weight:2,fillColor:color,fillOpacity:1}).bindTooltip(`${station.name} · ${station.level} m · ${station.status}`,{direction:"top",className:"aquifer-label"});marker.on("click",event=>{if(event.originalEvent)L.DomEvent.stopPropagation(event.originalEvent);renderGroundwaterStation(station);assessGroundwater(event.latlng,"SWALIM-compatible monitoring station");});marker.addTo(monitoringLayer);});
+function toggleMonitoringLayer(on){if(on){monitoringLayer.addTo(map);}else{monitoringLayer.remove();document.getElementById("groundwater-station-card").classList.add("hidden");}}
+renderGroundwaterStation(GROUNDWATER_NETWORK.stations[0]);
 
 /* FAO HWSD v2.0 topsoil-pH overlay (pre-rendered from the Somalia clip) */
 const PH_BOUNDS=[[-1.8,40.9],[12.2,51.5]];
@@ -1100,6 +1133,7 @@ const DB={
 const BASE_GIS_NATIVE=DB.nativeTrees.filter(item=>!item.catalogId),BASE_GIS_FRUIT_GROUPS=DB.fruitGroups.filter(([,items])=>!items.some(item=>item.catalogId)),BASE_GIS_CROPS=DB.crops.filter(item=>!item.catalogId),BASE_GIS_VEGETABLES=DB.vegetables.filter(item=>!item.catalogId);
 function updateProduceCount(){const count=DB.nativeTrees.length+DB.fruitGroups.reduce((sum,[,items])=>sum+items.length,0)+DB.seedOils.length+DB.crops.length+DB.vegetables.length;const node=document.getElementById("produce-count");if(node)node.textContent=`${count} synchronized entries · A–Z · linked Cudurada`;}
 function syncUnifiedCatalog(records){
+ records=Array.isArray(records)&&records.length?records:SHARED_CATALOG;
  const converted=records.map(sharedFlora);
  DB.nativeTrees=BASE_GIS_NATIVE.concat(converted.filter((_,index)=>records[index].category==="Tree"));
  DB.fruitGroups=BASE_GIS_FRUIT_GROUPS.concat([["Unified Regional Catalog","regional",converted.filter((_,index)=>records[index].category==="Fruits")]]);

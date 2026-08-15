@@ -294,10 +294,16 @@ arrive as `Decimal` (repository boundary now normalizes to float).
   revision-0005 history API. Monthly Farm Analytics can consume local or server
   pH/N/P/K and Cudurada aggregates across tenant Beer records.
 * GIS retains isolated scroll regions and a seven-range FAO/HWSD pH pane; its
-  alphabetized text-only cards expose species-specific pathology selectors.
-* A hydrogeology layer renders aquifer boundaries, depth and expected yield, then
-  issues coordinate/polygon drilling alerts. The Farm Fencing module calculates
-  geodesic perimeter, posts, strainers, gates, wire/mesh rolls and equipment BOM.
+  alphabetized text-only cards expose species-specific pathology selectors. Catalog
+  startup renders synchronous shared fallback records before IndexedDB seeding, so
+  an empty/corrupt browser store cannot produce a blank catalog screen.
+* The hydrogeology layer renders boundaries, depth and yield plus an attributed
+  FAO SWALIM-compatible monitoring view: 40 hourly telemetric stations and 609
+  weekly strategic boreholes, with water-level trend, functionality, price,
+  conductivity and salinity fields. Representative cached/demo values are clearly
+  distinguished from official Bulletin and Spatial Portal links.
+* Farm Fencing calculates geodesic perimeter, posts, strainers, gates, wire/mesh
+  rolls, recommendations and equipment BOM for the selected polygon.
 * Monthly Farm Analytics uses `z-index: 99999`, above every Leaflet pane/control.
 
 ## Production notes

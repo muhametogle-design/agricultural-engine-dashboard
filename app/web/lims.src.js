@@ -755,7 +755,7 @@ function RotationPlanner(props){
   useEffect(function(){localStorage.setItem("lims_strategic_field_id",fieldId);},[fieldId]);
   useEffect(function(){
     if(!window.AGRI_DATA_STORE)return;
-    const merge=function(records){setCatalog(function(previous){const map=new Map(previous.map(function(item){return [item.id,item];}));records.map(sharedCropRecord).forEach(function(item){map.set(item.id,item);});return Array.from(map.values()).sort(function(a,b){return a.name.localeCompare(b.name);});});};
+    const merge=function(records){records=Array.isArray(records)&&records.length?records:SHARED_AGRI.catalog;setCatalog(function(previous){const map=new Map(previous.map(function(item){return [item.id,item];}));records.map(sharedCropRecord).forEach(function(item){map.set(item.id,item);});return Array.from(map.values()).sort(function(a,b){return a.name.localeCompare(b.name);});});};
     AGRI_DATA_STORE.ready.then(merge).catch(console.warn);return AGRI_DATA_STORE.subscribe(merge);
   },[]);
   useEffect(function(){
