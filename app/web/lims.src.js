@@ -294,7 +294,28 @@ function parseCropPlan(text){
 }
 
 /* ═════════ UI ATOMS ═════════ */
-function Icon(props){ return e("i",{"data-lucide":props.name, className:props.cls||"w-4 h-4"}); }
+function iconComponentName(name){
+  return String(name||"").split("-").map(function(part){return part.charAt(0).toUpperCase()+part.slice(1);}).join("");
+}
+function reactSvgAttribute(name){
+  if(name==="class")return "className";
+  if(name.indexOf("aria-")===0||name.indexOf("data-")===0)return name;
+  return name.replace(/-([a-z])/g,function(_,letter){return letter.toUpperCase();});
+}
+function renderLucideNode(node,key,rootClass){
+  if(!node)return null;
+  const tag=node[0], raw=node[1]||{}, children=node[2]||[];
+  const attrs={key:key};
+  Object.keys(raw).forEach(function(name){attrs[reactSvgAttribute(name)]=raw[name];});
+  if(rootClass)attrs.className=rootClass;
+  if(tag==="svg")attrs["aria-hidden"]="true";
+  return e(tag,attrs,children.map(function(child,index){return renderLucideNode(child,key+"-"+index,null);}));
+}
+function Icon(props){
+  const name=iconComponentName(props.name);
+  const node=window.lucide&&lucide.icons&&lucide.icons[name];
+  return node?renderLucideNode(node,"icon",props.cls||"w-4 h-4"):e("span",{className:props.cls||"w-4 h-4","aria-hidden":"true"});
+}
 function Panel(props){
   return e("section",{className:"rounded-2xl border border-slate-700/60 bg-slate-900/80 backdrop-blur p-4 shadow-xl "+(props.cls||"")},
     e("div",{className:"flex flex-wrap items-center gap-2 mb-3"},
@@ -339,7 +360,6 @@ function RotationPlanner(){
   useEffect(function(){localStorage.setItem("lims_crop_catalog",JSON.stringify(catalog));},[catalog]);
   useEffect(function(){localStorage.setItem("lims_rotation",JSON.stringify(rotation));},[rotation]);
   useEffect(function(){localStorage.setItem("lims_rotation_ph",fieldPh);},[fieldPh]);
-  useEffect(function(){if(window.lucide)lucide.createIcons();});
   const byId=useMemo(function(){const out={};catalog.forEach(function(c){out[c.id]=c;});return out;},[catalog]);
   const phNum=parseFloat(fieldPh);
   const warnings=useMemo(function(){
@@ -497,7 +517,6 @@ function App(){
   useEffect(function(){ localStorage.setItem("lims_spectrum",spectrum); },[spectrum]);
   useEffect(function(){ localStorage.setItem("lims_engineers",JSON.stringify(engineers)); },[engineers]);
   useEffect(function(){ localStorage.setItem("lims_duty",String(duty.id)); },[duty.id]);
-  useEffect(function(){ if(window.lucide) lucide.createIcons(); });
 
   /* Mock asynchronous repository; cancellation avoids updates after unmount. */
   useEffect(function(){
@@ -876,7 +895,7 @@ function App(){
 /* self-check: offline-safe vendor guard */
 (function(){
   var root=document.getElementById("root");
-  if(!window.React||!window.ReactDOM||!window.Recharts){
+  if(!window.React||!window.ReactDOM||!window.Recharts||!window.lucide){
     root.innerHTML='<div style="margin:2rem;padding:1rem;border:2px solid #ef4444;border-radius:12px;color:#fff;background:#7f1d1d;font-family:sans-serif">⚠ LIMS library load failure — a vendored asset failed to load. Check <code>/web/vendor/</code> files.</div>';
     return;
   }
