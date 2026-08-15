@@ -40,8 +40,11 @@
   .leaflet-tooltip.map-label{background:rgba(15,23,42,.96);color:#f8fafc;font-size:17px;font-weight:750;padding:9px 12px;text-align:center}
   .leaflet-tooltip.map-label b{display:block;color:#6ee7b7;font-size:19px;line-height:1.2}
   .leaflet-tooltip.map-label span{color:#e2e8f0;font-size:15px;font-weight:650}
-  .leaflet-tooltip.lab-map-label{background:rgba(6,78,59,.98);color:#fff;font-size:19px;font-weight:850;padding:10px 13px}
-  .leaflet-tooltip.lab-map-label small{display:block;color:#d1fae5;font-size:15px;font-weight:650;margin-top:3px}
+  .leaflet-tooltip.lab-map-label{background:rgba(6,78,59,.92);color:#fff;font-size:12px;font-weight:750;padding:5px 7px;border-radius:6px}
+  .leaflet-tooltip.lab-map-label small{display:block;color:#d1fae5;font-size:9px;font-weight:600;margin-top:1px}
+  .sample-note{font-size:10px!important;font-weight:700;line-height:1.25;color:#cbd5e1}
+  #ph-legend i{display:inline-block;width:14px;height:14px;border:1px solid rgba(255,255,255,.35);border-radius:3px;margin-right:5px;vertical-align:-2px}
+  .hwsd-ph-raster{image-rendering:auto;filter:saturate(1.22) contrast(1.08);mix-blend-mode:multiply}
   .leaflet-tooltip.map-label:before{border-top-color:rgba(15,23,42,.94)}
   .leaflet-tooltip-top.lab-map-label:before{border-top-color:rgba(6,78,59,.96)}
   .leaflet-tooltip-right.lab-map-label:before{border-right-color:rgba(6,78,59,.96)}
@@ -144,8 +147,8 @@
         <input type="checkbox" id="ov-ph" onchange="togglePhOverlay(this.checked)"/> 🗺️ FAO topsoil pH map (HWSD v2.0)
       </label>
       <div id="ph-legend" class="hidden mt-2 rounded-lg bg-slate-900 border border-slate-800 p-2">
-        <div class="text-[9px] uppercase tracking-widest text-slate-500 mb-1">topsoil 0–20 cm pH</div>
-        <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[10px] text-slate-400">
+        <div class="text-xs font-bold uppercase tracking-wide text-slate-300 mb-1.5">Distinct pH ranges · topsoil 0–20 cm</div>
+        <div class="grid grid-cols-2 gap-x-2 gap-y-1 text-xs font-medium text-slate-300">
           <span><i style="background:#2d9c3c"></i>&lt; 5.5 — strong acid</span>
           <span><i style="background:#7bc043"></i>5.5–6.5 — acid</span>
           <span><i style="background:#c8da48"></i>6.5–7.0 — neutral</span>
@@ -373,6 +376,7 @@ renderHistory();
 
 /* ═══════════════ MAP & BASEMAPS (SPEC-8 · repaired Esri endpoint) ═══════════════ */
 const map=L.map("map",{preferCanvas:true}).setView(HOME,14);
+map.createPane("hwsdPhPane");map.getPane("hwsdPhPane").style.zIndex="350";map.getPane("hwsdPhPane").style.pointerEvents="none";
 const BASES={
  "Esri World Imagery":L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"Esri, Maxar, Earthstar Geographics"}),
  "Google Satellite":L.tileLayer("https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",{subdomains:["0","1","2","3"],maxZoom:20,attribution:"Google"}),
@@ -462,9 +466,10 @@ async function getHwsdPayload(lat,lon){
 function togglePhOverlay(on){
  document.getElementById("ph-legend").classList.toggle("hidden",!on);
  if(on){
-  const base=apiBase||location.origin;
-  phOverlay=L.imageOverlay(base+"/web/hwsd_ph_overlay.png",PH_BOUNDS,{interactive:false,opacity:1}).addTo(map);
-  if(state.selected)state.selected.poly.bringToFront();
+  const overlayUrl=new URL("/web/hwsd_ph_overlay.png?ph-ranges=v2",location.origin).href;
+  phOverlay=L.imageOverlay(overlayUrl,PH_BOUNDS,{interactive:false,opacity:.82,pane:"hwsdPhPane",className:"hwsd-ph-raster"}).addTo(map);
+  labLayer.eachLayer(layer=>layer.bringToFront&&layer.bringToFront());
+  state.aois.forEach(a=>a.poly.bringToFront());
   logEv("Displayed FAO topsoil pH overlay (HWSD v2.0 clip)",{flora:state.flora?state.flora.en:null,rating:healthScore(SOILS[state.soil]),src:"data/hwsd/hwsd2_somalia.tif"});
  }else if(phOverlay){map.removeLayer(phOverlay);phOverlay=null;}
 }
@@ -480,7 +485,7 @@ function probeSoil(latlng){
   if(!s||s.ph==null){pop.setContent("<div class='text-sm font-semibold p-2'>Outside the soil grid at this point.</div>");return;}
   const phCol=s.ph<5.5?"#2d9c3c":s.ph<6.5?"#7bc043":s.ph<7?"#c8da48":s.ph<7.5?"#f4d03f":s.ph<8?"#f39c12":s.ph<8.5?"#e67e22":"#c0392b";
   pop.setContent("<div class='p-2' style='font-size:14px;line-height:1.5'>"
-   +"<div style='font-weight:800;margin-bottom:3px'>"+(s.offline?"💾 Local HWSD overlay sample":"🛰 FAO topsoil reading")+" <span style='color:#64748b'>0–20 cm</span></div>"
+   +"<div class='sample-note' style='margin-bottom:3px'>"+(s.offline?"Local HWSD sample":"FAO topsoil reading")+" · <span style='color:#94a3b8'>0–20 cm</span></div>"
    +"<div style='font-size:26px;font-weight:800'><span style='display:inline-block;width:14px;height:14px;border-radius:3px;background:"+phCol+";margin-right:4px'></span>pH "+s.ph+"</div>"
    +"<div>Organic matter: <b>"+(s.om_pct??"—")+"%</b> · Total N: <b>"+(s.nitrogen_pct??"—")+"%</b></div>"
    +"<div>Texture: clay <b>"+(s.clay_pct??"—")+"%</b> · sand <b>"+(s.sand_pct??"—")+"%</b> · silt <b>"+(s.silt_pct??"—")+"%</b></div>"
@@ -856,13 +861,36 @@ const GROUP_DEFAULTS={g8:{spacing:[2.5,1.5],water:{mode:"orchard",mm:650},kgYr:[
 
 /* enrichment: manual entry → runtime record */
 function phOf(s){const p=s.split("-").map(x=>parseFloat(x.trim()));return [p[0],p[1]||p[0]];}
-const GRP_ICON={g1:"🍊",g2:"🍒",g3:"🍍",g4:"🍑",g5:"🍎",g6:"🍉",g7:"🌴",g8:"🫐",g9:"🥜",native:"🌳",crop:"🌾",veg:"🥬"};
+const GENERAL_TREE_PATHOLOGIES=[
+ {name:"Root and collar rot",cause:"Soil-borne Phytophthora/Fusarium complex",action:"Improve drainage, protect roots and confirm the causal organism before treatment."},
+ {name:"Branch canker and dieback",cause:"Opportunistic fungal or bacterial canker complex",action:"Prune in dry weather, disinfect tools and remove dead wood."},
+ {name:"Sap-sucking pest decline",cause:"Scale, mealybug, aphid or mite pressure",action:"Inspect leaf undersides, conserve natural enemies and use selective controls at threshold."},
+];
+const GENERAL_CROP_PATHOLOGIES=[
+ {name:"Fusarium or bacterial wilt",cause:"Soil-borne vascular pathogen complex",action:"Remove confirmed plants, sanitize tools and rotate with non-host crops."},
+ {name:"Foliar leaf-spot complex",cause:"Alternaria, Cercospora or related fungi",action:"Reduce leaf wetness, remove residue and use locally registered protectants when justified."},
+ {name:"Mosaic and vector-borne virus",cause:"Aphid, whitefly or leafhopper-transmitted viruses",action:"Rogue symptomatic plants, control weed hosts and use clean planting material."},
+];
+const HOST_PATHOLOGY_RULES=[
+ {match:/mango|mangifera/,items:[{name:"Mango anthracnose",cause:"Colletotrichum gloeosporioides",action:"Sanitize fruit and panicles; protect flowers during wet risk periods."},{name:"Mango powdery mildew",cause:"Oidium mangiferae",action:"Improve airflow and use locally registered mildew controls at bloom."}]},
+ {match:/banana|musa|plantain/,items:[{name:"Black Sigatoka",cause:"Pseudocercospora fijiensis",action:"Remove severely infected leaves and manage resistance in fungicide rotations."},{name:"Fusarium wilt TR4",cause:"Fusarium oxysporum f. sp. cubense",action:"Quarantine mats, soil and planting material; use certified resistant stock."}]},
+ {match:/orange|lemon|lime|citrus|grapefruit|mandarin|pomelo/,items:[{name:"Citrus greening (HLB)",cause:"Candidatus Liberibacter · psyllid vectored",action:"Use certified stock, monitor psyllids and remove confirmed source trees."},{name:"Citrus canker",cause:"Xanthomonas citri",action:"Sanitize tools, manage wind exposure and follow registered copper guidance."}]},
+ {match:/tomato|potato|eggplant|pepper|capsicum/,items:[{name:"Bacterial wilt",cause:"Ralstonia solanacearum complex",action:"Use clean transplants, drainage, sanitation and non-solanaceous rotation."},{name:"Late or early blight",cause:"Phytophthora/Alternaria complex",action:"Keep foliage dry and follow local blight forecasts and registered controls."}]},
+ {match:/cabbage|broccoli|cauliflower|radish|brassica/,items:[{name:"Black rot",cause:"Xanthomonas campestris pv. campestris",action:"Use clean seed, avoid splash irrigation and rotate brassicas."},{name:"Clubroot",cause:"Plasmodiophora brassicae",action:"Prevent soil movement and maintain a long brassica-free rotation."}]},
+ {match:/watermelon|cucumber|pumpkin|squash|melon|cucumis|citrullus/,items:[{name:"Powdery mildew",cause:"Podosphaera xanthii",action:"Use tolerant cultivars, airflow and resistance-managed controls."},{name:"Cucurbit mosaic virus",cause:"Aphid-vectored mosaic virus complex",action:"Rogue infections and remove volunteer cucurbit hosts."}]},
+ {match:/bean|cowpea|groundnut|soy|pea|vigna|phaseolus/,items:[{name:"Legume rust",cause:"Host-specific rust fungi",action:"Use clean resistant seed and monitor lower leaf surfaces."},{name:"Aphid-borne mosaic",cause:"Legume mosaic virus complex",action:"Rogue symptoms and manage vectors and weed reservoirs."}]},
+];
+function pathologiesForFlora(entry,kind){
+ const hay=(entry.english_name+" "+entry.scientific_name+" "+entry.somali_name).toLowerCase();
+ const direct=HOST_PATHOLOGY_RULES.filter(rule=>rule.match.test(hay)).flatMap(rule=>rule.items);
+ return direct.concat(kind==="crop"?GENERAL_CROP_PATHOLOGIES:GENERAL_TREE_PATHOLOGIES).filter((item,index,all)=>all.findIndex(other=>other.name===item.name)===index).slice(0,5);
+}
 function enrich(e, kind, group){
  const meta=Object.assign({},GROUP_DEFAULTS[group]||{},e.sim||{},SIM_META[e.scientific_name]||{});
  const k=meta.kind||kind;
  return {somali:e.somali_name,en:e.english_name,sci:e.scientific_name,season:e.seasonal_behavior,
   output:e.fruit_output,care:e.planting_care,ph:phOf(e.optimal_soil_ph),avoid:e.what_to_avoid,
-  group,kind:k,icon:GRP_ICON[group]||"🌿",
+  group,kind:k,pathologies:pathologiesForFlora(e,k),
   spacing:meta.spacing||(k==="crop"?[1.5,0.6]:[8,8]),
   seedKgHa:meta.seedKgHa,seedNote:meta.seedNote,yieldT:meta.yieldT,
   kgYr:meta.kgYr,yieldNote:meta.yieldNote,water:meta.water||(k==="crop"?{mode:"crop",mm:450}:{mode:"tree",lTreeWeek:30})};
@@ -1014,8 +1042,8 @@ function floraCard(f){
  const el=document.createElement("div");
  el.className="rounded-xl border bg-slate-900 p-3 cursor-pointer hover:border-emerald-600 transition-colors "+(active?"flora-active border-amber-500":"border-slate-800");
  el.innerHTML=`
-  <div class="flex items-baseline gap-2"><span class="text-base">${f.icon}</span>
-    <b class="text-sm">${f.en}</b><span class="text-[11px] text-emerald-400">${f.somali}</span>
+  <div class="flex items-baseline gap-2">
+    <b class="text-base">${f.en}</b><span class="text-xs text-emerald-400">${f.somali}</span>
     <span class="flex-1"></span><span class="text-[10px] italic text-slate-500">${f.sci}</span></div>
   <div class="mt-1.5 grid grid-cols-[86px_1fr] gap-x-2 gap-y-1 text-[11px] leading-snug">
     <span class="text-slate-500">Season</span><span>${f.season}</span>
@@ -1024,24 +1052,32 @@ function floraCard(f){
     <span class="text-slate-500">Optimal pH</span><span class="font-mono text-sky-300">${f.ph[0]} – ${f.ph[1]}</span>
     <span class="text-red-400/90">⚠ Avoid</span><span class="text-red-200/80">${f.avoid}</span>
   </div>
+  <div class="mt-2 rounded-lg border border-slate-700 bg-slate-950/70 p-2">
+    <label class="text-xs font-bold text-violet-300">Applicable pathology for ${f.en}</label>
+    <select class="plant-pathology-select mt-1 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs">
+      ${f.pathologies.map((item,index)=>`<option value="${index}">${item.name}</option>`).join("")}
+    </select>
+    <div class="plant-pathology-note mt-1.5 text-xs leading-relaxed text-slate-300"><b>${f.pathologies[0].cause}</b> · ${f.pathologies[0].action}</div>
+  </div>
   <div class="mt-2 text-right text-[10px] ${active?"text-amber-300 font-bold":"text-slate-600"}">${active?"● ACTIVE — simulated below":"tap to run simulation"}</div>`;
+ const pathologySelect=el.querySelector(".plant-pathology-select"),pathologyNote=el.querySelector(".plant-pathology-note");
+ pathologySelect.onclick=event=>event.stopPropagation();
+ pathologySelect.onchange=event=>{event.stopPropagation();const item=f.pathologies[Number(event.target.value)];pathologyNote.innerHTML=`<b>${item.cause}</b> · ${item.action}`;};
  el.onclick=()=>{state.flora=f;renderFlora();renderSim();logEv("Selected flora profile: "+f.en+" ("+f.sci+")",{area:state.selected?fmtHa(aoiM2(state.selected)):null,flora:f.en,rating:healthScore(SOILS[state.soil]),src:"global flora database"});};
  return el;
 }
+const alphaFlora=(a,b)=>a.en.localeCompare(b.en,undefined,{sensitivity:"base"});
 function renderFlora(){
  const body=document.getElementById("flora-body");body.innerHTML="";
  if(activeTab==="soil"){renderSoils(body);return;}
  if(activeTab==="fruits"){
-  DB.fruitGroups.forEach(([label,arr])=>{
-   const items=arr.filter(f=>!qs()||JSON.stringify(f).toLowerCase().includes(qs()));
-   if(!items.length)return;
-   body.insertAdjacentHTML("beforeend",`<div class="text-[10px] uppercase tracking-widest text-amber-200/70 font-bold pt-1.5">${label}</div>`);
-   items.forEach(f=>body.appendChild(floraCard(f)));
-  });
-  if(!body.innerHTML)body.innerHTML='<div class="text-center text-slate-600 text-xs py-8">Nothing matches.</div>';
+  const items=DB.fruitGroups.flatMap(([,arr])=>arr).filter(f=>!qs()||JSON.stringify(f).toLowerCase().includes(qs())).sort(alphaFlora);
+  if(!items.length){body.innerHTML='<div class="text-center text-slate-600 text-xs py-8">Nothing matches.</div>';return;}
+  body.insertAdjacentHTML("beforeend",`<div class="rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-xs font-bold text-amber-200">Fruits · alphabetical A–Z · ${items.length} entries</div>`);
+  items.forEach(f=>body.appendChild(floraCard(f)));
   return;
  }
- const list=DB[activeTab].filter(f=>!qs()||JSON.stringify(f).toLowerCase().includes(qs()));
+ const list=DB[activeTab].filter(f=>!qs()||JSON.stringify(f).toLowerCase().includes(qs())).sort(alphaFlora);
  if(!list.length){body.innerHTML='<div class="text-center text-slate-600 text-xs py-8">Nothing matches.</div>';return;}
  if(activeTab==="nativeTrees"&&!qs())
   body.insertAdjacentHTML("beforeend",`<div class="rounded-lg border border-amber-800/50 bg-amber-950/20 p-2 text-[10px] text-amber-100/70 mb-1">★ <b>Native Somali Trees</b> — ${DB.nativeTrees.length} keystone species · Field-Manual baseline · charcoal-trade pressure flagged (Galool / Higlo / Yagcar).</div>`);

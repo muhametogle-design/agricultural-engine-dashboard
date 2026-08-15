@@ -34,10 +34,14 @@ def test_dashboard_served():
         "aspect-ratio:1/1", "grid-template-columns", "lab-map-label",
         "Afgooye Soil Laboratory", "updateAoiMapLabel", "localHwsdImagePromise",
         "Local HWSD pH overlay", "local-sampler=v1",
+        "hwsdPhPane", "hwsd-ph-raster", "ph-ranges=v2", "Distinct pH ranges",
+        "alphaFlora", "plant-pathology-select", "Applicable pathology for",
         "overscroll-behavior:contain", "scrollbar-gutter:stable",
         "#left,#right,#map-shell", "overflow-y:auto!important",
     ):
         assert marker in r.text
+    assert "f.icon" not in r.text
+    assert "GRP_ICON" not in r.text
 
 
 def test_lims_dashboard_is_modular_and_offline_safe():
@@ -50,6 +54,8 @@ def test_lims_dashboard_is_modular_and_offline_safe():
     assert page.status_code == 200
     assert "/web/lims.src.js" in page.text
     assert "/web/vendor/react.min.js" in page.text
+    assert ".strategic-planner h2" in page.text
+    assert "font-size:19px" in page.text
     assert "https://" not in page.text
 
     source = client.get("/web/lims.src.js")
@@ -78,12 +84,18 @@ def test_lims_dashboard_is_modular_and_offline_safe():
         "Avocado",
         "Broccoli",
         "CROP_VARIETY_EXPANSION",
+        "REGIONAL_PRODUCE_EXPANSION",
         "DISEASE_EXPANSION",
+        "linkedPathologies",
+        "Associated pathology selection",
+        "strategic-planner",
         "NO TAX · NO FEES",
         "GIS_ENGINE_URL",
     ):
         assert marker in source.text
     assert source.text.count("cropVariety(") >= 51
+    regional_block = source.text.split("const REGIONAL_PRODUCE_EXPANSION", 1)[1].split("const CROP_LIBRARY", 1)[0]
+    assert regional_block.count('crop("') >= 50
     assert source.text.count("pathology(") >= 51
     for removed in ("CREDIT CARD", "const TAX", "GATEWAYS", "Tax 5%", "% fee"):
         assert removed not in source.text

@@ -181,6 +181,52 @@ const DISEASE_EXPANSION = [
   pathology("Legumes","Pigeon Pea","Fusarium Wilt","Fusarium udum (Fungus)","Progressive branch wilt","Brown vascular tissue","Remove wilted plants with roots","Use resistant cultivars and long rotation with cereals."),
 ];
 const DISEASE_VECTOR = BASE_DISEASE_VECTOR.concat(DISEASE_EXPANSION);
+const FAMILY_PATHOLOGY_TEMPLATES={
+ Solanaceae:[
+  {disease:"Bacterial Wilt Risk",cause:"Ralstonia solanacearum complex",symptoms:["Rapid green wilt","Vascular browning"],immediate:["Isolate affected beds and sanitize tools"],remedy:"Use clean transplants, resistant material, drainage and non-solanaceous rotation."},
+  {disease:"Solanaceous Blight Complex",cause:"Phytophthora and Alternaria species",symptoms:["Expanding leaf lesions","Fruit or stem rot"],immediate:["Remove infected tissue and reduce leaf wetness"],remedy:"Use forecast-led integrated blight management and locally registered products."},
+ ],
+ Cucurbitaceae:[
+  {disease:"Cucurbit Powdery Mildew",cause:"Podosphaera xanthii complex",symptoms:["White powdery colonies","Early canopy decline"],immediate:["Improve airflow and remove badly affected leaves"],remedy:"Use tolerant cultivars and resistance-managed registered mildew controls."},
+  {disease:"Cucurbit Mosaic Virus Risk",cause:"Aphid-vectored mosaic virus complex",symptoms:["Mosaic leaves","Bumpy or malformed fruit"],immediate:["Rogue symptomatic plants and remove volunteer hosts"],remedy:"Use clean seed, resistant varieties and integrated vector management."},
+ ],
+ Fabaceae:[
+  {disease:"Legume Rust Complex",cause:"Host-adapted rust fungi",symptoms:["Brown leaf pustules","Premature defoliation"],immediate:["Scout lower leaves and remove severe residues"],remedy:"Use resistant clean seed and registered protection only when thresholds are exceeded."},
+  {disease:"Legume Mosaic Virus Risk",cause:"Aphid or whitefly-vectored virus complex",symptoms:["Mosaic and puckering","Stunting and reduced pod set"],immediate:["Rogue symptoms and manage weed hosts"],remedy:"Use certified seed and integrated vector management."},
+ ],
+ Brassicaceae:[
+  {disease:"Clubroot Risk",cause:"Plasmodiophora brassicae",symptoms:["Swollen roots","Midday wilt and stunting"],immediate:["Prevent movement of infested soil"],remedy:"Use resistant cultivars, improve drainage and maintain a long brassica-free rotation."},
+  {disease:"Brassica Black Rot",cause:"Xanthomonas campestris pv. campestris",symptoms:["V-shaped yellow lesions","Blackened veins"],immediate:["Remove infected residues and avoid splash irrigation"],remedy:"Use clean treated seed and rotate away from brassicas."},
+ ],
+ Rutaceae:[
+  {disease:"Citrus Greening Risk",cause:"Candidatus Liberibacter · psyllid vectored",symptoms:["Asymmetric mottling","Small lopsided bitter fruit"],immediate:["Inspect new flush and remove confirmed sources"],remedy:"Use certified nursery stock and coordinated psyllid management."},
+  {disease:"Citrus Canker Risk",cause:"Xanthomonas citri",symptoms:["Raised corky lesions","Yellow lesion halos"],immediate:["Prune only in dry weather and sanitize tools"],remedy:"Use windbreaks and locally registered copper guidance."},
+ ],
+ Poaceae:[
+  {disease:"Cereal Rust Complex",cause:"Puccinia species",symptoms:["Colored leaf pustules","Premature leaf drying"],immediate:["Scout susceptible growth stages"],remedy:"Use resistant cultivars and threshold-based registered fungicides."},
+  {disease:"Cereal Leaf Blight",cause:"Cercospora, Bipolaris or related fungi",symptoms:["Elongated necrotic lesions","Reduced green leaf area"],immediate:["Manage infected residue and volunteers"],remedy:"Rotate crops, balance fertility and use tolerant varieties."},
+ ],
+ Rosaceae:[
+  {disease:"Rosaceae Blossom and Fruit Rot",cause:"Botrytis or Monilinia complex",symptoms:["Blossom blight","Soft fruit rot"],immediate:["Remove mummified fruit and improve airflow"],remedy:"Use sanitation and locally registered bloom protection when weather risk is high."},
+ ],
+ Arecaceae:[
+  {disease:"Palm Bud and Root Rot",cause:"Phytophthora/Thielaviopsis complex",symptoms:["Spear-leaf collapse","Crown or root decay"],immediate:["Improve drainage and isolate affected palms"],remedy:"Confirm diagnosis and use clean planting material with specialist guidance."},
+ ],
+};
+const CATEGORY_PATHOLOGY_TEMPLATES={
+ Fruit:[{disease:"Fruit Anthracnose Risk",cause:"Colletotrichum species complex",symptoms:["Sunken fruit lesions","Blossom or twig blight"],immediate:["Remove infected fruit and dead twigs"],remedy:"Improve canopy drying and use locally registered protectants when risk is confirmed."}],
+ Vegetable:[{disease:"Root and Crown Rot Risk",cause:"Soil-borne oomycete/fungal complex",symptoms:["Root discoloration","Wilt or crown collapse"],immediate:["Correct drainage and remove confirmed plants"],remedy:"Use clean transplants, rotation and crop-specific registered controls."}],
+ Cereal:[{disease:"Seedling and Root Disease Risk",cause:"Pythium, Fusarium or Rhizoctonia complex",symptoms:["Poor emergence","Brown roots and stunting"],immediate:["Check seed quality and soil drainage"],remedy:"Use certified seed, rotation and approved seed protection where required."}],
+ Tree:[{disease:"Tree Canker and Dieback Risk",cause:"Opportunistic fungal/bacterial complex",symptoms:["Branch dieback","Sunken bark lesions"],immediate:["Prune dead wood in dry weather and sanitize tools"],remedy:"Reduce stress, protect wounds and confirm the pathogen before treatment."}],
+};
+function linkedPathologies(cropItem){
+ const baseName=(cropItem.baseName||cropItem.name).replace(/ ·.*/,"");
+ const key=compact(baseName),direct=DISEASE_VECTOR.filter(record=>{const host=compact(record.plant);return host.includes(key)||key.includes(host);});
+ const categoryFallback=cropItem.category==="Tree"?CATEGORY_PATHOLOGY_TEMPLATES.Tree:cropItem.category==="Fruit"?CATEGORY_PATHOLOGY_TEMPLATES.Fruit:CATEGORY_PATHOLOGY_TEMPLATES.Vegetable;
+ const templates=(FAMILY_PATHOLOGY_TEMPLATES[cropItem.family]||[]).concat(CATEGORY_PATHOLOGY_TEMPLATES[cropItem.category]||categoryFallback);
+ return direct.concat(templates.map(item=>Object.assign({cat:cropItem.category,plant:cropItem.name},item)))
+  .filter((item,index,all)=>all.findIndex(other=>other.disease===item.disease)===index).slice(0,6);
+}
 function loadDiseaseDictionary(){
   return new Promise(function(resolve){setTimeout(function(){resolve(DISEASE_VECTOR.slice());},600);});
 }
@@ -248,7 +294,7 @@ const ENGINEERS = [
 /* ═════════ MODULE 6 · FIVE-YEAR ROTATION DATA ENGINE ═════════ */
 const SEASON_SUGGESTIONS = ["Gu","Deyr","Xagaa","Jilaal","Hagaa","Rabi","Kharif","Dry season","Wet season"];
 function crop(id,name,category,family,rootDepth,nitrogenDemand,minPh,maxPh,maturityDays,seasons,color){
-  return {id,name,category,family,rootDepth,nitrogenDemand,minPh,maxPh,maturityDays,seasons,color};
+  return {id,baseId:id,baseName:name,name,category,family,rootDepth,nitrogenDemand,minPh,maxPh,maturityDays,seasons,color};
 }
 const BASE_CROP_LIBRARY = [
   crop("maize","Maize","Cereal","Poaceae","Medium","Heavy Feeder",5.5,7.5,90,["Gu","Deyr"],"#f59e0b"),
@@ -307,7 +353,7 @@ const BASE_CROP_LIBRARY = [
 ];
 function cropVariety(id,name,baseId,maturityDays,seasons){
   const base=BASE_CROP_LIBRARY.find(function(item){return item.id===baseId;});
-  return Object.assign({},base,{id,name,maturityDays:maturityDays||base.maturityDays,seasons:seasons||base.seasons});
+  return Object.assign({},base,{id,baseId:baseId,baseName:base.name,name,maturityDays:maturityDays||base.maturityDays,seasons:seasons||base.seasons});
 }
 const CROP_VARIETY_EXPANSION = [
   cropVariety("tomato_roma_vf","Tomato · Roma VF","tomato",85),
@@ -387,7 +433,90 @@ const CROP_VARIETY_EXPANSION = [
   cropVariety("strawberry_chandler","Strawberry · Chandler","strawberry",115),
   cropVariety("strawberry_festival","Strawberry · Festival","strawberry",110),
 ];
-const CROP_LIBRARY = BASE_CROP_LIBRARY.concat(CROP_VARIETY_EXPANSION);
+const REGIONAL_PRODUCE_EXPANSION = [
+  crop("african_nightshade","African Nightshade (Managu)","Vegetable","Solanaceae","Medium","Light Feeder",5.5,7.2,45,["Gu","Deyr"],"#166534"),
+  crop("amaranth_mchicha","Leaf Amaranth (Mchicha)","Vegetable","Amaranthaceae","Shallow","Light Feeder",5.5,7.5,35,["Gu","Deyr"],"#22c55e"),
+  crop("spider_plant_saga","Spider Plant (Saga)","Vegetable","Cleomaceae","Medium","Light Feeder",5.5,7.5,45,["Gu","Deyr"],"#65a30d"),
+  crop("jute_mallow_molokhia","Jute Mallow (Molokhia)","Vegetable","Malvaceae","Medium","Light Feeder",5.5,7.5,55,["Gu","Xagaa"],"#15803d"),
+  crop("ethiopian_kale","Ethiopian Kale (Gomen)","Vegetable","Brassicaceae","Medium","Heavy Feeder",6.0,7.5,70,["Deyr","Jilaal"],"#16a34a"),
+  crop("sukuma_wiki","Collard Greens (Sukuma Wiki)","Vegetable","Brassicaceae","Medium","Heavy Feeder",6.0,7.5,65,["Gu","Deyr"],"#4d7c0f"),
+  crop("african_eggplant","African Eggplant","Vegetable","Solanaceae","Deep","Heavy Feeder",5.5,7.2,100,["Gu","Deyr"],"#7e22ce"),
+  crop("garden_egg_white","Garden Egg · White","Vegetable","Solanaceae","Deep","Heavy Feeder",5.5,7.2,90,["Gu","Deyr"],"#e2e8f0"),
+  crop("garden_egg_green","Garden Egg · Green","Vegetable","Solanaceae","Deep","Heavy Feeder",5.5,7.2,90,["Gu","Deyr"],"#84cc16"),
+  crop("bottle_gourd","Bottle Gourd","Vegetable","Cucurbitaceae","Deep","Heavy Feeder",5.8,7.5,90,["Gu","Xagaa"],"#65a30d"),
+  crop("ridge_gourd","Ridge Gourd","Vegetable","Cucurbitaceae","Medium","Heavy Feeder",5.8,7.5,70,["Gu","Deyr"],"#22c55e"),
+  crop("sponge_gourd","Sponge Gourd (Luffa)","Vegetable","Cucurbitaceae","Medium","Heavy Feeder",5.8,7.5,80,["Gu","Deyr"],"#4ade80"),
+  crop("bitter_melon","Bitter Melon","Vegetable","Cucurbitaceae","Medium","Heavy Feeder",5.5,7.0,70,["Gu","Deyr"],"#16a34a"),
+  crop("chayote","Chayote","Vegetable","Cucurbitaceae","Deep","Heavy Feeder",5.5,7.5,150,["Gu establishment"],"#86efac"),
+  crop("cassava","Cassava","Vegetable","Euphorbiaceae","Deep","Heavy Feeder",5.0,7.0,300,["Gu"],"#a16207"),
+  crop("taro","Taro","Vegetable","Araceae","Shallow","Heavy Feeder",5.5,7.0,240,["Gu","Irrigated"],"#15803d"),
+  crop("cocoyam","Cocoyam","Vegetable","Araceae","Shallow","Heavy Feeder",5.5,7.0,270,["Gu","Irrigated"],"#166534"),
+  crop("white_guinea_yam","White Guinea Yam","Vegetable","Dioscoreaceae","Deep","Heavy Feeder",5.5,7.0,270,["Gu"],"#92400e"),
+  crop("yellow_guinea_yam","Yellow Guinea Yam","Vegetable","Dioscoreaceae","Deep","Heavy Feeder",5.5,7.0,300,["Gu"],"#a16207"),
+  crop("arrowroot","Arrowroot","Vegetable","Marantaceae","Shallow","Heavy Feeder",5.5,7.0,300,["Gu","Irrigated"],"#ca8a04"),
+  crop("moringa_leaf","Moringa Leaves","Vegetable","Moringaceae","Deep","Light Feeder",6.0,8.5,120,["Gu establishment"],"#22c55e"),
+  crop("cowpea_leaf","Cowpea Leaves","Vegetable","Fabaceae","Medium","Nitrogen Fixer",5.5,7.5,35,["Gu","Deyr"],"#4ade80"),
+  crop("pumpkin_leaf","Pumpkin Leaves","Vegetable","Cucurbitaceae","Deep","Heavy Feeder",5.8,7.5,40,["Gu","Deyr"],"#84cc16"),
+  crop("roselle_leaf","Roselle Leaves","Vegetable","Malvaceae","Deep","Light Feeder",5.5,7.5,75,["Gu"],"#be123c"),
+  crop("fenugreek","Fenugreek","Vegetable","Fabaceae","Medium","Nitrogen Fixer",6.0,7.5,90,["Jilaal","Rabi"],"#65a30d"),
+  crop("fava_bean","Fava Bean","Vegetable","Fabaceae","Medium","Nitrogen Fixer",6.0,8.0,110,["Jilaal","Rabi"],"#22c55e"),
+  crop("leek","Leek","Vegetable","Amaryllidaceae","Shallow","Heavy Feeder",6.0,7.5,120,["Deyr","Jilaal"],"#34d399"),
+  crop("turnip","Turnip","Vegetable","Brassicaceae","Medium","Light Feeder",5.8,7.5,60,["Deyr","Jilaal"],"#e2e8f0"),
+  crop("globe_artichoke","Globe Artichoke","Vegetable","Asteraceae","Deep","Heavy Feeder",6.0,7.5,180,["Jilaal"],"#6d28d9"),
+  crop("rocket_arugula","Rocket (Arugula)","Vegetable","Brassicaceae","Shallow","Light Feeder",6.0,7.5,40,["Deyr","Jilaal"],"#4ade80"),
+  crop("parsley","Parsley","Vegetable","Apiaceae","Medium","Light Feeder",5.8,7.2,75,["Deyr","Jilaal"],"#15803d"),
+  crop("coriander","Coriander (Cilantro)","Vegetable","Apiaceae","Shallow","Light Feeder",6.0,7.5,45,["Deyr","Jilaal"],"#22c55e"),
+  crop("mint","Mint","Vegetable","Lamiaceae","Shallow","Heavy Feeder",6.0,7.5,60,["Irrigated year-round"],"#2dd4bf"),
+  crop("swiss_chard","Swiss Chard","Vegetable","Amaranthaceae","Medium","Heavy Feeder",6.0,7.5,60,["Deyr","Jilaal"],"#e11d48"),
+  crop("celery","Celery","Vegetable","Apiaceae","Shallow","Heavy Feeder",6.0,7.0,120,["Jilaal","Irrigated"],"#4ade80"),
+  crop("asparagus","Asparagus","Vegetable","Asparagaceae","Deep","Heavy Feeder",6.5,7.5,730,["Jilaal establishment"],"#16a34a"),
+  crop("kiwano","African Horned Melon (Kiwano)","Fruit","Cucurbitaceae","Medium","Heavy Feeder",6.0,7.5,110,["Gu","Xagaa"],"#f97316"),
+  crop("tamarind","Tamarind","Fruit","Fabaceae","Deep","Light Feeder",5.5,7.5,1460,["Gu establishment"],"#92400e"),
+  crop("baobab_fruit","Baobab Fruit","Fruit","Malvaceae","Deep","Light Feeder",5.5,8.0,1825,["Gu establishment"],"#a16207"),
+  crop("jujube","Jujube (Ber)","Fruit","Rhamnaceae","Deep","Light Feeder",6.0,8.5,730,["Gu establishment"],"#b45309"),
+  crop("marula","Marula","Fruit","Anacardiaceae","Deep","Light Feeder",5.5,7.5,1460,["Gu establishment"],"#d97706"),
+  crop("safou","African Pear (Safou)","Fruit","Burseraceae","Deep","Heavy Feeder",5.0,7.0,1095,["Gu establishment"],"#4338ca"),
+  crop("jackfruit","Jackfruit","Fruit","Moraceae","Deep","Heavy Feeder",5.5,7.5,1095,["Gu establishment"],"#84cc16"),
+  crop("breadfruit","Breadfruit","Fruit","Moraceae","Deep","Heavy Feeder",6.0,7.5,1095,["Gu establishment"],"#65a30d"),
+  crop("soursop","Soursop","Fruit","Annonaceae","Deep","Heavy Feeder",5.5,6.5,730,["Gu establishment"],"#4ade80"),
+  crop("custard_apple","Custard Apple","Fruit","Annonaceae","Deep","Light Feeder",6.0,7.5,730,["Gu establishment"],"#a3e635"),
+  crop("cherimoya","Cherimoya","Fruit","Annonaceae","Deep","Heavy Feeder",6.0,7.0,900,["Cool-season establishment"],"#84cc16"),
+  crop("fig","Common Fig","Fruit","Moraceae","Deep","Light Feeder",6.0,8.0,730,["Jilaal establishment"],"#7c3aed"),
+  crop("olive","Olive","Fruit","Oleaceae","Deep","Light Feeder",6.5,8.5,1460,["Jilaal establishment"],"#4d7c0f"),
+  crop("grape_thompson","Grape · Thompson Seedless","Fruit","Vitaceae","Deep","Heavy Feeder",5.5,7.0,730,["Jilaal establishment"],"#84cc16"),
+  crop("grape_flame","Grape · Flame Seedless","Fruit","Vitaceae","Deep","Heavy Feeder",5.5,7.0,730,["Jilaal establishment"],"#e11d48"),
+  crop("apricot","Apricot","Fruit","Rosaceae","Deep","Heavy Feeder",6.0,7.5,1095,["Cool Jilaal establishment"],"#fb923c"),
+  crop("peach","Peach","Fruit","Rosaceae","Deep","Heavy Feeder",6.0,7.0,900,["Cool Jilaal establishment"],"#f97316"),
+  crop("plum","Plum","Fruit","Rosaceae","Deep","Heavy Feeder",6.0,7.0,1095,["Cool Jilaal establishment"],"#7e22ce"),
+  crop("pear","Pear","Fruit","Rosaceae","Deep","Heavy Feeder",6.0,7.0,1095,["Cool Jilaal establishment"],"#a3e635"),
+  crop("apple_anna","Apple · Anna","Fruit","Rosaceae","Deep","Heavy Feeder",6.0,7.0,1095,["Highland establishment"],"#ef4444"),
+  crop("quince","Quince","Fruit","Rosaceae","Deep","Heavy Feeder",6.0,7.5,1095,["Highland establishment"],"#eab308"),
+  crop("loquat","Loquat","Fruit","Rosaceae","Deep","Heavy Feeder",6.0,7.5,900,["Gu establishment"],"#f59e0b"),
+  crop("mulberry","Mulberry","Fruit","Moraceae","Deep","Light Feeder",5.5,7.5,730,["Gu establishment"],"#581c87"),
+  crop("lychee","Lychee","Fruit","Sapindaceae","Deep","Heavy Feeder",5.0,6.5,1460,["Humid Gu establishment"],"#e11d48"),
+  crop("longan","Longan","Fruit","Sapindaceae","Deep","Heavy Feeder",5.5,6.5,1460,["Humid Gu establishment"],"#a16207"),
+  crop("rambutan","Rambutan","Fruit","Sapindaceae","Deep","Heavy Feeder",5.0,6.5,1460,["Humid Gu establishment"],"#dc2626"),
+  crop("dragon_fruit","Dragon Fruit","Fruit","Cactaceae","Shallow","Light Feeder",5.5,7.0,365,["Dry irrigated establishment"],"#ec4899"),
+  crop("grapefruit","Grapefruit","Fruit","Rutaceae","Deep","Heavy Feeder",5.5,7.5,900,["Gu establishment"],"#f59e0b"),
+  crop("mandarin","Mandarin","Fruit","Rutaceae","Deep","Heavy Feeder",5.5,7.5,730,["Gu establishment"],"#f97316"),
+  crop("clementine","Clementine","Fruit","Rutaceae","Deep","Heavy Feeder",5.5,7.5,730,["Gu establishment"],"#fb923c"),
+  crop("pomelo","Pomelo","Fruit","Rutaceae","Deep","Heavy Feeder",5.5,7.5,900,["Gu establishment"],"#84cc16"),
+  crop("lemon_eureka","Lemon · Eureka","Fruit","Rutaceae","Deep","Heavy Feeder",5.5,7.5,650,["Gu establishment"],"#fde047"),
+  crop("date_ajwa","Date Palm · Ajwa","Fruit","Arecaceae","Deep","Heavy Feeder",7.0,8.5,1825,["Irrigated establishment"],"#78350f"),
+  crop("date_deglet_noor","Date Palm · Deglet Noor","Fruit","Arecaceae","Deep","Heavy Feeder",7.0,8.5,1825,["Irrigated establishment"],"#92400e"),
+  crop("mango_ngowe","Mango · Ngowe","Fruit","Anacardiaceae","Deep","Light Feeder",5.5,8.0,950,["Gu establishment"],"#f59e0b"),
+  crop("mango_boribo","Mango · Boribo","Fruit","Anacardiaceae","Deep","Light Feeder",5.5,8.0,950,["Gu establishment"],"#eab308"),
+  crop("matoke","East African Highland Banana (Matoke)","Fruit","Musaceae","Shallow","Heavy Feeder",5.5,7.5,365,["Year-round irrigation"],"#84cc16"),
+  crop("kisii_banana","Kisii Banana","Fruit","Musaceae","Shallow","Heavy Feeder",5.5,7.5,360,["Year-round irrigation"],"#fde047"),
+  crop("prickly_pear","Prickly Pear","Fruit","Cactaceae","Shallow","Light Feeder",6.0,8.5,365,["Dry-season establishment"],"#f43f5e"),
+  crop("moringa_tree","Moringa Tree","Tree","Moringaceae","Deep","Light Feeder",6.0,8.5,365,["Gu establishment"],"#16a34a"),
+  crop("neem_tree","Neem Tree","Tree","Meliaceae","Deep","Light Feeder",6.0,8.5,1095,["Gu establishment"],"#166534"),
+  crop("gum_arabic_acacia","Gum Arabic Acacia","Tree","Fabaceae","Deep","Nitrogen Fixer",6.0,8.0,1460,["Gu establishment"],"#65a30d"),
+  crop("frankincense_tree","Frankincense Tree","Tree","Burseraceae","Deep","Light Feeder",7.0,8.5,1825,["Dry upland establishment"],"#a8a29e"),
+  crop("myrrh_tree","Myrrh Tree","Tree","Burseraceae","Deep","Light Feeder",6.5,8.0,1460,["Dry upland establishment"],"#78716c"),
+];
+const CROP_LIBRARY = BASE_CROP_LIBRARY.concat(CROP_VARIETY_EXPANSION,REGIONAL_PRODUCE_EXPANSION)
+  .map(item=>Object.assign({},item,{pathologies:linkedPathologies(item)}));
 const CROP_ALIASES = {
   corn:"maize",cornmeal:"maize",millet:"pearl_millet",pearlmillet:"pearl_millet",
   bean:"beans",commonbean:"beans",greenbeans:"beans",mungbean:"mung_bean",
@@ -467,6 +596,7 @@ function cropRecord(raw,family,rootDepth,nitrogenDemand,minPh,maxPh,maturityDays
     maturityDays:Number.isFinite(maturityDays)&&maturityDays>0?Math.round(maturityDays):base.maturityDays,
     seasons:seasonList(seasons,base.seasons)});
   if(result.minPh>result.maxPh){const swap=result.minPh;result.minPh=result.maxPh;result.maxPh=swap;}
+  result.pathologies=linkedPathologies(result);
   return result;
 }
 function parseCropPlan(text){
@@ -581,7 +711,7 @@ function RotationPlanner(props){
     {id:"plot-c",name:"Upland Trial Field",ph:5.3,texture:"red loam",organicMatter:0.9,nitrogenReserve:48},
   ];
   const [catalog,setCatalog]=useState(function(){
-    try{const saved=JSON.parse(localStorage.getItem("lims_strategic_crop_catalog_v4"));return Array.isArray(saved)&&saved.length?saved:CROP_LIBRARY;}catch(_){return CROP_LIBRARY;}
+    try{const saved=JSON.parse(localStorage.getItem("lims_strategic_crop_catalog_v5"));return Array.isArray(saved)&&saved.length?saved:CROP_LIBRARY;}catch(_){return CROP_LIBRARY;}
   });
   const [rotation,setRotation]=useState(function(){
     try{const saved=JSON.parse(localStorage.getItem("lims_strategic_rotation_v2"));return Array.isArray(saved)&&saved.length===5?saved:defaultRotation();}catch(_){return defaultRotation();}
@@ -595,10 +725,11 @@ function RotationPlanner(props){
   const [demandFilter,setDemandFilter]=useState("All demands");
   const [sortMode,setSortMode]=useState("name");
   const [selectedCropId,setSelectedCropId]=useState("");
+  const [linkedPathologyKey,setLinkedPathologyKey]=useState("");
   const [dragOver,setDragOver]=useState("");
   const [importState,setImportState]=useState({kind:"idle",message:"Fallback enterprise catalog active — upload or drop a CSV to replace it."});
 
-  useEffect(function(){localStorage.setItem("lims_strategic_crop_catalog_v4",JSON.stringify(catalog));},[catalog]);
+  useEffect(function(){localStorage.setItem("lims_strategic_crop_catalog_v5",JSON.stringify(catalog));},[catalog]);
   useEffect(function(){localStorage.setItem("lims_strategic_rotation_v2",JSON.stringify(rotation));},[rotation]);
   useEffect(function(){localStorage.setItem("lims_strategic_fields_v2",JSON.stringify(fields));},[fields]);
   useEffect(function(){localStorage.setItem("lims_strategic_field_id",fieldId);},[fieldId]);
@@ -611,6 +742,9 @@ function RotationPlanner(props){
 
   const activeField=fields.find(function(field){return field.id===fieldId;})||fields[0];
   const byId=useMemo(function(){const out={};catalog.forEach(function(crop){out[crop.id]=crop;});return out;},[catalog]);
+  const selectedCrop=byId[selectedCropId]||null;
+  const selectedPathologies=selectedCrop&&selectedCrop.pathologies?selectedCrop.pathologies:[];
+  const selectedPathology=selectedPathologies.find(function(item){return item.disease===linkedPathologyKey;})||selectedPathologies[0]||null;
   const families=useMemo(function(){return Array.from(new Set(catalog.map(function(crop){return crop.family;}))).sort();},[catalog]);
   const filteredCrops=useMemo(function(){
     const query=search.trim().toLowerCase();
@@ -663,7 +797,10 @@ function RotationPlanner(props){
       compliance:Math.max(0,100-risks.filter(function(risk){return risk.severity==="high";}).length*18-risks.filter(function(risk){return risk.severity!=="high";}).length*10)};
   },[rotation,byId,risks]);
 
-  function assignCrop(key,cropId){setRotation(function(previous){return previous.map(function(slot){return slot.key===key?Object.assign({},slot,{cropId}):slot;});});}
+  function assignCrop(key,cropId){
+    setRotation(function(previous){return previous.map(function(slot){return slot.key===key?Object.assign({},slot,{cropId}):slot;});});
+    if(cropId&&byId[cropId]){setSelectedCropId(cropId);setLinkedPathologyKey((byId[cropId].pathologies[0]||{}).disease||"");}
+  }
   function setSeason(key,season){setRotation(function(previous){return previous.map(function(slot){return slot.key===key?Object.assign({},slot,{season}):slot;});});}
   function updateField(name,value){setFields(function(previous){return previous.map(function(field){return field.id===fieldId?Object.assign({},field,{[name]:value}):field;});});}
   function autoBalance(){
@@ -701,7 +838,7 @@ function RotationPlanner(props){
   }
   function dropCrop(event,key){event.preventDefault();const cropId=event.dataTransfer.getData("text/crop-id");if(cropId)assignCrop(key,cropId);setDragOver("");}
 
-  return e(Panel,{title:"5-Year Strategic Crop Planning & Rotation",icon:"calendar-range",cls:"2xl:col-span-2",
+  return e(Panel,{title:"5-Year Strategic Crop Planning & Rotation",icon:"calendar-range",cls:"strategic-planner 2xl:col-span-2",
     right:e("span",{className:"text-[10px] text-slate-500"},catalog.length+" crop rules · drag, drop or select")},
     e("div",{className:"grid grid-cols-1 xl:grid-cols-[300px_minmax(0,1fr)] gap-4"},
       e("aside",{className:"rounded-xl border border-slate-700 bg-slate-950/70 p-3"},
@@ -729,7 +866,7 @@ function RotationPlanner(props){
         e("div",{className:"mt-2 max-h-[38rem] overflow-y-auto space-y-1.5 pr-1"},filteredCrops.map(function(crop){
           const selected=selectedCropId===crop.id;
           return e("button",{key:crop.id,draggable:true,onDragStart:function(event){event.dataTransfer.setData("text/crop-id",crop.id);event.dataTransfer.effectAllowed="copy";},
-            onClick:function(){setSelectedCropId(selected?"":crop.id);},
+            onClick:function(){if(selected){setSelectedCropId("");setLinkedPathologyKey("");}else{setSelectedCropId(crop.id);setLinkedPathologyKey((crop.pathologies[0]||{}).disease||"");}},
             className:"w-full rounded-lg border p-2 text-left transition "+(selected?"border-emerald-500 bg-emerald-950/30":"border-slate-800 bg-slate-900/70 hover:border-slate-600")},
             e("div",{className:"flex items-center gap-2"},e("span",{className:"w-2.5 h-2.5 rounded-full",style:{backgroundColor:crop.color}}),
               e("b",{className:"text-xs"},crop.name),e("span",{className:"ml-auto text-[9px] text-slate-500"},crop.maturityDays+" d")),
@@ -760,7 +897,16 @@ function RotationPlanner(props){
         e("div",{className:"mt-2 rounded-lg border border-slate-700 bg-slate-900/50 px-3 py-2 text-[10px] text-slate-400"},
           e("b",{className:"text-sky-300"},"Ideal season forecast: "),forecast.windows.length?forecast.windows.join(" · "):"Assign crops to calculate planting windows."),
         selectedCropId&&e("div",{className:"mt-2 rounded-lg border border-emerald-700/50 bg-emerald-950/20 px-3 py-2 text-[10px] text-emerald-200"},
-          "Selected ",e("b",null,byId[selectedCropId]?byId[selectedCropId].name:"crop")," — click Assign on a year card or drag it into the timeline."),
+          "Selected ",e("b",null,selectedCrop?selectedCrop.name:"crop")," — click Assign on a year card or drag it into the timeline."),
+        selectedCrop&&selectedPathology&&e("div",{className:"mt-2 rounded-xl border border-violet-700/60 bg-violet-950/20 p-3"},
+          e("div",{className:"text-[10px] uppercase tracking-widest text-violet-300 font-bold"},"Associated pathology selection · "+selectedCrop.name),
+          e("select",{value:selectedPathology.disease,onChange:function(event){setLinkedPathologyKey(event.target.value);},className:"mt-2 w-full rounded-lg border border-violet-700/60 bg-slate-950 px-3 py-2 text-xs"},
+            selectedPathologies.map(function(item){return e("option",{key:item.disease,value:item.disease},item.disease);})),
+          e("div",{className:"mt-2 grid grid-cols-1 md:grid-cols-2 gap-2 text-[10px]"},
+            e("div",{className:"rounded-lg border border-slate-700 bg-slate-900/70 p-2"},e("b",{className:"text-red-300"},"Cause · "),selectedPathology.cause,
+              e("div",{className:"mt-1 text-slate-400"},(selectedPathology.symptoms||[]).join(" · "))),
+            e("div",{className:"rounded-lg border border-slate-700 bg-slate-900/70 p-2"},e("b",{className:"text-emerald-300"},"Response · "),selectedPathology.remedy||selectedPathology.action)),
+        ),
         e("datalist",{id:"rotation-season-options"},SEASON_SUGGESTIONS.map(function(season){return e("option",{key:season,value:season});})),
         e("div",{className:"mt-3 overflow-x-auto pb-2"},
           e("div",{className:"min-w-[900px] grid grid-cols-5 gap-2"},rotation.map(function(slot){
