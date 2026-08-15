@@ -437,7 +437,7 @@ async function sampleLocalHwsd(lat,lon){
   nearest_km:nearestKm||null,source:"Local HWSD pH overlay · browser pixel sample",offline:true};
 }
 async function getHwsdPayload(lat,lon){
- if(STANDALONE_GIS&&!apiBase)return {available:true,sample:await sampleLocalHwsd(lat,lon),standalone:true};
+ if(STANDALONE_GIS)return {available:true,sample:await sampleLocalHwsd(lat,lon),standalone:true};
  const base=apiBase||location.origin;
  const response=await fetch(`${base}/api/v1/lab/hwsd/sample?lat=${lat.toFixed(6)}&lon=${lon.toFixed(6)}`);
  if(!response.ok)throw new Error(`HWSD API returned HTTP ${response.status}`);
@@ -898,7 +898,7 @@ async function autoLab(aoiTarget){
  const a=aoiTarget||state.selected;let lat=HOME[0],lon=HOME[1];
  if(a){[lat,lon]=ringCentroid(a.poly.getLatLngs()[0]);}else{const c=map.getCenter();lat=c.lat;lon=c.lng;}
  const box=document.getElementById("lab-verdict");
- box.innerHTML=STANDALONE_GIS&&!apiBase?"⏳ sampling the local HWSD pH overlay…":"⏳ sampling FAO/IIASA HWSD v2.0 grid…";
+ box.innerHTML=STANDALONE_GIS?"⏳ sampling the local HWSD pH overlay…":"⏳ sampling FAO/IIASA HWSD v2.0 grid…";
  try{
   const j=await getHwsdPayload(lat,lon);
   if(!j.available){box.innerHTML="HWSD dataset not mounted on this server — keeping the 18-region baseline (see data/hwsd/README to mount it).";return;}
