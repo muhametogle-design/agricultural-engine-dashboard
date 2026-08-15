@@ -38,7 +38,10 @@ def test_dashboard_served():
         "alphaFlora", "plant-pathology-select", "Applicable pathology for",
         "agri.shared.js", "agri.store.js", "agri.i18n.js", "seedOils", "lang-toggle", "Soomaali | English",
         "left-collapsed", "sidebar-toggle", "restoreLeftSidebar", "map.invalidateSize",
-        "AGRI_DATA_STORE", "AQUIFERS", "assessGroundwater", "Underground aquifer detected",
+        "AGRI_DATA_STORE", "STATIC_MASTER_CATALOG", "renderStartupCatalog",
+        "AQUIFERS", "assessGroundwater", "Underground aquifer detected",
+        "somalia_unified.geojson", "nationalBoundaryLayer", "DEFAULT_MAP_ZOOM=8",
+        "Laascaanood Integration Preview",
         "GROUNDWATER_NETWORK", "hourlyStations:40", "weeklyBoreholes:609",
         "renderGroundwaterStation", "Conductivity", "Local water price",
         "Somalia_Groundwater_Monitoring_Bulletin_23_Dec_2025.pdf", "spatial.faoswalim.org", "data.faoswalim.org:1080/gwater",
@@ -55,6 +58,13 @@ def test_dashboard_served():
     assert "demoPlot" not in r.text
     assert "Loading synchronized regional catalog" not in r.text
     assert "Regional seed catalog ready" in r.text
+
+    boundary = client.get("/web/somalia_unified.geojson")
+    assert boundary.status_code == 200
+    geojson = boundary.json()
+    assert len(geojson["features"]) == 1
+    assert geojson["features"][0]["properties"]["iso_a3"] == "SOM"
+    assert "internal" in geojson["features"][0]["properties"]["boundary_policy"]
 
 
 def test_lims_dashboard_is_modular_and_offline_safe():
@@ -91,6 +101,7 @@ def test_lims_dashboard_is_modular_and_offline_safe():
     assert i18n.status_code == 200
     for marker in ("MutationObserver", "Soomaali", "Khariidadda & Beeraha", "Falanqaynta Billaha Beeraha", "Dayrka Beeraha", "Cudurada", "Saliidda Abuurka"):
         assert marker in i18n.text
+    assert i18n.text.count('\":\"') >= 80
 
     catalog = client.get("/web/regional_produce.json")
     assert catalog.status_code == 200

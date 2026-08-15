@@ -529,7 +529,16 @@ function sharedCropRecord(item){
   return record;
 }
 const SHARED_CROP_LIBRARY = SHARED_AGRI.catalog.map(sharedCropRecord);
-const CROP_LIBRARY = BASE_CROP_LIBRARY.concat(CROP_VARIETY_EXPANSION,REGIONAL_PRODUCE_EXPANSION,SHARED_CROP_LIBRARY)
+const LIMS_STATIC_SEED_OILS=[
+ crop("oil_sesame","Sesame","Seed Oil","Pedaliaceae","Deep","Light Feeder",5.5,8,100,["Gu","Deyr"],"#d97706"),
+ crop("oil_palm","Oil Palm","Seed Oil","Arecaceae","Deep","Heavy Feeder",4,7,1095,["Humid establishment"],"#d97706"),
+ crop("oil_sunflower","Sunflower","Seed Oil","Asteraceae","Deep","Heavy Feeder",6,7.5,110,["Gu"],"#d97706"),
+ crop("oil_castor","Castor","Seed Oil","Euphorbiaceae","Deep","Light Feeder",5.5,7.5,150,["Gu"],"#d97706"),
+ crop("oil_niger","Niger Seed","Seed Oil","Asteraceae","Medium","Light Feeder",5.2,7.5,120,["Gu"],"#d97706"),
+ crop("oil_olive","Olive","Seed Oil","Oleaceae","Deep","Light Feeder",6.5,8.5,1460,["Jilaal establishment"],"#d97706"),
+ crop("oil_jojoba","Jojoba","Seed Oil","Simmondsiaceae","Deep","Light Feeder",6,8.5,1095,["Dry irrigated establishment"],"#d97706"),
+].map(item=>Object.assign({},item,{categorySo:"Saliidda Abuurka",pathologies:linkedPathologies(item)}));
+const CROP_LIBRARY = BASE_CROP_LIBRARY.concat(CROP_VARIETY_EXPANSION,REGIONAL_PRODUCE_EXPANSION,LIMS_STATIC_SEED_OILS,SHARED_CROP_LIBRARY)
   .filter(function(item,index,all){return all.findIndex(function(other){return other.id===item.id;})===index;})
   .map(function(item){
     const linked=(item.pathologies||[]).concat(linkedPathologies(item)).filter(function(record,index,all){return all.findIndex(function(other){return other.disease===record.disease;})===index;});

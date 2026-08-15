@@ -287,8 +287,10 @@ arrive as `Decimal` (repository boundary now normalizes to float).
 * Seed Oil / `Saliidda Abuurka` includes sesame, oil palm, sunflower, castor,
   niger seed, olive and jojoba, each with linked `Cudurada` records. Every shared
   crop/tree carries selectable pathology cause, symptom and response data.
-* A persistent `SOM | ENG` switch shares language state across pages and includes
-  the native seeds Ciid, Dhoobo, Khudaar, Midho, Beer, Cudurada and Saliidda Abuurka.
+* A wide persistent `Soomaali | English` switch shares state across pages.
+  `agri.i18n.js` translates static and dynamically inserted text/attributes through
+  MutationObserver using the Ciid, Dhoobo, Khudaar, Midho, Beer, Cudurada and
+  Saliidda Abuurka dictionary seeds.
 * Static Demo Plot creation was removed. Custom polygons persist offline in
   IndexedDB and, when an API JWT is configured, synchronize to PostGIS plus the
   revision-0005 history API. Monthly Farm Analytics can consume local or server
@@ -296,10 +298,12 @@ arrive as `Decimal` (repository boundary now normalizes to float).
 * GIS retains isolated scroll regions and a seven-range FAO/HWSD pH pane. Catalog
   startup now master-merges shared seeds with cached/custom rows, so empty, partial
   or corrupt IndexedDB state cannot remove trees or leave the catalog blank.
-* `agri.i18n.js` applies the shared Somali dictionary to static and dynamically
-  inserted text/attributes via MutationObserver. Wide `Soomaali | English` controls
-  synchronize language across tabs. The GIS hamburger persists a true collapsed
-  workspace state and invalidates Leaflet sizing when the map expands.
+* A synchronous `STATIC_MASTER_CATALOG` paints usable categories before Leaflet,
+  IndexedDB or network code runs; LIMS also embeds a seven-entry Seed Oil fallback.
+  The GIS hamburger persists a true collapsed state and invalidates Leaflet sizing.
+* The default camera is Laascaanood (`8.4774, 47.3597`). A single-feature
+  `somalia_unified.geojson` renders one sovereign Somalia outline with no internal
+  administrative or de facto boundary layers.
 * The hydrogeology layer renders boundaries, depth and yield plus an attributed
   FAO SWALIM-compatible monitoring view: 40 hourly telemetric stations and 609
   weekly strategic boreholes, with water-level trend, functionality, price,

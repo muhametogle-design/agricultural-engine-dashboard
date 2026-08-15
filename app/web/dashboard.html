@@ -170,6 +170,9 @@
         </div>
         <div class="mt-1 text-[9px] text-slate-600">FAO/IIASA HWSD v2.0 · 1 km grid · labels auto-join to polygons</div>
       </div>
+      <label class="mt-2 flex items-center gap-2 text-sm font-medium text-emerald-200 select-none cursor-pointer">
+        <input type="checkbox" id="ov-national" checked onchange="toggleNationalBoundary(this.checked)"/> Unified Somalia national boundary
+      </label>
       <label class="mt-2 flex items-center gap-2 text-sm font-medium text-cyan-200 select-none cursor-pointer">
         <input type="checkbox" id="ov-aquifer" checked onchange="toggleAquiferLayer(this.checked)"/> Groundwater aquifers
       </label>
@@ -383,7 +386,15 @@ function toggleTheme(){localStorage.setItem("ssb_theme",(localStorage.getItem("s
 applyTheme();
 
 /* ═══════════════ CONFIG / STATE ═══════════════ */
-const HOME=[2.046,45.318];
+const HOME=[8.4774,47.3597];
+const DEFAULT_MAP_ZOOM=8;
+function fallbackCatalogItem(id,name,category,family,minPh=5.5,maxPh=7.5){return {id,name,category,categorySo:category==="Fruits"?"Midho":category==="Vegetables"?"Khudaar":category==="Seed Oil"?"Saliidda Abuurka":category,family,rootDepth:"Medium",nitrogenDemand:family==="Fabaceae"?"Nitrogen Fixer":"Light Feeder",minPh,maxPh,maturityDays:100,seasons:["Gu","Deyr"],color:"#10b981",region:"Static emergency seed",pathologies:[{disease:"Root and Leaf Health Risk",cause:"Crop-specific fungal, bacterial or vector complex",symptoms:["Decline or leaf lesions"],immediate:["Inspect and isolate affected material"],remedy:"Confirm diagnosis and use crop-specific integrated management."}]};}
+const STATIC_MASTER_CATALOG=[
+ fallbackCatalogItem("fallback_mango","Mango","Fruits","Anacardiaceae"),fallbackCatalogItem("fallback_banana","Banana","Fruits","Musaceae"),fallbackCatalogItem("fallback_date","Date Palm","Fruits","Arecaceae",7,8.5),fallbackCatalogItem("fallback_orange","Orange","Fruits","Rutaceae"),fallbackCatalogItem("fallback_guava","Guava","Fruits","Myrtaceae"),
+ fallbackCatalogItem("fallback_tomato","Tomato","Vegetables","Solanaceae"),fallbackCatalogItem("fallback_onion","Onion","Vegetables","Amaryllidaceae",6,7.2),fallbackCatalogItem("fallback_carrot","Carrot","Vegetables","Apiaceae",6,7),fallbackCatalogItem("fallback_cabbage","Cabbage","Vegetables","Brassicaceae",6,7.5),fallbackCatalogItem("fallback_okra","Okra","Vegetables","Malvaceae",6,7.5),
+ fallbackCatalogItem("fallback_maize","Maize","Field Crops","Poaceae"),fallbackCatalogItem("fallback_sorghum","Sorghum","Field Crops","Poaceae"),fallbackCatalogItem("fallback_beans","Beans","Field Crops","Fabaceae"),
+ ...["Sesame","Oil Palm","Sunflower","Castor","Niger Seed","Olive","Jojoba"].map(name=>fallbackCatalogItem("fallback_oil_"+name.toLowerCase().replace(/ /g,"_"),name,"Seed Oil",name==="Olive"?"Oleaceae":name==="Oil Palm"?"Arecaceae":"Asteraceae"))
+];
 let uiLang=localStorage.getItem("agri_lang")==="so"?"so":"en";
 const tr=key=>(window.AGRI_SHARED&&AGRI_SHARED.t(uiLang,key))||key;
 function applyLanguage(){
@@ -412,6 +423,16 @@ document.getElementById("api-token").value=apiToken;
 document.getElementById("client-name").value=localStorage.getItem("ssb_client")||"";
 function saveClient(){localStorage.setItem("ssb_client",document.getElementById("client-name").value);}
 const state={draw:null,aois:[],selected:null,seq:1,flora:null,soil:"shabelle",labManual:false};
+
+/* Synchronous catalog paint happens before Leaflet/network initialization. */
+function renderStartupCatalog(category="Fruits"){
+ const shared=(window.AGRI_SHARED&&Array.isArray(AGRI_SHARED.catalog))?AGRI_SHARED.catalog:[],records=Array.from(new Map(STATIC_MASTER_CATALOG.concat(shared).map(item=>[item.id,item])).values()),tabs=document.getElementById("tabs"),body=document.getElementById("flora-body"),count=document.getElementById("produce-count"),categories=[["Trees","Trees"],["Fruits","Fruits"],["Seed Oil","Seed Oil"],["Field Crops","Field Crops"],["Vegetables","Vegetables"]];
+ count.textContent=`${records.length} master records ready · background sync pending`;
+ tabs.innerHTML="";categories.forEach(([value,label])=>{const button=document.createElement("button");button.textContent=(window.AGRI_SHARED&&AGRI_SHARED.t(uiLang,label==="Trees"?"trees":label==="Fruits"?"fruits":label==="Vegetables"?"vegetables":label==="Seed Oil"?"seedOil":"fieldCrops"))||label;button.className="px-2.5 py-1 rounded-md border border-slate-700 bg-slate-900 text-slate-300";button.onclick=()=>renderStartupCatalog(value);tabs.appendChild(button);});
+ let selected=records.filter(item=>item.category===category);if(category==="Trees")selected=records.filter(item=>item.category==="Tree");if(!selected.length)selected=records;
+ body.innerHTML=selected.sort((a,b)=>a.name.localeCompare(b.name)).slice(0,150).map(item=>`<div class="rounded-xl border border-slate-700 bg-slate-900 p-3"><b class="text-base text-emerald-200">${item.name}</b><div class="mt-1 text-xs text-slate-400">${item.family} · ${item.categorySo||item.category}</div><label class="mt-2 block text-xs font-bold text-violet-300">Cudurada</label><select class="mt-1 w-full rounded border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs">${(item.pathologies||[]).map(record=>`<option>${record.disease}</option>`).join("")}</select></div>`).join("");
+}
+renderStartupCatalog();
 
 /* ═══════════════ PERMANENT POLYGON FARM DATABASE (IndexedDB, offline-first) ═══════════════ */
 const FARM_DB_NAME="agri-dss-polygon-farms",FARM_STORE="farms";
@@ -522,13 +543,11 @@ function exportAudit(){
 renderHistory();
 
 /* ═══════════════ MAP & BASEMAPS (SPEC-8 · repaired Esri endpoint) ═══════════════ */
-const map=L.map("map",{preferCanvas:true}).setView(HOME,14);
+const map=L.map("map",{preferCanvas:true}).setView(HOME,DEFAULT_MAP_ZOOM);
 map.createPane("hwsdPhPane");map.getPane("hwsdPhPane").style.zIndex="350";map.getPane("hwsdPhPane").style.pointerEvents="none";
 const BASES={
  "Esri World Imagery":L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"Esri, Maxar, Earthstar Geographics"}),
- "Google Satellite":L.tileLayer("https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",{subdomains:["0","1","2","3"],maxZoom:20,attribution:"Google"}),
- "OSM Standard":L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}),
- "Carto Dark":L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{maxZoom:19,attribution:"© CARTO"}),
+ "Google Satellite (no labels)":L.tileLayer("https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",{subdomains:["0","1","2","3"],maxZoom:20,attribution:"Google"}),
 };
 let activeBase="Esri World Imagery";
 const baseBox=document.getElementById("basemaps");
@@ -539,6 +558,16 @@ Object.keys(BASES).forEach(n=>{
   baseBox.querySelectorAll("button").forEach(x=>x.classList.toggle("base-active",x.dataset.name===n));};
  baseBox.appendChild(b);});
 BASES[activeBase].addTo(map);
+
+/* Single sovereign Somalia national outline — deliberately no internal borders. */
+map.createPane("nationalBoundaryPane");map.getPane("nationalBoundaryPane").style.zIndex="345";
+let nationalBoundaryLayer=L.layerGroup(),nationalBoundaryVisible=true;
+fetch("/web/somalia_unified.geojson").then(response=>{if(!response.ok)throw new Error(`Boundary HTTP ${response.status}`);return response.json();}).then(data=>{
+ const layer=L.geoJSON(data,{pane:"nationalBoundaryPane",style:{color:"#34d399",weight:3,opacity:.95,fillColor:"#10b981",fillOpacity:.055,dashArray:null}})
+  .bindTooltip("Jamhuuriyadda Federaalka Soomaaliya · Unified national boundary",{sticky:true,className:"map-label"});
+ nationalBoundaryLayer.addLayer(layer);if(nationalBoundaryVisible)nationalBoundaryLayer.addTo(map);
+}).catch(error=>console.warn("Unified Somalia boundary unavailable",error));
+function toggleNationalBoundary(on){nationalBoundaryVisible=on;if(on)nationalBoundaryLayer.addTo(map);else nationalBoundaryLayer.remove();}
 
 /* High-visibility laboratory reference points */
 const LAB_SITES=[
@@ -557,6 +586,7 @@ LAB_SITES.forEach(site=>{
 /* Hydrogeology / groundwater screening layer */
 map.createPane("aquiferPane");map.getPane("aquiferPane").style.zIndex="360";
 const AQUIFERS=[
+ {id:"sool-nugaal-limestone",name:"Sool–Nugaal Limestone Aquifer",type:"Fractured karstic limestone",depth:[42,88],yield:[3,11],confidence:"Regional screening",color:"#0891b2",ring:[[7.85,46.45],[7.85,48.35],[9.15,48.35],[9.15,46.45]]},
  {id:"shabelle-alluvial",name:"Shabelle Alluvial Aquifer",type:"Unconfined alluvial sand/gravel",depth:[30,48],yield:[8,20],confidence:"High",color:"#06b6d4",ring:[[2.038,45.307],[2.038,45.332],[2.055,45.332],[2.055,45.307]]},
  {id:"coastal-limestone",name:"Coastal Limestone Aquifer",type:"Karstic limestone",depth:[45,72],yield:[5,12],confidence:"Medium",color:"#3b82f6",ring:[[2.032,45.324],[2.032,45.346],[2.058,45.346],[2.058,45.324]]},
  {id:"fractured-basement",name:"Fractured Basement Aquifer",type:"Weathered/fractured rock",depth:[65,110],yield:[2,7],confidence:"Screening",color:"#8b5cf6",ring:[[2.034,45.292],[2.034,45.312],[2.06,45.312],[2.06,45.292]]},
@@ -585,6 +615,7 @@ function toggleAquiferLayer(on){if(on){aquiferLayer.addTo(map);}else{aquiferLaye
 map.createPane("monitoringPane");map.getPane("monitoringPane").style.zIndex="430";
 function telemetrySeries(base,count=24,amplitude=.45){return Array.from({length:count},(_,index)=>Math.round((base+Math.sin(index*.58)*amplitude+Math.cos(index*.21)*amplitude*.35)*100)/100);}
 const GROUNDWATER_NETWORK={source:"FAO SWALIM Groundwater Monitoring Bulletin",portal:"https://spatial.faoswalim.org/",hourlyStations:40,weeklyBoreholes:609,mode:"Representative cached integration preview",stations:[
+ {id:"preview-laascaanood",name:"Laascaanood Integration Preview",region:"Sool",lat:8.4774,lon:47.3597,level:46.0,conductivity:2180,status:"Operational",price:0.86,update:"Hourly demo",trend:0.1},
  {id:"preview-afgooye",name:"Afgooye Integration Preview",region:"Lower Shabelle",lat:2.046,lon:45.318,level:40.2,conductivity:1650,status:"Operational",price:0.62,update:"Hourly demo",trend:-0.3},
  {id:"baraawe",name:"Baraawe",region:"Lower Shabelle",lat:1.11,lon:44.03,level:11.4,conductivity:1480,status:"Operational",price:0.74,update:"Hourly cached",trend:0.0},
  {id:"buulo-burde",name:"Buulo Burde",region:"Hiiraan",lat:3.85,lon:45.57,level:8.7,conductivity:1908,status:"Operational",price:0.58,update:"Hourly cached",trend:0.2},
@@ -1127,7 +1158,7 @@ function sharedFlora(item){
   yieldT:isTree?null:[1,4],kgYr:isTree?[15,80]:null,yieldNote:null,water:isTree?{mode:"tree",lTreeWeek:35}:{mode:"crop",mm:500},
   pathologies:item.pathologies||[]};
 }
-const SHARED_CATALOG=(window.AGRI_SHARED&&AGRI_SHARED.catalog)||[];
+const SHARED_CATALOG=(window.AGRI_SHARED&&Array.isArray(AGRI_SHARED.catalog)&&AGRI_SHARED.catalog.length?AGRI_SHARED.catalog:STATIC_MASTER_CATALOG);
 const SHARED_FRUITS=SHARED_CATALOG.filter(item=>item.category==="Fruits").map(sharedFlora);
 const DB={
  nativeTrees:NATIVE_TREES.map(e=>enrich(e,"tree","native")).concat(SHARED_CATALOG.filter(item=>item.category==="Tree").map(sharedFlora)),
