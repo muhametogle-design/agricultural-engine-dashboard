@@ -23,8 +23,10 @@
   button:focus-visible,input:focus-visible{outline:2px solid #34d399;outline-offset:1px}
 
   /* Compact, high-contrast map workspace */
-  #map-shell{background:linear-gradient(145deg,#111827,#0f172a);}
-  .map-frame{height:420px!important;max-height:56vh;box-shadow:0 18px 55px rgba(2,6,23,.48)}
+  #workspace{width:100%;min-width:0}
+  #map-shell{background:linear-gradient(145deg,#111827,#0f172a);display:flex;flex-direction:column;justify-content:flex-start;overflow-y:auto}
+  .map-frame{width:min(100%,620px);height:auto!important;max-height:none!important;aspect-ratio:1/1;flex:none;box-shadow:0 18px 55px rgba(2,6,23,.48)}
+  .map-summary{width:min(100%,620px);flex:1;min-height:116px}
   #left{font-size:15px}
   #left input,#left select,#left button,#left label{font-size:14px!important;line-height:1.45}
   #left .text-\[9px\],#left .text-\[10px\],#left .text-\[11px\]{font-size:13px!important;line-height:1.45}
@@ -44,11 +46,12 @@
   .leaflet-tooltip-right.lab-map-label:before{border-right-color:rgba(6,78,59,.96)}
   .leaflet-tooltip-left.lab-map-label:before{border-left-color:rgba(6,78,59,.96)}
   @media (min-width:1280px){
-    #map-shell{flex:0 0 460px!important;width:460px!important;min-width:460px!important;max-width:460px!important}
-    #right{flex:1 1 470px;min-width:470px;max-width:none;width:auto}
+    #workspace{display:grid!important;grid-template-columns:340px minmax(420px,min(36vw,620px)) minmax(430px,1fr);align-items:stretch}
+    #left,#right,#map-shell{position:relative!important;inset:auto!important;width:auto!important;min-width:0!important;max-width:none!important;height:100%!important;transform:none!important}
+    #map-shell{padding:12px!important}
+    .map-frame,.map-summary{width:100%}
   }
-  @media (min-width:1536px){#map-shell{flex-basis:520px!important;width:520px!important;min-width:520px!important;max-width:520px!important}}
-  @media (max-width:1279px){#map-shell{max-width:none}.map-frame{height:440px!important;max-height:62vh}}
+  @media (max-width:1279px){#map-shell{max-width:none;align-items:center}.map-frame,.map-summary{width:min(100%,620px)}}
 
   /* Orbital logo */
   .orbit-sat{animation:orbit 7s linear infinite;transform-origin:24px 24px}
@@ -124,7 +127,7 @@
   <button onclick="toggleRight()" aria-label="Toggle database panel" class="xl:hidden p-1.5 rounded hover:bg-slate-800">🌿</button>
 </header>
 
-<div class="flex flex-1 min-h-0 relative">
+<div id="workspace" class="flex flex-1 min-h-0 relative">
 
   <!-- ══ LEFT SIDEBAR ══ -->
   <aside id="left" class="w-80 bg-slate-950 border-r border-slate-800 flex flex-col z-20 flex-none
@@ -231,14 +234,26 @@
   <div id="left-scrim" onclick="toggleLeft()" class="hidden absolute inset-0 bg-black/50 z-10 lg:hidden"></div>
 
   <!-- ══ COMPACT MAP WORKSPACE ══ -->
-  <main id="map-shell" class="flex-1 min-w-0 relative flex items-center justify-center p-2 sm:p-3">
-    <div class="map-frame relative w-full overflow-hidden rounded-2xl border border-slate-700/80 bg-slate-950">
+  <main id="map-shell" class="flex-1 min-w-0 relative flex flex-col items-center justify-start p-2 sm:p-3">
+    <div class="map-frame relative overflow-hidden rounded-2xl border border-slate-700/80 bg-slate-950">
       <div id="map" class="absolute inset-0"></div>
       <div class="pointer-events-none absolute left-3 top-3 z-[500] rounded-xl border border-white/20 bg-slate-950/90 px-3 py-2 shadow-xl backdrop-blur">
-        <div class="flex items-center gap-2 text-base font-extrabold text-white">Compact Field Map <span class="rounded-full bg-emerald-500 px-2 py-0.5 text-xs font-black text-slate-950">v3</span></div>
-        <div class="text-sm font-semibold text-slate-200">Laboratories · AOIs · local HWSD sampling</div>
+        <div class="flex items-center gap-2 text-base font-extrabold text-white">Field Intelligence Map <span class="rounded-full bg-emerald-400 px-2 py-0.5 text-xs font-black text-slate-950">SQUARE v4</span></div>
+        <div class="text-sm font-semibold text-slate-200">Screen-fit workspace · laboratories · AOIs · local HWSD</div>
       </div>
     </div>
+    <section class="map-summary mt-3 rounded-2xl border border-slate-700/80 bg-slate-950/90 p-3 shadow-xl" aria-label="Map context summary">
+      <div class="flex items-center justify-between gap-2">
+        <div><div class="text-sm font-extrabold text-white">Map Context</div><div class="text-xs font-medium text-slate-400">Operational layers visible in this workspace</div></div>
+        <span class="rounded-full border border-emerald-700 bg-emerald-950/50 px-2 py-1 text-xs font-bold text-emerald-300">LIVE SESSION</span>
+      </div>
+      <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-2"><span class="block text-xs text-slate-400">Reference laboratories</span><b class="text-lg text-violet-300">3 visible</b></div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-2"><span class="block text-xs text-slate-400">Active AOIs</span><b id="map-aoi-count" class="text-lg text-emerald-300">0</b></div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-2"><span class="block text-xs text-slate-400">Soil source</span><b class="text-sm text-sky-300">Local HWSD overlay</b></div>
+        <div class="rounded-xl border border-slate-800 bg-slate-900 p-2"><span class="block text-xs text-slate-400">Annotation scale</span><b class="text-sm text-amber-300">High visibility</b></div>
+      </div>
+    </section>
   </main>
 
   <!-- ══ RIGHT SIDEBAR ══ -->
@@ -527,7 +542,7 @@ function addMid(a,i){const m=L.marker([0,0],{icon:L.divIcon({className:"mid-mark
 function moveMids(a){const ll=a.poly.getLatLngs()[0];if(!a.mids)return;a.mids.forEach((m,i)=>{const p=ll[i],q=ll[(i+1)%ll.length];m.setLatLng([(p.lat+q.lat)/2,(p.lng+q.lng)/2]);});}
 function dropVertex(a,i){const ll=a.poly.getLatLngs()[0];if(ll.length<=3){alert("Keep at least 3 vertices.");return;}ll.splice(i,1);a.poly.setLatLngs(ll);a.dirty=true;setEditable(a,true);updateStats();}
 function selectAoi(a){state.selected=a;state.aois.forEach(x=>{const on=x===a;x.poly.setStyle({weight:on?3:2,fillOpacity:on?.22:.15});if(x!==a&&x.editing)setEditable(x,false);});updateStats();listAois();}
-function updateStats(){document.getElementById("stat-count").textContent=state.aois.length;const a=state.selected;
+function updateStats(){document.getElementById("stat-count").textContent=state.aois.length;const mapCount=document.getElementById("map-aoi-count");if(mapCount)mapCount.textContent=state.aois.length;const a=state.selected;
  if(!a){document.getElementById("stat-ha").textContent="—";document.getElementById("stat-ac").textContent="select / draw a polygon";renderSim();return;}
  const m2=aoiM2(a);updateAoiMapLabel(a);document.getElementById("stat-ha").textContent=fmtHa(m2);
  document.getElementById("stat-ac").textContent=fmtAc(m2)+" · "+fnum(m2,0)+" m²";

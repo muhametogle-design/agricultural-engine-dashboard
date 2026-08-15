@@ -29,10 +29,11 @@ def test_dashboard_served():
     for marker in (
         "Native trees", "Ziziphus mauritiana", "base-active", "Soil engine",
         "Soil amendment required", "ringAreaM2", "renderSim",
-        "World_Imagery", "mt{s}.google.com", "Compact Field Map",
-        "map-frame", "lab-map-label", "Afgooye Soil Laboratory",
-        "updateAoiMapLabel", "localHwsdImagePromise",
-        "Local HWSD pH overlay", "flex:0 0 460px", "local-sampler=v1",
+        "World_Imagery", "mt{s}.google.com", "Field Intelligence Map",
+        "SQUARE v4", "map-frame", "map-summary", "map-aoi-count",
+        "aspect-ratio:1/1", "grid-template-columns", "lab-map-label",
+        "Afgooye Soil Laboratory", "updateAoiMapLabel", "localHwsdImagePromise",
+        "Local HWSD pH overlay", "local-sampler=v1",
     ):
         assert marker in r.text
 
