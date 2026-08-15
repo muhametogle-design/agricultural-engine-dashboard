@@ -107,8 +107,8 @@ alembic revision -m "..."      # next change
 0001 = baseline schema; 0002 = auth/multitenancy (adds `tenant_id` as NULLABLE
 for upgrade paths — backfill then `SET NOT NULL`; init.sql ships them strict);
 0003 = irrigation JSON embedded in master plans; 0004 = standalone saved
-irrigation-advisory history and export metadata. Both directions are designed
-for `alembic upgrade head` / `downgrade base` validation against scratch databases.
+irrigation-advisory history; 0005 = tenant-scoped polygon farm soil/pathology
+history and monthly analytics. Revisions remain reversible through Alembic.
 
 ## Decision engines
 
@@ -186,6 +186,9 @@ Zones provably partition the field (see tests, ±3 %).
 | `POST /fields` | register field (`mode: point` or `mode: polygon`) |
 | `GET /fields` | list tenant fields (latest first) |
 | `GET /fields/{id}` | field + geodesic metrics |
+| `POST /polygon-farms` | create a tenant-owned PostGIS polygon without a client row |
+| `POST` · `GET /fields/{id}/history` | append/list Ciid, nutrient and Cudurada events |
+| `GET /analytics/farms/monthly` | tenant monthly pH/N/P/K and pathology aggregation |
 | `GET /console` | single-page map console (sign-in → field → ingest → master plan) |
 | `GET /lims` | responsive React laboratory operations, finance, pathology and crop-rotation dashboard |
 | `POST /fields/{id}/environmental?refresh=` | soil+climate ingestion (cache-first) |
@@ -209,7 +212,7 @@ cp .env.example .env
 docker compose up -d db                 # PostGIS with schema auto-initialized
 pip install -r requirements.txt
 uvicorn app.main:app --reload           # http://localhost:8000/docs  ·  /console (map UI)
-pytest                                  # 80 tests, no DB required
+pytest                                  # 81 tests, no DB required
 python examples/run_decision_cycle_demo.py   # full engine chain, no DB/network
 ```
 
@@ -284,9 +287,10 @@ arrive as `Decimal` (repository boundary now normalizes to float).
   crop/tree carries selectable pathology cause, symptom and response data.
 * A persistent `SOM | ENG` switch shares language state across pages and includes
   the native seeds Ciid, Dhoobo, Khudaar, Midho, Beer, Cudurada and Saliidda Abuurka.
-* Static Demo Plot creation was removed. Custom GIS polygons persist in IndexedDB
-  with coordinates and Ciid/test/pathology event history; Monthly Farm Analytics
-  aggregates pH, N/P/K trends and Cudurada alerts across saved Beer records.
+* Static Demo Plot creation was removed. Custom polygons persist offline in
+  IndexedDB and, when an API JWT is configured, synchronize to PostGIS plus the
+  revision-0005 history API. Monthly Farm Analytics can consume local or server
+  pH/N/P/K and Cudurada aggregates across tenant Beer records.
 * GIS retains isolated scroll regions and a seven-range FAO/HWSD pH pane; its
   alphabetized text-only plant cards expose species-specific pathology selectors.
 
@@ -316,7 +320,7 @@ arrive as `Decimal` (repository boundary now normalizes to float).
 
 ## Tests
 
-80 passing (`pytest`): engine math with known-answer fixtures, respx-mocked
+81 passing (`pytest`): engine math with known-answer fixtures, respx-mocked
 SoilGrids/POWER/Open-Meteo clients (retry, sentinel, null, coverage paths),
 orchestrator degradation, irrigation schedule/volume arithmetic, CSV/iCalendar
 exports, DEM provider against a synthetic plane, API wiring via in-memory

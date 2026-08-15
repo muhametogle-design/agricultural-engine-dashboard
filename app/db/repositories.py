@@ -131,7 +131,7 @@ class FieldsRepo:
         FROM farm_fields
     """
 
-    async def create(self, tenant_id: UUID, client_id: UUID, field_name: str,
+    async def create(self, tenant_id: UUID, client_id: UUID | None, field_name: str,
                      boundary_geojson: dict) -> dict:
         try:
             row = await self.pool.fetchrow(
@@ -434,6 +434,87 @@ class IrrigationAdvisoriesRepo:
         return _normalize_columns(out, self.NUMERIC_COLS)
 
 
+class FieldHistoryRepo:
+    """Immutable soil/pathology observations attached to tenant-scoped fields."""
+
+    NUMERIC_COLS = (
+        "soil_ph", "ec_ds_m", "organic_matter_pct", "nitrogen_ppm",
+        "phosphorus_ppm", "potassium_ppm",
+    )
+
+    def __init__(self, pool: asyncpg.Pool):
+        self.pool = pool
+
+    async def create(self, field_id: UUID, user_id: UUID, event: dict[str, Any]) -> dict:
+        row = await self.pool.fetchrow(
+            """
+            INSERT INTO field_history_events (
+                field_id, event_type, soil_ph, ec_ds_m, organic_matter_pct,
+                nitrogen_ppm, phosphorus_ppm, potassium_ppm, pathology_alerts,
+                notes, metadata, observed_at, created_by
+            ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10,$11::jsonb,
+                      COALESCE($12, now()),$13)
+            RETURNING *
+            """,
+            field_id,
+            event["event_type"],
+            event.get("soil_ph"),
+            event.get("ec_ds_m"),
+            event.get("organic_matter_pct"),
+            event.get("nitrogen_ppm"),
+            event.get("phosphorus_ppm"),
+            event.get("potassium_ppm"),
+            json.dumps(event.get("pathology_alerts") or []),
+            event.get("notes"),
+            json.dumps(event.get("metadata") or {}, default=str),
+            event.get("observed_at"),
+            user_id,
+        )
+        out = _decode_geojson_columns(dict(row), ("pathology_alerts", "metadata"))
+        return _normalize_columns(out, self.NUMERIC_COLS)
+
+    async def list_for_field(self, field_id: UUID, limit: int = 200) -> list[dict]:
+        rows = await self.pool.fetch(
+            """
+            SELECT * FROM field_history_events
+            WHERE field_id = $1
+            ORDER BY observed_at DESC, id DESC
+            LIMIT $2
+            """,
+            field_id,
+            limit,
+        )
+        out = []
+        for row in rows:
+            item = _decode_geojson_columns(dict(row), ("pathology_alerts", "metadata"))
+            out.append(_normalize_columns(item, self.NUMERIC_COLS))
+        return out
+
+    async def monthly(self, tenant_id: UUID, months: int = 12) -> list[dict]:
+        rows = await self.pool.fetch(
+            """
+            SELECT date_trunc('month', h.observed_at)::date AS month,
+                   COUNT(DISTINCT f.id)::int AS farms,
+                   COUNT(*) FILTER (WHERE h.event_type = 'soil_test')::int AS soil_tests,
+                   ROUND(AVG(h.soil_ph) FILTER (WHERE h.soil_ph IS NOT NULL), 2) AS avg_ph,
+                   ROUND(AVG(h.nitrogen_ppm) FILTER (WHERE h.nitrogen_ppm IS NOT NULL), 2) AS avg_nitrogen_ppm,
+                   ROUND(AVG(h.phosphorus_ppm) FILTER (WHERE h.phosphorus_ppm IS NOT NULL), 2) AS avg_phosphorus_ppm,
+                   ROUND(AVG(h.potassium_ppm) FILTER (WHERE h.potassium_ppm IS NOT NULL), 2) AS avg_potassium_ppm,
+                   COALESCE(SUM(jsonb_array_length(h.pathology_alerts)), 0)::int AS pathology_alerts
+            FROM field_history_events h
+            JOIN farm_fields f ON f.id = h.field_id
+            WHERE f.tenant_id = $1
+              AND h.observed_at >= date_trunc('month', now()) - (($2::int - 1) * INTERVAL '1 month')
+            GROUP BY 1
+            ORDER BY 1
+            """,
+            tenant_id,
+            months,
+        )
+        numeric = ("avg_ph", "avg_nitrogen_ppm", "avg_phosphorus_ppm", "avg_potassium_ppm")
+        return [_normalize_columns(dict(row), numeric) for row in rows]
+
+
 class RepositoryBundle:
     """Aggregates all repositories; constructed per-request (cheap)."""
 
@@ -446,3 +527,4 @@ class RepositoryBundle:
         self.ves = VesRepo(pool)
         self.plans = PlansRepo(pool)
         self.irrigation_advisories = IrrigationAdvisoriesRepo(pool)
+        self.field_history = FieldHistoryRepo(pool)

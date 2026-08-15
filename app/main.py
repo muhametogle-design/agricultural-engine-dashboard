@@ -11,7 +11,19 @@ from fastapi.staticfiles import StaticFiles
 
 from app import __version__
 from app.api.deps import get_settings
-from app.api.routes import analysis, auth, clients, environmental, fields, health, irrigation, lab, plans, ves
+from app.api.routes import (
+    analysis,
+    auth,
+    clients,
+    environmental,
+    farm_history,
+    fields,
+    health,
+    irrigation,
+    lab,
+    plans,
+    ves,
+)
 from app.core.errors import AppError
 from app.core.logging import configure_logging, get_logger
 from app.db.pool import close_pool, create_pool
@@ -93,7 +105,8 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     api_prefix = "/api/v1"
     for r in (auth.router, clients.router, fields.router, environmental.router,
-              ves.router, analysis.router, irrigation.router, plans.router, lab.router):
+              ves.router, analysis.router, irrigation.router, farm_history.router,
+              plans.router, lab.router):
         app.include_router(r, prefix=api_prefix)
 
     @app.get("/api")

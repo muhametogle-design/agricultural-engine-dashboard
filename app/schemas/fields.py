@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -26,7 +26,7 @@ class PolygonFieldInput(BaseModel):
     geometry: GeoJSONPolygon
 
 
-FieldInput = Annotated[Union[PointFieldInput, PolygonFieldInput], Field(discriminator="mode")]
+FieldInput = Annotated[PointFieldInput | PolygonFieldInput, Field(discriminator="mode")]
 
 
 class FieldCreate(BaseModel):
@@ -38,7 +38,7 @@ class FieldCreate(BaseModel):
 class FieldOut(BaseModel):
     id: UUID
     tenant_id: UUID
-    client_id: UUID
+    client_id: UUID | None
     field_name: str
     boundary: dict
     center_point: dict
