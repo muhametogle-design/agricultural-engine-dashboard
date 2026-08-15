@@ -522,10 +522,13 @@ const REGIONAL_PRODUCE_EXPANSION = [
   crop("frankincense_tree","Frankincense Tree","Tree","Burseraceae","Deep","Light Feeder",7.0,8.5,1825,["Dry upland establishment"],"#a8a29e"),
   crop("myrrh_tree","Myrrh Tree","Tree","Burseraceae","Deep","Light Feeder",6.5,8.0,1460,["Dry upland establishment"],"#78716c"),
 ];
-const SHARED_CROP_LIBRARY = SHARED_AGRI.catalog.map(function(item){
+function sharedCropRecord(item){
   const category=item.category==="Fruits"?"Fruit":item.category==="Vegetables"?"Vegetable":item.category;
-  return Object.assign({},item,{category:category,baseId:item.baseId||item.id,baseName:item.name,color:item.color||"#64748b"});
-});
+  const record=Object.assign({},item,{category:category,baseId:item.baseId||item.id,baseName:item.name,color:item.color||"#64748b"});
+  record.pathologies=(record.pathologies||[]).concat(linkedPathologies(record)).filter(function(entry,index,all){return all.findIndex(function(other){return other.disease===entry.disease;})===index;}).slice(0,8);
+  return record;
+}
+const SHARED_CROP_LIBRARY = SHARED_AGRI.catalog.map(sharedCropRecord);
 const CROP_LIBRARY = BASE_CROP_LIBRARY.concat(CROP_VARIETY_EXPANSION,REGIONAL_PRODUCE_EXPANSION,SHARED_CROP_LIBRARY)
   .filter(function(item,index,all){return all.findIndex(function(other){return other.id===item.id;})===index;})
   .map(function(item){
@@ -751,6 +754,11 @@ function RotationPlanner(props){
   useEffect(function(){localStorage.setItem("lims_strategic_fields_v2",JSON.stringify(fields));},[fields]);
   useEffect(function(){localStorage.setItem("lims_strategic_field_id",fieldId);},[fieldId]);
   useEffect(function(){
+    if(!window.AGRI_DATA_STORE)return;
+    const merge=function(records){setCatalog(function(previous){const map=new Map(previous.map(function(item){return [item.id,item];}));records.map(sharedCropRecord).forEach(function(item){map.set(item.id,item);});return Array.from(map.values()).sort(function(a,b){return a.name.localeCompare(b.name);});});};
+    AGRI_DATA_STORE.ready.then(merge).catch(console.warn);return AGRI_DATA_STORE.subscribe(merge);
+  },[]);
+  useEffect(function(){
     setFields(function(previous){
       const additions=derivedFields.filter(function(field){return !previous.some(function(saved){return saved.id===field.id;});});
       return additions.length?previous.concat(additions):previous;
@@ -843,7 +851,8 @@ function RotationPlanner(props){
     try{
       const result=parseCropPlan(await file.text());
       setCatalog(result.catalog);setRotation(result.slots);setSelectedCropId("");
-      setImportState({kind:"ok",message:"Mapped "+result.catalog.length+" crop rules from "+result.rowCount+" CSV rows."});
+      if(window.AGRI_DATA_STORE){const sharedRecords=result.catalog.map(function(item){return Object.assign({},item,{category:item.category==="Fruit"?"Fruits":item.category==="Vegetable"?"Vegetables":item.category,categorySo:item.category==="Fruit"?"Midho":item.category==="Vegetable"?"Khudaar":item.categorySo||item.category,catalogSource:"lims-csv"});});AGRI_DATA_STORE.upsertMany(sharedRecords).catch(console.warn);}
+      setImportState({kind:"ok",message:"Mapped "+result.catalog.length+" crop rules from "+result.rowCount+" CSV rows and synchronized them to GIS."});
     }catch(error){setImportState({kind:"error",message:error.message||"Unable to parse this CSV."});}
   }
   function handleFileInput(event){const file=event.target.files&&event.target.files[0];importFile(file);event.target.value="";}

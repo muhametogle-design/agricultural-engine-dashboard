@@ -36,9 +36,11 @@ def test_dashboard_served():
         "Local HWSD pH overlay", "local-sampler=v1",
         "hwsdPhPane", "hwsd-ph-raster", "ph-ranges=v2", "Distinct pH ranges",
         "alphaFlora", "plant-pathology-select", "Applicable pathology for",
-        "agri.shared.js", "seedOils", "lang-toggle", "SOM | ENG",
+        "agri.shared.js", "agri.store.js", "seedOils", "lang-toggle", "SOM | ENG",
+        "AGRI_DATA_STORE", "AQUIFERS", "assessGroundwater", "Underground aquifer detected",
+        "Farm Fencing", "fencingPlan", "ringPerimeterM",
         "indexedDB", "openFarmAnalytics", "recordFarmEvent", "restoreFarmRecords",
-        "z-index:99999", "#farm-analytics-modal", "synchronizedProduceCount",
+        "z-index:99999", "#farm-analytics-modal", "updateProduceCount",
         "overscroll-behavior:contain", "scrollbar-gutter:stable",
         "#left,#right,#map-shell", "overflow-y:auto!important",
     ):
@@ -59,6 +61,7 @@ def test_lims_dashboard_is_modular_and_offline_safe():
     assert page.status_code == 200
     assert "/web/lims.src.js" in page.text
     assert "/web/agri.shared.js" in page.text
+    assert "/web/agri.store.js" in page.text
     assert "/web/vendor/react.min.js" in page.text
     assert ".strategic-planner h2" in page.text
     assert "font-size:19px" in page.text
@@ -71,6 +74,11 @@ def test_lims_dashboard_is_modular_and_offline_safe():
     assert "const profiles=" in shared.text
     assert "const names=" in shared.text
     assert "regionalProduceCount:produce.length" in shared.text
+
+    store = client.get("/web/agri.store.js")
+    assert store.status_code == 200
+    for marker in ("agri-unified-catalog", "BroadcastChannel", "upsertMany", "catalog-changed"):
+        assert marker in store.text
 
     catalog = client.get("/web/regional_produce.json")
     assert catalog.status_code == 200
@@ -109,6 +117,8 @@ def test_lims_dashboard_is_modular_and_offline_safe():
         "REGIONAL_PRODUCE_EXPANSION",
         "SHARED_CROP_LIBRARY",
         "SHARED_DISEASE_VECTOR",
+        "AGRI_DATA_STORE",
+        "synchronized them to GIS",
         "DISEASE_EXPANSION",
         "linkedPathologies",
         "Associated pathology selection",

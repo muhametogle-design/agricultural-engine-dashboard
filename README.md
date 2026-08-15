@@ -279,10 +279,11 @@ arrive as `Decimal` (repository boundary now normalizes to float).
   pathology/treatment logging, and CSV-driven five-year rotation planning.
 * Farmer/client names are writable, diagnoses stay linked to active pathology
   filters, and every planner season label accepts suggestions or custom text.
-* `app/web/agri.shared.js` is now the cross-module source of truth. It contributes
-  215 named East African/Middle Eastern produce cultivars plus seven Seed Oil and
-  seven regional tree profiles to both GIS and LIMS in one update path. A generated
-  `regional_produce.json` lookup exposes all 229 shared records and pathologies.
+* `app/web/agri.shared.js` seeds the cross-module catalog and `agri.store.js`
+  persists it in shared IndexedDB with BroadcastChannel updates. LIMS CSV imports
+  are therefore visible in GIS without duplicating arrays or reloading seed files.
+  The seed contributes 215 regional cultivars, seven Seed Oils and seven trees;
+  `regional_produce.json` exposes all 229 shared records and pathologies.
 * Seed Oil / `Saliidda Abuurka` includes sesame, oil palm, sunflower, castor,
   niger seed, olive and jojoba, each with linked `Cudurada` records. Every shared
   crop/tree carries selectable pathology cause, symptom and response data.
@@ -293,9 +294,11 @@ arrive as `Decimal` (repository boundary now normalizes to float).
   revision-0005 history API. Monthly Farm Analytics can consume local or server
   pH/N/P/K and Cudurada aggregates across tenant Beer records.
 * GIS retains isolated scroll regions and a seven-range FAO/HWSD pH pane; its
-  alphabetized text-only plant cards expose species-specific pathology selectors.
-  Monthly Farm Analytics is forced into a top-level `z-index: 99999` overlay so no
-  Leaflet pane, map canvas or control can obscure the dashboard.
+  alphabetized text-only cards expose species-specific pathology selectors.
+* A hydrogeology layer renders aquifer boundaries, depth and expected yield, then
+  issues coordinate/polygon drilling alerts. The Farm Fencing module calculates
+  geodesic perimeter, posts, strainers, gates, wire/mesh rolls and equipment BOM.
+* Monthly Farm Analytics uses `z-index: 99999`, above every Leaflet pane/control.
 
 ## Production notes
 
