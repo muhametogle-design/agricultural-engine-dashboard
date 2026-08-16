@@ -24,6 +24,57 @@ def test_console_served():
         assert marker in r.text
 
 
+def test_dawaad_drought_map_component():
+    app = create_app()
+    app.state.pool = None
+    app.state.terrain = None
+    client = TestClient(app)
+
+    page = client.get("/dawaad")
+    assert page.status_code == 200
+    for marker in (
+        "Dawaad / Abaar Alert",
+        "[8.4167, 47.3667]",
+        "zoom: 8",
+        "YOUR_BING_MAPS_KEY",
+        "/web/dawaad-map.js",
+        "/web/dawaad-map.css",
+        "Gobol boundaries",
+        "Degmo boundaries",
+    ):
+        assert marker in page.text
+
+    source_response = client.get("/web/dawaad-map.js")
+    assert source_response.status_code == 200
+    source = source_response.text
+    for marker in (
+        "class DawaadMapComponent",
+        "class BingAerialWithLabelsLayer",
+        "tileXYToQuadKey",
+        "tiles/h${quadKey}.jpeg",
+        "Bing Satellite + Labels",
+        "OpenStreetMap Standard",
+        "openstreetmap.org/{z}/{x}/{y}.png",
+        'position: "topright", collapsed: false',
+        'scale({ position: "bottomleft"',
+        "requestFullscreen",
+        "dawaadRegions",
+        "dawaadDistricts",
+        "FeatureCollection",
+        "geoBoundaries CC BY 4.0",
+    ):
+        assert marker in source
+
+    node = shutil.which("node")
+    if node:
+        start = source.index("function tileXYToQuadKey")
+        end = source.index("function isConfiguredKey", start)
+        quadkey_engine = source[start:end]
+        check = "\nif (tileXYToQuadKey(3, 5, 3) !== '213') throw new Error('quadkey regression');"
+        completed = subprocess.run([node, "-e", quadkey_engine + check], capture_output=True, text=True)
+        assert completed.returncode == 0, completed.stderr
+
+
 def test_dashboard_served():
     app = create_app()
     app.state.pool = None

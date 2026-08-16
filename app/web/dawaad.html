@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <meta name="theme-color" content="#07120e"/>
+  <title>Dawaad / Abaar Alert · Drought GIS</title>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin="anonymous"
+  />
+  <link rel="stylesheet" href="/web/dawaad-map.css"/>
+</head>
+<body>
+  <div class="dawaad-shell">
+    <header class="dawaad-header">
+      <div class="dawaad-mark" aria-hidden="true">⌁</div>
+      <div class="dawaad-title">
+        <h1>Dawaad / Abaar Alert</h1>
+        <p>Horn of Africa agro-pastoral drought intelligence map</p>
+      </div>
+      <div class="dawaad-header-spacer"></div>
+      <div class="dawaad-live-pill">GIS initialized</div>
+    </header>
+
+    <main class="dawaad-workspace">
+      <aside class="dawaad-sidebar" aria-label="Map configuration and layer status">
+        <section class="dawaad-card">
+          <h2>Map view</h2>
+          <dl class="dawaad-kv">
+            <dt>Center</dt><dd id="view-center">8.4167, 47.3667</dd>
+            <dt>Zoom</dt><dd id="view-zoom">8</dd>
+            <dt>Corridor</dt><dd>Sool–Nugaal</dd>
+          </dl>
+        </section>
+
+        <section class="dawaad-card">
+          <h2>Administrative overlays</h2>
+          <div class="dawaad-layer-row">
+            <span class="dawaad-swatch gobol"></span>
+            <span>Gobol boundaries</span>
+            <span id="regions-state" class="dawaad-layer-state">waiting</span>
+          </div>
+          <div class="dawaad-layer-row">
+            <span class="dawaad-swatch degmo"></span>
+            <span>Degmo boundaries</span>
+            <span id="districts-state" class="dawaad-layer-state">waiting</span>
+          </div>
+          <p>
+            Source:
+            <a class="dawaad-source" href="https://www.geoboundaries.org/" target="_blank" rel="noopener">geoBoundaries, CC BY 4.0</a>
+          </p>
+        </section>
+
+        <section class="dawaad-card">
+          <h2>Satellite configuration</h2>
+          <div id="bing-key-state" class="dawaad-key-state">
+            Placeholder key active. Set <code>DAWAAD_CONFIG.bingMapsKey</code> before deployment.
+          </div>
+          <p>Use a browser-safe Bing Maps key restricted to the production domain.</p>
+        </section>
+
+        <section class="dawaad-card">
+          <h2>Boundary policy</h2>
+          <p class="dawaad-policy-note">
+            Gobol and Degmo are operational administrative overlays. Somalia remains represented as one sovereign national territory; no de facto state boundary is classified here.
+          </p>
+        </section>
+      </aside>
+
+      <section class="dawaad-map-wrap" aria-label="Dawaad drought alert map workspace">
+        <div id="dawaad-map" aria-label="Interactive map of the Horn of Africa agro-pastoral corridor"></div>
+      </section>
+    </main>
+  </div>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin="anonymous"
+  ></script>
+  <script src="/web/dawaad-map.js"></script>
+  <script>
+    // Replace the placeholder with a domain-restricted client key in deployment.
+    // Boundary URLs can instead point to local GeoJSON files for a fully controlled deployment.
+    window.DAWAAD_CONFIG = Object.freeze({
+      bingMapsKey: window.DAWAAD_BING_MAPS_KEY || "YOUR_BING_MAPS_KEY",
+      center: [8.4167, 47.3667],
+      zoom: 8,
+      boundarySources: {
+        regions: window.DAWAAD_GOBOL_GEOJSON_URL || "https://media.githubusercontent.com/media/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/SOM/ADM1/geoBoundaries-SOM-ADM1_simplified.geojson",
+        districts: window.DAWAAD_DEGMO_GEOJSON_URL || "https://media.githubusercontent.com/media/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/SOM/ADM2/geoBoundaries-SOM-ADM2_simplified.geojson"
+      },
+      onStatus(status) {
+        const node = document.getElementById(`${status.kind}-state`);
+        if (!node) return;
+        node.className = `dawaad-layer-state ${status.state}`;
+        node.textContent = status.state === "ready" ? `${status.count} loaded` : status.state;
+        if (status.error) node.title = status.error;
+      }
+    });
+
+    const component = new DawaadMapComponent("dawaad-map", window.DAWAAD_CONFIG).init();
+    window.dawaadMap = component;
+
+    const keyState = document.getElementById("bing-key-state");
+    if (DawaadMapUtils.isConfiguredKey(window.DAWAAD_CONFIG.bingMapsKey)) {
+      keyState.classList.add("ready");
+      keyState.textContent = "Bing Satellite + Labels is configured.";
+    }
+
+    document.getElementById("dawaad-map").addEventListener("dawaad:viewchange", (event) => {
+      document.getElementById("view-center").textContent = event.detail.center.join(", ");
+      document.getElementById("view-zoom").textContent = event.detail.zoom;
+    });
+  </script>
+</body>
+</html>

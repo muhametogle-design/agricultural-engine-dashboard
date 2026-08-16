@@ -66,6 +66,7 @@ code{{background:#0b120e;padding:2px 6px;border-radius:6px;font-size:13px}}
 <p>version {version} — PostGIS · SoilGrids · NASA POWER · Open-Meteo · terrain DEM</p>
 <a class="btn" href="/console">Open the map console →</a>
 <a class="btn" href="/dashboard">Open the unified dashboard →</a>
+<a class="btn" href="/dawaad">Open Dawaad / Abaar Alert →</a>
 <a class="btn" href="/lims">Open the laboratory dashboard →</a>
 <a class="btn alt" href="/docs">API reference (Swagger)</a>
 <p style="margin-top:18px">demo login: <code>demo@agri-dss.app</code> / <code>demo-pass-2026</code></p>
@@ -112,7 +113,7 @@ def create_app() -> FastAPI:
     @app.get("/api")
     async def api_info() -> dict:
         return {"service": "agri-dss", "version": __version__, "docs": "/docs",
-                "console": "/console"}
+                "console": "/console", "dawaad": "/dawaad"}
 
     @app.get("/", response_class=HTMLResponse, include_in_schema=False)
     async def landing() -> HTMLResponse:
@@ -131,6 +132,12 @@ def create_app() -> FastAPI:
     @app.get("/dashboard", response_class=HTMLResponse, include_in_schema=False)
     async def dashboard() -> HTMLResponse:
         return HTMLResponse(dashboard_path.read_text(encoding="utf-8"))
+
+    dawaad_path = Path(__file__).resolve().parent / "web" / "dawaad.html"
+
+    @app.get("/dawaad", response_class=HTMLResponse, include_in_schema=False)
+    async def dawaad() -> HTMLResponse:
+        return HTMLResponse(dawaad_path.read_text(encoding="utf-8"))
 
     lims_path = Path(__file__).resolve().parent / "web" / "lims.html"
 

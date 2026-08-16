@@ -190,6 +190,7 @@ Zones provably partition the field (see tests, ±3 %).
 | `POST` · `GET /fields/{id}/history` | append/list Ciid, nutrient and Cudurada events |
 | `GET /analytics/farms/monthly` | tenant monthly pH/N/P/K and pathology aggregation |
 | `GET /console` | single-page map console (sign-in → field → ingest → master plan) |
+| `GET /dawaad` | Dawaad / Abaar Alert Leaflet drought-map component and administrative overlays |
 | `GET /lims` | responsive React laboratory operations, finance, pathology and crop-rotation dashboard |
 | `POST /fields/{id}/environmental?refresh=` | soil+climate ingestion (cache-first) |
 | `POST /fields/{id}/ves` · `POST /ves/bulk` · `GET /ves` | partner machine ingestion |
@@ -322,6 +323,24 @@ arrive as `Decimal` (repository boundary now normalizes to float).
   hydrogeology, crop/pathology advice and the linked solar-pump design. It uses
   the browser print dialog (Save as PDF), so no external PDF CDN is required.
 * Monthly Farm Analytics uses `z-index: 99999`, above every Leaflet pane/control.
+
+### 2026-08-16 — Dawaad / Abaar Alert map component
+
+* `/dawaad` initializes a modular Vanilla JS + Leaflet map at
+  `[8.4167, 47.3667]`, zoom 8, for the Horn of Africa agro-pastoral corridor.
+* Its top-right layer control switches between OpenStreetMap Standard and a
+  quadkey-based Bing Aerial-with-labels layer. Set the browser-restricted key in
+  `DAWAAD_CONFIG.bingMapsKey`; the checked-in value is deliberately
+  `YOUR_BING_MAPS_KEY`, and missing keys render a diagnostic tile without making
+  unauthorized imagery requests.
+* Asynchronous GeoJSON loaders create uniform Gobol and Degmo administrative
+  overlays, status/error events and geoBoundaries CC BY 4.0 attribution. Override
+  `boundarySources.regions` and `boundarySources.districts` with local GeoJSON
+  URLs when deployment policy requires same-origin data.
+* Leaflet zoom, a native Fullscreen API control, the expanded layer selector and
+  a metric scale bar are positioned independently. `DawaadMapComponent` also
+  exposes `setBoundaryData`, `focusBoundaryLayer`, `reloadBoundaries`, `ready`
+  and `destroy` for drought-monitoring feature integration.
 
 ## Production notes
 
