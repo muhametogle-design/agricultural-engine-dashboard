@@ -303,9 +303,11 @@ arrive as `Decimal` (repository boundary now normalizes to float).
   IndexedDB or network code runs; LIMS also embeds a seven-entry Seed Oil fallback.
   The GIS hamburger persists a true collapsed state and invalidates Leaflet sizing.
 * The default camera is Laascaanood (`8.4774, 47.3597`). The GIS Engine basemap
-  selector now includes OpenStreetMap Standard alongside Esri and Google imagery.
-  A single-feature `somalia_unified.geojson` renders one sovereign Somalia outline;
-  the OSM layer is optional while Esri World Imagery remains the default.
+  selector includes OpenStreetMap Standard, Esri and Google imagery, plus a
+  quadkey-based Bing Satellite + Labels option. Bing never requests tiles until
+  a valid browser key is saved in its Basemap panel; the key and preferred layer
+  remain local to that browser. Esri World Imagery remains the safe default.
+  A single-feature `somalia_unified.geojson` keeps the national outline unified.
 * The hydrogeology layer renders boundaries, depth and yield plus an attributed
   FAO SWALIM-compatible monitoring view: 40 hourly telemetric stations and 609
   weekly strategic boreholes, with water-level trend, functionality, price,

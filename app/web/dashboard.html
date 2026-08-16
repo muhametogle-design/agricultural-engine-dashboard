@@ -156,6 +156,14 @@
     <div class="p-3 border-b border-slate-800 flex-none">
       <div data-i18n="basemap" class="text-sm font-bold uppercase tracking-wide text-slate-300 mb-2">Basemap</div>
       <div id="basemaps" class="grid grid-cols-2 gap-2"></div>
+      <div id="bing-basemap-config" class="mt-2 rounded-lg border border-sky-900/70 bg-sky-950/25 p-2">
+        <div class="flex items-center justify-between gap-2 text-xs"><b class="text-sky-300">Bing Satellite + Labels</b><span id="bing-key-status" class="text-[10px] font-bold text-amber-300">API key required</span></div>
+        <div class="mt-1.5 grid grid-cols-[1fr_auto] gap-1.5">
+          <input id="bing-key-input" type="password" autocomplete="off" spellcheck="false" placeholder="Paste Bing Maps browser key" onkeydown="if(event.key==='Enter')saveGisBingKey()" class="min-w-0 rounded border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-white"/>
+          <button onclick="saveGisBingKey()" class="rounded bg-sky-700 px-2 py-1.5 text-xs font-bold text-white hover:bg-sky-600">Save</button>
+        </div>
+        <button onclick="clearGisBingKey()" class="mt-1 text-[10px] font-semibold text-slate-500 hover:text-red-300">Clear saved Bing key</button>
+      </div>
       <div data-i18n="overlay" class="mt-3 text-sm font-bold uppercase tracking-wide text-slate-300 mb-1.5">Data overlay</div>
       <label class="flex items-center gap-2 text-sm font-medium text-slate-300 select-none cursor-pointer">
         <input type="checkbox" id="ov-ph" onchange="togglePhOverlay(this.checked)"/> 🗺️ FAO topsoil pH map (HWSD v2.0)
@@ -562,20 +570,35 @@ renderHistory();
 /* ═══════════════ MAP & BASEMAPS (SPEC-8 · repaired Esri endpoint) ═══════════════ */
 const map=L.map("map",{preferCanvas:true}).setView(HOME,DEFAULT_MAP_ZOOM);
 map.createPane("hwsdPhPane");map.getPane("hwsdPhPane").style.zIndex="350";map.getPane("hwsdPhPane").style.pointerEvents="none";
+const GIS_BING_KEY_STORAGE="gis_bing_maps_key",GIS_BASEMAP_STORAGE="gis_active_basemap";
+let gisBingKey=localStorage.getItem(GIS_BING_KEY_STORAGE)||"";
+function gisTileXYToQuadKey(tileX,tileY,zoom){let key="";for(let level=zoom;level>0;level--){let digit=0,mask=1<<(level-1);if((tileX&mask)!==0)digit++;if((tileY&mask)!==0)digit+=2;key+=digit;}return key;}
+function hasGisBingKey(key=gisBingKey){return typeof key==="string"&&key.trim().length>=16&&!/^YOUR[_-]/i.test(key);}
+class GisBingHybridLayer extends L.TileLayer{
+ constructor(key){super("",{minZoom:1,maxZoom:19,tileSize:256,subdomains:["0","1","2","3"],crossOrigin:true,attribution:'&copy; <a href="https://www.microsoft.com/maps/product/terms.html" target="_blank" rel="noopener">Microsoft Bing</a>'});this.apiKey=key;}
+ getTileUrl(coords){const quadKey=gisTileXYToQuadKey(coords.x,coords.y,coords.z),subdomain=this._getSubdomain(coords);return `https://ecn.t${subdomain}.tiles.virtualearth.net/tiles/h${quadKey}.jpeg?g=1&mkt=en-US&n=z&key=${encodeURIComponent(this.apiKey)}`;}
+}
+function setGisBingStatus(message,ok=false){const node=document.getElementById("bing-key-status");if(!node)return;node.textContent=message;node.className=`text-[10px] font-bold ${ok?"text-emerald-300":"text-amber-300"}`;}
+function saveGisBingKey(){const input=document.getElementById("bing-key-input"),key=(input.value||"").trim();if(!hasGisBingKey(key)){setGisBingStatus("Enter a valid key",false);input.focus();return;}localStorage.setItem(GIS_BING_KEY_STORAGE,key);localStorage.setItem(GIS_BASEMAP_STORAGE,"Bing Satellite + Labels");location.reload();}
+function clearGisBingKey(){localStorage.removeItem(GIS_BING_KEY_STORAGE);localStorage.removeItem(GIS_BASEMAP_STORAGE);location.reload();}
 const BASES={
  "Esri World Imagery":L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"Esri, Maxar, Earthstar Geographics"}),
  "Google Satellite (no labels)":L.tileLayer("https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",{subdomains:["0","1","2","3"],maxZoom:20,attribution:"Google"}),
  "OpenStreetMap Standard":L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{subdomains:["a","b","c"],maxZoom:19,maxNativeZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>'}),
+ "Bing Satellite + Labels":new GisBingHybridLayer(gisBingKey),
 };
-let activeBase="Esri World Imagery";
+const preferredBase=localStorage.getItem(GIS_BASEMAP_STORAGE);
+let activeBase=BASES[preferredBase]&&(preferredBase!=="Bing Satellite + Labels"||hasGisBingKey())?preferredBase:"Esri World Imagery";
 const baseBox=document.getElementById("basemaps");
 Object.keys(BASES).forEach(n=>{
  const b=document.createElement("button");b.textContent=n;b.dataset.name=n;
  b.className="px-2.5 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm font-semibold hover:border-emerald-500 "+(n===activeBase?"base-active":"");
- b.onclick=()=>{if(n===activeBase)return;map.removeLayer(BASES[activeBase]);BASES[n].addTo(map);activeBase=n;
+ b.onclick=()=>{if(n==="Bing Satellite + Labels"&&!hasGisBingKey()){setGisBingStatus("API key required",false);document.getElementById("bing-key-input").focus();return;}if(n===activeBase)return;map.removeLayer(BASES[activeBase]);BASES[n].addTo(map);activeBase=n;localStorage.setItem(GIS_BASEMAP_STORAGE,n);
   baseBox.querySelectorAll("button").forEach(x=>x.classList.toggle("base-active",x.dataset.name===n));};
  baseBox.appendChild(b);});
 BASES[activeBase].addTo(map);
+setGisBingStatus(hasGisBingKey()?"Key configured":"API key required",hasGisBingKey());
+if(hasGisBingKey())document.getElementById("bing-key-input").placeholder="A Bing key is saved — paste to replace";
 
 /* Single sovereign Somalia national outline — deliberately no internal borders. */
 map.createPane("nationalBoundaryPane");map.getPane("nationalBoundaryPane").style.zIndex="345";

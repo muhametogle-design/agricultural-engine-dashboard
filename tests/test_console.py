@@ -86,7 +86,8 @@ def test_dashboard_served():
     for marker in (
         "Native Somali Trees", "Ziziphus mauritiana", "base-active", 'id:"soil",key:"soil"',
         "Soil amendment required", "ringAreaM2", "renderSim",
-        "World_Imagery", "mt{s}.google.com", "OpenStreetMap Standard", "tile.openstreetmap.org", "Field Intelligence Map",
+        "World_Imagery", "mt{s}.google.com", "OpenStreetMap Standard", "tile.openstreetmap.org",
+        "Bing Satellite + Labels", "GisBingHybridLayer", "gisTileXYToQuadKey", "gis_bing_maps_key", "bing-key-input", "Field Intelligence Map",
         "SQUARE v4", "map-frame", "map-summary", "map-aoi-count",
         "aspect-ratio:1/1", "grid-template-columns", "lab-map-label",
         "Afgooye Soil Laboratory", "updateAoiMapLabel", "localHwsdImagePromise",
@@ -129,6 +130,20 @@ def test_dashboard_served():
     assert len(geojson["features"]) == 1
     assert geojson["features"][0]["properties"]["iso_a3"] == "SOM"
     assert "internal" in geojson["features"][0]["properties"]["boundary_policy"]
+
+
+def test_gis_bing_quadkey_engine():
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("Node.js is required for the Bing quadkey regression")
+    dashboard_path = Path(__file__).resolve().parents[1] / "app/web/dashboard.html"
+    source = dashboard_path.read_text(encoding="utf-8")
+    start = source.index("function gisTileXYToQuadKey")
+    end = source.index("function hasGisBingKey", start)
+    engine = source[start:end]
+    check = "\nif (gisTileXYToQuadKey(3, 5, 3) !== '213') throw new Error('quadkey regression');"
+    completed = subprocess.run([node, "-e", engine + check], capture_output=True, text=True)
+    assert completed.returncode == 0, completed.stderr
 
 
 def test_solar_pump_engine_recalculates_linked_aquifer_design():
@@ -245,7 +260,7 @@ def test_lims_dashboard_is_modular_and_offline_safe():
 
     i18n = client.get("/web/agri.i18n.js")
     assert i18n.status_code == 200
-    for marker in ("MutationObserver", "Soomaali", "Khariidadda & Beeraha", "Falanqaynta Billaha Beeraha", "Dayrka Beeraha", "Cabbirka Bamka Qorraxda", "Soo Dawi Warbixinta PDF", "Cudurada", "Saliidda Abuurka"):
+    for marker in ("MutationObserver", "Soomaali", "Khariidadda & Beeraha", "Falanqaynta Billaha Beeraha", "Dayrka Beeraha", "Cabbirka Bamka Qorraxda", "Bing Dayax-gacmeed + Magacyo", "Furaha API ayaa loo baahan yahay", "Soo Dawi Warbixinta PDF", "Cudurada", "Saliidda Abuurka"):
         assert marker in i18n.text
     assert i18n.text.count('\":\"') >= 80
     assert '"Export PDF Report":"' not in i18n.text
