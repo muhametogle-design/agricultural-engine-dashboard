@@ -10,15 +10,12 @@
   }
 
   const L = global.L;
-  const PLACEHOLDER_KEY = "YOUR_BING_MAPS_KEY";
   const DEFAULT_OPTIONS = Object.freeze({
     center: [8.4167, 47.3667],
     zoom: 8,
     minZoom: 3,
     maxZoom: 19,
-    bingMapsKey: PLACEHOLDER_KEY,
-    bingCulture: "en-US",
-    defaultBasemap: "osm",
+    defaultBasemap: "esri",
     boundaryTimeoutMs: 20000,
     boundarySources: Object.freeze({
       regions:
@@ -27,22 +24,6 @@
         "https://media.githubusercontent.com/media/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/SOM/ADM2/geoBoundaries-SOM-ADM2_simplified.geojson",
     }),
   });
-
-  function tileXYToQuadKey(tileX, tileY, zoom) {
-    let quadKey = "";
-    for (let level = zoom; level > 0; level -= 1) {
-      let digit = 0;
-      const mask = 1 << (level - 1);
-      if ((tileX & mask) !== 0) digit += 1;
-      if ((tileY & mask) !== 0) digit += 2;
-      quadKey += String(digit);
-    }
-    return quadKey;
-  }
-
-  function isConfiguredKey(key) {
-    return Boolean(key && key !== PLACEHOLDER_KEY && !/^YOUR[_-]/i.test(key));
-  }
 
   function escapeHtml(value) {
     return String(value ?? "")
@@ -65,48 +46,6 @@
       properties.NAME_1 ||
       "Unnamed administrative area"
     );
-  }
-
-  class BingAerialWithLabelsLayer extends L.TileLayer {
-    constructor(apiKey, options = {}) {
-      super("", {
-        tileSize: 256,
-        minZoom: 1,
-        maxZoom: 19,
-        subdomains: ["0", "1", "2", "3"],
-        crossOrigin: true,
-        attribution:
-          '&copy; <a href="https://www.microsoft.com/maps/product/terms.html" target="_blank" rel="noopener">Microsoft Bing</a>',
-        ...options,
-      });
-      this.apiKey = apiKey || PLACEHOLDER_KEY;
-      this.culture = options.culture || "en-US";
-    }
-
-    hasApiKey() {
-      return isConfiguredKey(this.apiKey);
-    }
-
-    getTileUrl(coords) {
-      const quadKey = tileXYToQuadKey(coords.x, coords.y, coords.z);
-      const subdomain = this._getSubdomain(coords);
-      return (
-        `https://ecn.t${subdomain}.tiles.virtualearth.net/tiles/h${quadKey}.jpeg` +
-        `?g=1&mkt=${encodeURIComponent(this.culture)}&n=z&key=${encodeURIComponent(this.apiKey)}`
-      );
-    }
-
-    createTile(coords, done) {
-      if (this.hasApiKey()) return super.createTile(coords, done);
-
-      const tile = document.createElement("div");
-      tile.className = "dawaad-key-tile";
-      tile.setAttribute("role", "img");
-      tile.setAttribute("aria-label", "Bing map API key required");
-      tile.innerHTML = "<strong>Bing key required</strong><span>Set DAWAAD_CONFIG.bingMapsKey</span>";
-      global.setTimeout(() => done(null, tile), 0);
-      return tile;
-    }
   }
 
   class FullscreenControl extends L.Control {
@@ -220,15 +159,35 @@
           '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>',
       });
 
-      this.baseLayers.bing = new BingAerialWithLabelsLayer(this.options.bingMapsKey, {
-        minZoom: this.options.minZoom,
-        maxZoom: this.options.maxZoom,
-        culture: this.options.bingCulture,
-      });
+      this.baseLayers.esriImagery = L.tileLayer(
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        {
+          minZoom: this.options.minZoom,
+          maxZoom: this.options.maxZoom,
+          maxNativeZoom: 19,
+          zIndex: 1,
+          attribution:
+            'Tiles &copy; <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a> &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
+        },
+      );
+      this.baseLayers.esriLabels = L.tileLayer(
+        "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+        {
+          minZoom: this.options.minZoom,
+          maxZoom: this.options.maxZoom,
+          maxNativeZoom: 19,
+          zIndex: 2,
+          attribution: 'Labels &copy; <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a>',
+        },
+      );
+      this.baseLayers.esri = L.layerGroup([
+        this.baseLayers.esriImagery,
+        this.baseLayers.esriLabels,
+      ]);
 
-      const canStartWithBing =
-        this.options.defaultBasemap === "bing" && this.baseLayers.bing.hasApiKey();
-      (canStartWithBing ? this.baseLayers.bing : this.baseLayers.osm).addTo(this.map);
+      (this.options.defaultBasemap === "osm" ? this.baseLayers.osm : this.baseLayers.esri).addTo(
+        this.map,
+      );
     }
 
     _createBoundaryLayers() {
@@ -284,7 +243,7 @@
       this.controls.layers = L.control
         .layers(
           {
-            "Bing Satellite + Labels": this.baseLayers.bing,
+            "Esri Satellite + Labels": this.baseLayers.esri,
             "OpenStreetMap Standard": this.baseLayers.osm,
           },
           {
@@ -302,14 +261,6 @@
     }
 
     _bindEvents() {
-      this.map.on("baselayerchange", (event) => {
-        if (event.layer === this.baseLayers.bing && !this.baseLayers.bing.hasApiKey()) {
-          this._emit("dawaad:keyrequired", {
-            provider: "Bing Maps",
-            message: "Set DAWAAD_CONFIG.bingMapsKey to enable satellite imagery.",
-          });
-        }
-      });
       this.map.on("moveend zoomend", () => {
         const center = this.map.getCenter();
         this._emit("dawaad:viewchange", {
@@ -417,9 +368,5 @@
   }
 
   global.DawaadMapComponent = DawaadMapComponent;
-  global.DawaadMapUtils = Object.freeze({
-    tileXYToQuadKey,
-    isConfiguredKey,
-    boundaryName,
-  });
+  global.DawaadMapUtils = Object.freeze({ boundaryName });
 })(window);

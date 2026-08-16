@@ -36,19 +36,19 @@ def test_dawaad_drought_map_component():
         "Dawaad / Abaar Alert",
         "[8.4167, 47.3667]",
         "zoom: 8",
-        "YOUR_BING_MAPS_KEY",
+        "Esri Satellite + Labels",
+        "No API key is required",
         "/web/dawaad-map.js",
         "/web/dawaad-map.css",
         "/web/vendor/leaflet/leaflet.js",
         "/web/vendor/leaflet/leaflet.css",
-        'id="bing-key-form"',
-        "dawaad_bing_maps_key",
         "← Main GIS",
         "Gobol boundaries",
         "Degmo boundaries",
     ):
         assert marker in page.text
     assert "unpkg.com" not in page.text
+    assert "Bing Maps" not in page.text
     assert client.get("/web/vendor/leaflet/leaflet.js").status_code == 200
     assert client.get("/web/vendor/leaflet/leaflet.css").status_code == 200
 
@@ -57,12 +57,12 @@ def test_dawaad_drought_map_component():
     source = source_response.text
     for marker in (
         "class DawaadMapComponent",
-        "class BingAerialWithLabelsLayer",
-        "tileXYToQuadKey",
-        "tiles/h${quadKey}.jpeg",
-        "Bing Satellite + Labels",
+        "Esri Satellite + Labels",
+        "World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        "World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+        "L.layerGroup",
         "OpenStreetMap Standard",
-        "defaultBasemap",
+        'defaultBasemap: "esri"',
         "openstreetmap.org/{z}/{x}/{y}.png",
         'position: "topright", collapsed: false',
         'scale({ position: "bottomleft"',
@@ -73,15 +73,7 @@ def test_dawaad_drought_map_component():
         "geoBoundaries CC BY 4.0",
     ):
         assert marker in source
-
-    node = shutil.which("node")
-    if node:
-        start = source.index("function tileXYToQuadKey")
-        end = source.index("function isConfiguredKey", start)
-        quadkey_engine = source[start:end]
-        check = "\nif (tileXYToQuadKey(3, 5, 3) !== '213') throw new Error('quadkey regression');"
-        completed = subprocess.run([node, "-e", quadkey_engine + check], capture_output=True, text=True)
-        assert completed.returncode == 0, completed.stderr
+    assert "YOUR_BING_MAPS_KEY" not in source
 
 
 def test_dashboard_served():

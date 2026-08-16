@@ -146,40 +146,15 @@ button, input { font: inherit; }
 .dawaad-layer-state { color: var(--dawaad-muted); font: 10px ui-monospace, monospace; }
 .dawaad-layer-state.ready { color: #86efac; }
 .dawaad-layer-state.error { color: #fca5a5; }
-.dawaad-key-state {
+.dawaad-satellite-state {
+  border: 1px solid rgba(52, 211, 153, 0.35);
   border-radius: 9px;
   padding: 9px 10px;
-  background: rgba(120, 53, 15, 0.24);
-  color: #fde68a;
+  background: rgba(20, 83, 45, 0.28);
+  color: #bbf7d0;
   font-size: 11px;
+  font-weight: 700;
 }
-.dawaad-key-state.ready { background: rgba(20, 83, 45, 0.28); color: #bbf7d0; }
-.dawaad-key-state.error { background: rgba(127, 29, 29, 0.28); color: #fecaca; }
-.dawaad-key-form { display: grid; gap: 7px; margin-top: 10px; }
-.dawaad-key-form label { color: #cbd5e1; font-size: 11px; font-weight: 750; }
-.dawaad-key-form input {
-  width: 100%;
-  border: 1px solid #365848;
-  border-radius: 8px;
-  padding: 8px 9px;
-  background: #07120e;
-  color: #f8fafc;
-  font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-}
-.dawaad-key-form input:focus { border-color: var(--dawaad-green); outline: 2px solid rgba(52, 211, 153, 0.18); }
-.dawaad-key-actions { display: grid; grid-template-columns: 1fr auto; gap: 7px; }
-.dawaad-key-actions button {
-  cursor: pointer;
-  border: 1px solid #047857;
-  border-radius: 8px;
-  padding: 7px 9px;
-  background: #047857;
-  color: #fff;
-  font-size: 11px;
-  font-weight: 800;
-}
-.dawaad-key-actions button:hover { background: #059669; }
-.dawaad-key-actions button.secondary { border-color: #475569; background: #1e293b; color: #cbd5e1; }
 .dawaad-source {
   color: #67e8f9;
   text-decoration: none;
@@ -236,18 +211,6 @@ button, input { font: inherit; }
 .dawaad-popup { min-width: 160px; }
 .dawaad-popup strong { display: block; color: #065f46; font-size: 15px; }
 .dawaad-popup span { display: block; margin-top: 3px; color: #64748b; font-size: 11px; }
-.dawaad-key-tile {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid #334155;
-  background: #111827;
-  color: #fbbf24;
-  text-align: center;
-}
-.dawaad-key-tile strong { font-size: 12px; }
-.dawaad-key-tile span { margin-top: 4px; color: #94a3b8; font-size: 9px; }
 .leaflet-control-scale-line {
   border-color: #e2e8f0 !important;
   background: rgba(15, 23, 42, 0.75) !important;
