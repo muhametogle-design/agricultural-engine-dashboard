@@ -39,6 +39,9 @@ def test_dawaad_drought_map_component():
         "YOUR_BING_MAPS_KEY",
         "/web/dawaad-map.js",
         "/web/dawaad-map.css",
+        'id="bing-key-form"',
+        "dawaad_bing_maps_key",
+        "← Main GIS",
         "Gobol boundaries",
         "Degmo boundaries",
     ):
@@ -54,6 +57,7 @@ def test_dawaad_drought_map_component():
         "tiles/h${quadKey}.jpeg",
         "Bing Satellite + Labels",
         "OpenStreetMap Standard",
+        "defaultBasemap",
         "openstreetmap.org/{z}/{x}/{y}.png",
         'position: "topright", collapsed: false',
         'scale({ position: "bottomleft"',
@@ -116,6 +120,8 @@ def test_dashboard_served():
     assert "demoPlot" not in r.text
     assert "Loading synchronized regional catalog" not in r.text
     assert "Regional seed catalog ready" in r.text
+    assert r.text.count('href="/web/dawaad.html"') >= 2
+    assert "Dawaad / Abaar Alert" in r.text
     assert r.text.count('<section class="page">') == 2
     assert "height:297mm;overflow:hidden" in r.text
     assert "Warbixinta Farsamo ee Beerta" in r.text

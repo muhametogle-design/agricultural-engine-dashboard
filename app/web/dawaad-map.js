@@ -18,6 +18,7 @@
     maxZoom: 19,
     bingMapsKey: PLACEHOLDER_KEY,
     bingCulture: "en-US",
+    defaultBasemap: "osm",
     boundaryTimeoutMs: 20000,
     boundarySources: Object.freeze({
       regions:
@@ -225,7 +226,9 @@
         culture: this.options.bingCulture,
       });
 
-      this.baseLayers.osm.addTo(this.map);
+      const canStartWithBing =
+        this.options.defaultBasemap === "bing" && this.baseLayers.bing.hasApiKey();
+      (canStartWithBing ? this.baseLayers.bing : this.baseLayers.osm).addTo(this.map);
     }
 
     _createBoundaryLayers() {

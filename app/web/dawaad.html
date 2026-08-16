@@ -22,6 +22,7 @@
         <p>Horn of Africa agro-pastoral drought intelligence map</p>
       </div>
       <div class="dawaad-header-spacer"></div>
+      <a class="dawaad-back" href="/web/dashboard.html">← Main GIS</a>
       <div class="dawaad-live-pill">GIS initialized</div>
     </header>
 
@@ -55,11 +56,19 @@
         </section>
 
         <section class="dawaad-card">
-          <h2>Satellite configuration</h2>
+          <h2>Bing Satellite + Labels</h2>
           <div id="bing-key-state" class="dawaad-key-state">
-            Placeholder key active. Set <code>DAWAAD_CONFIG.bingMapsKey</code> before deployment.
+            A Bing Maps API key is required before satellite tiles can be displayed.
           </div>
-          <p>Use a browser-safe Bing Maps key restricted to the production domain.</p>
+          <form id="bing-key-form" class="dawaad-key-form">
+            <label for="bing-key-input">Bing Maps browser key</label>
+            <input id="bing-key-input" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your Bing Maps key"/>
+            <div class="dawaad-key-actions">
+              <button type="submit">Save key &amp; open Bing</button>
+              <button id="bing-key-clear" type="button" class="secondary">Clear</button>
+            </div>
+          </form>
+          <p>The key is stored only in this browser. Use a domain-restricted key for deployment.</p>
         </section>
 
         <section class="dawaad-card">
@@ -83,10 +92,12 @@
   ></script>
   <script src="/web/dawaad-map.js"></script>
   <script>
-    // Replace the placeholder with a domain-restricted client key in deployment.
-    // Boundary URLs can instead point to local GeoJSON files for a fully controlled deployment.
+    // A deployment can inject DAWAAD_BING_MAPS_KEY before this script runs.
+    // Locally, the key form stores a browser-only copy and reloads into Bing mode.
+    const storedBingKey = window.DAWAAD_BING_MAPS_KEY || localStorage.getItem("dawaad_bing_maps_key") || "YOUR_BING_MAPS_KEY";
     window.DAWAAD_CONFIG = Object.freeze({
-      bingMapsKey: window.DAWAAD_BING_MAPS_KEY || "YOUR_BING_MAPS_KEY",
+      bingMapsKey: storedBingKey,
+      defaultBasemap: DawaadMapUtils.isConfiguredKey(storedBingKey) ? "bing" : "osm",
       center: [8.4167, 47.3667],
       zoom: 8,
       boundarySources: {
@@ -106,10 +117,30 @@
     window.dawaadMap = component;
 
     const keyState = document.getElementById("bing-key-state");
+    const keyInput = document.getElementById("bing-key-input");
     if (DawaadMapUtils.isConfiguredKey(window.DAWAAD_CONFIG.bingMapsKey)) {
       keyState.classList.add("ready");
-      keyState.textContent = "Bing Satellite + Labels is configured.";
+      keyState.textContent = "Bing Satellite + Labels is configured and selected.";
+      keyInput.placeholder = "A key is saved — paste a replacement";
     }
+
+    document.getElementById("bing-key-form").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const key = keyInput.value.trim();
+      if (key.length < 20 || !DawaadMapUtils.isConfiguredKey(key)) {
+        keyState.classList.remove("ready");
+        keyState.classList.add("error");
+        keyState.textContent = "Enter a valid Bing Maps browser API key.";
+        return;
+      }
+      localStorage.setItem("dawaad_bing_maps_key", key);
+      location.reload();
+    });
+
+    document.getElementById("bing-key-clear").addEventListener("click", () => {
+      localStorage.removeItem("dawaad_bing_maps_key");
+      location.reload();
+    });
 
     document.getElementById("dawaad-map").addEventListener("dawaad:viewchange", (event) => {
       document.getElementById("view-center").textContent = event.detail.center.join(", ");

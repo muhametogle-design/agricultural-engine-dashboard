@@ -328,11 +328,12 @@ arrive as `Decimal` (repository boundary now normalizes to float).
 
 * `/dawaad` initializes a modular Vanilla JS + Leaflet map at
   `[8.4167, 47.3667]`, zoom 8, for the Horn of Africa agro-pastoral corridor.
+  The unified dashboard exposes it in both the header and left navigation.
 * Its top-right layer control switches between OpenStreetMap Standard and a
-  quadkey-based Bing Aerial-with-labels layer. Set the browser-restricted key in
-  `DAWAAD_CONFIG.bingMapsKey`; the checked-in value is deliberately
-  `YOUR_BING_MAPS_KEY`, and missing keys render a diagnostic tile without making
-  unauthorized imagery requests.
+  quadkey-based Bing Aerial-with-labels layer. A built-in password field stores
+  the domain-restricted browser key locally and reloads with Bing selected. The
+  checked-in value remains `YOUR_BING_MAPS_KEY`; without a valid key the app uses
+  OSM and makes no unauthorized Bing imagery requests.
 * Asynchronous GeoJSON loaders create uniform Gobol and Degmo administrative
   overlays, status/error events and geoBoundaries CC BY 4.0 attribution. Override
   `boundarySources.regions` and `boundarySources.districts` with local GeoJSON

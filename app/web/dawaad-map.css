@@ -53,6 +53,17 @@ button, input { font: inherit; }
 .dawaad-title h1 { margin: 0; color: #f8fafc; font-size: 18px; line-height: 1.25; }
 .dawaad-title p { margin: 2px 0 0; color: var(--dawaad-muted); font-size: 12px; }
 .dawaad-header-spacer { flex: 1; }
+.dawaad-back {
+  border: 1px solid #365848;
+  border-radius: 8px;
+  padding: 6px 10px;
+  color: #a7f3d0;
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.dawaad-back:hover { border-color: var(--dawaad-green); background: rgba(6, 78, 59, 0.35); }
 .dawaad-live-pill {
   display: inline-flex;
   align-items: center;
@@ -143,6 +154,32 @@ button, input { font: inherit; }
   font-size: 11px;
 }
 .dawaad-key-state.ready { background: rgba(20, 83, 45, 0.28); color: #bbf7d0; }
+.dawaad-key-state.error { background: rgba(127, 29, 29, 0.28); color: #fecaca; }
+.dawaad-key-form { display: grid; gap: 7px; margin-top: 10px; }
+.dawaad-key-form label { color: #cbd5e1; font-size: 11px; font-weight: 750; }
+.dawaad-key-form input {
+  width: 100%;
+  border: 1px solid #365848;
+  border-radius: 8px;
+  padding: 8px 9px;
+  background: #07120e;
+  color: #f8fafc;
+  font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.dawaad-key-form input:focus { border-color: var(--dawaad-green); outline: 2px solid rgba(52, 211, 153, 0.18); }
+.dawaad-key-actions { display: grid; grid-template-columns: 1fr auto; gap: 7px; }
+.dawaad-key-actions button {
+  cursor: pointer;
+  border: 1px solid #047857;
+  border-radius: 8px;
+  padding: 7px 9px;
+  background: #047857;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+}
+.dawaad-key-actions button:hover { background: #059669; }
+.dawaad-key-actions button.secondary { border-color: #475569; background: #1e293b; color: #cbd5e1; }
 .dawaad-source {
   color: #67e8f9;
   text-decoration: none;
@@ -224,7 +261,8 @@ button, input { font: inherit; }
   .dawaad-mark { width: 35px; height: 35px; }
   .dawaad-title h1 { font-size: 15px; }
   .dawaad-title p { display: none; }
-  .dawaad-live-pill { padding: 5px 8px; font-size: 9px; }
+  .dawaad-live-pill { display: none; }
+  .dawaad-back { padding: 5px 7px; font-size: 9px; }
   .dawaad-workspace { grid-template-columns: 1fr; grid-template-rows: auto minmax(420px, 1fr); overflow-y: auto; }
   .dawaad-sidebar { z-index: 700; display: flex; overflow-x: auto; padding: 9px; border-right: 0; border-bottom: 1px solid var(--dawaad-line); }
   .dawaad-card { min-width: 260px; margin: 0 8px 0 0; padding: 10px; }
