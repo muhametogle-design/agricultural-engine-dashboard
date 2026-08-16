@@ -39,6 +39,8 @@ def test_dawaad_drought_map_component():
         "YOUR_BING_MAPS_KEY",
         "/web/dawaad-map.js",
         "/web/dawaad-map.css",
+        "/web/vendor/leaflet/leaflet.js",
+        "/web/vendor/leaflet/leaflet.css",
         'id="bing-key-form"',
         "dawaad_bing_maps_key",
         "← Main GIS",
@@ -46,6 +48,9 @@ def test_dawaad_drought_map_component():
         "Degmo boundaries",
     ):
         assert marker in page.text
+    assert "unpkg.com" not in page.text
+    assert client.get("/web/vendor/leaflet/leaflet.js").status_code == 200
+    assert client.get("/web/vendor/leaflet/leaflet.css").status_code == 200
 
     source_response = client.get("/web/dawaad-map.js")
     assert source_response.status_code == 200

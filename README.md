@@ -326,7 +326,7 @@ arrive as `Decimal` (repository boundary now normalizes to float).
 
 ### 2026-08-16 — Dawaad / Abaar Alert map component
 
-* `/dawaad` initializes a modular Vanilla JS + Leaflet map at
+* `/dawaad` initializes a modular Vanilla JS + locally vendored Leaflet map at
   `[8.4167, 47.3667]`, zoom 8, for the Horn of Africa agro-pastoral corridor.
   The unified dashboard exposes it in both the header and left navigation.
 * Its top-right layer control switches between OpenStreetMap Standard and a
