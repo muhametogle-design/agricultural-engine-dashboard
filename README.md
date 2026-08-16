@@ -302,9 +302,10 @@ arrive as `Decimal` (repository boundary now normalizes to float).
 * A synchronous `STATIC_MASTER_CATALOG` paints usable categories before Leaflet,
   IndexedDB or network code runs; LIMS also embeds a seven-entry Seed Oil fallback.
   The GIS hamburger persists a true collapsed state and invalidates Leaflet sizing.
-* The default camera is Laascaanood (`8.4774, 47.3597`). A single-feature
-  `somalia_unified.geojson` renders one sovereign Somalia outline with no internal
-  administrative or de facto boundary layers.
+* The default camera is Laascaanood (`8.4774, 47.3597`). The GIS Engine basemap
+  selector now includes OpenStreetMap Standard alongside Esri and Google imagery.
+  A single-feature `somalia_unified.geojson` renders one sovereign Somalia outline;
+  the OSM layer is optional while Esri World Imagery remains the default.
 * The hydrogeology layer renders boundaries, depth and yield plus an attributed
   FAO SWALIM-compatible monitoring view: 40 hourly telemetric stations and 609
   weekly strategic boreholes, with water-level trend, functionality, price,

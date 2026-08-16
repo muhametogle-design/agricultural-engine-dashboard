@@ -86,7 +86,7 @@ def test_dashboard_served():
     for marker in (
         "Native Somali Trees", "Ziziphus mauritiana", "base-active", 'id:"soil",key:"soil"',
         "Soil amendment required", "ringAreaM2", "renderSim",
-        "World_Imagery", "mt{s}.google.com", "Field Intelligence Map",
+        "World_Imagery", "mt{s}.google.com", "OpenStreetMap Standard", "tile.openstreetmap.org", "Field Intelligence Map",
         "SQUARE v4", "map-frame", "map-summary", "map-aoi-count",
         "aspect-ratio:1/1", "grid-template-columns", "lab-map-label",
         "Afgooye Soil Laboratory", "updateAoiMapLabel", "localHwsdImagePromise",
