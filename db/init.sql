@@ -183,3 +183,57 @@ CREATE INDEX IF NOT EXISTS idx_field_history_field_time
     ON field_history_events(field_id, observed_at DESC);
 CREATE INDEX IF NOT EXISTS idx_field_history_pathology
     ON field_history_events USING GIN(pathology_alerts);
+
+-- 8. Dawaad Climate / Pastoral Monitoring Models
+CREATE TABLE IF NOT EXISTS climate_stations (
+    id VARCHAR(64) PRIMARY KEY,
+    name VARCHAR(160) NOT NULL,
+    region VARCHAR(80) NOT NULL,
+    lat DOUBLE PRECISION NOT NULL CHECK (lat BETWEEN -90 AND 90),
+    lng DOUBLE PRECISION NOT NULL CHECK (lng BETWEEN -180 AND 180),
+    location GEOMETRY(Point, 4326) GENERATED ALWAYS AS
+        (ST_SetSRID(ST_MakePoint(lng, lat), 4326)) STORED,
+    last_updated TIMESTAMP WITH TIME ZONE NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_climate_stations_region ON climate_stations(lower(region));
+CREATE INDEX IF NOT EXISTS idx_climate_stations_location ON climate_stations USING GIST(location);
+
+CREATE TABLE IF NOT EXISTS rainfall_records (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    station_id VARCHAR(64) NOT NULL REFERENCES climate_stations(id) ON DELETE CASCADE,
+    dekad VARCHAR(10) NOT NULL CHECK (dekad ~ '^[0-9]{4}-(0[1-9]|1[0-2])-D[123]$'),
+    rainfall_mm NUMERIC(9,2) NOT NULL CHECK (rainfall_mm >= 0),
+    historical_mean_mm NUMERIC(9,2) NOT NULL CHECK (historical_mean_mm > 0),
+    anomaly_pct NUMERIC(9,2) NOT NULL CHECK (anomaly_pct >= -100),
+    UNIQUE (station_id, dekad)
+);
+CREATE INDEX IF NOT EXISTS idx_rainfall_records_dekad ON rainfall_records(dekad);
+
+CREATE TABLE IF NOT EXISTS vegetation_indices (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    region_id VARCHAR(64) NOT NULL,
+    vci_score NUMERIC(5,2) NOT NULL CHECK (vci_score BETWEEN 0 AND 100),
+    status VARCHAR(16) NOT NULL CHECK (status IN ('Normal','Watch','Alert','Severe')),
+    observed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (region_id, observed_at)
+);
+CREATE INDEX IF NOT EXISTS idx_vegetation_indices_region_latest
+    ON vegetation_indices(region_id, observed_at DESC);
+
+CREATE TABLE IF NOT EXISTS pastoral_water_points (
+    id VARCHAR(64) PRIMARY KEY,
+    name VARCHAR(160) NOT NULL,
+    type VARCHAR(20) NOT NULL CHECK (type IN ('Borehole','Shallow Well','Berkad')),
+    status VARCHAR(16) NOT NULL CHECK (status IN ('Functional','Stressed','Dry')),
+    depth_meters NUMERIC(8,2) NOT NULL CHECK (depth_meters >= 0),
+    lat DOUBLE PRECISION NOT NULL CHECK (lat BETWEEN -90 AND 90),
+    lng DOUBLE PRECISION NOT NULL CHECK (lng BETWEEN -180 AND 180),
+    location GEOMETRY(Point, 4326) GENERATED ALWAYS AS
+        (ST_SetSRID(ST_MakePoint(lng, lat), 4326)) STORED,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    last_updated TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_pastoral_water_points_location
+    ON pastoral_water_points USING GIST(location);
+CREATE INDEX IF NOT EXISTS idx_pastoral_water_points_active_status
+    ON pastoral_water_points(status) WHERE is_active;

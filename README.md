@@ -189,6 +189,8 @@ Zones provably partition the field (see tests, ±3 %).
 | `POST /polygon-farms` | create a tenant-owned PostGIS polygon without a client row |
 | `POST` · `GET /fields/{id}/history` | append/list Ciid, nutrient and Cudurada events |
 | `GET /analytics/farms/monthly` | tenant monthly pH/N/P/K and pathology aggregation |
+| `GET /drought-metrics?region=Sool` | deterministic 10-day CHIRPS-compatible rainfall and VCI mock |
+| `GET /water-points` | active pastoral water-point mock as GeoJSON FeatureCollection |
 | `GET /console` | single-page map console (sign-in → field → ingest → master plan) |
 | `GET /dawaad` | Dawaad / Abaar Alert Leaflet drought-map component and administrative overlays |
 | `GET /lims` | responsive React laboratory operations, finance, pathology and crop-rotation dashboard |
@@ -345,6 +347,21 @@ arrive as `Decimal` (repository boundary now normalizes to float).
   exposes `setBoundaryData`, `focusBoundaryLayer`, `reloadBoundaries`, `ready`
   and `destroy` for drought-monitoring feature integration.
 
+### 2026-08-17 — climate and pastoral monitoring contracts
+
+* `app/schemas/drought.py` validates climate stations, dekadal rainfall,
+  regional VCI status and Borehole/Shallow Well/Berkad water points while the
+  JSON API retains the requested camelCase names.
+* Alembic revision `0006_drought_monitoring` and `db/init.sql` define indexed
+  PostGIS-ready station and water-point models plus rainfall and vegetation
+  tables with coordinate, status, score and value constraints.
+* `GET /api/v1/drought-metrics?region=Sool` returns a deterministic ten-day
+  CHIRPS-compatible rainfall/VCI fixture; `GET /api/v1/water-points` returns ten
+  pastoral monitoring points as RFC 7946 GeoJSON features.
+* Every response is explicitly marked `dataMode: mock` and says it is not a live
+  or official observation. Browser contracts and a typed fetch client live in
+  `app/web/drought.types.ts` and `app/web/drought.api.ts`.
+
 ## Production notes
 
 - **Scaling**: engines are CPU-bound pure functions → run via `asyncio.to_thread`
@@ -371,8 +388,9 @@ arrive as `Decimal` (repository boundary now normalizes to float).
 
 ## Tests
 
-81 passing (`pytest`): engine math with known-answer fixtures, respx-mocked
+93 passing (`pytest`): engine math with known-answer fixtures, respx-mocked
 SoilGrids/POWER/Open-Meteo clients (retry, sentinel, null, coverage paths),
 orchestrator degradation, irrigation schedule/volume arithmetic, CSV/iCalendar
-exports, DEM provider against a synthetic plane, API wiring via in-memory
-repository fakes, repository JSON persistence, and console/LIMS smoke tests (no DB needed).
+exports, DEM provider against a synthetic plane, Dawaad drought/water GeoJSON
+contracts, API wiring via in-memory repository fakes, repository JSON persistence,
+and console/LIMS smoke tests (no DB needed).

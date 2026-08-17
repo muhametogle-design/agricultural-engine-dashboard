@@ -15,6 +15,7 @@ from app.api.routes import (
     analysis,
     auth,
     clients,
+    drought,
     environmental,
     farm_history,
     fields,
@@ -107,13 +108,15 @@ def create_app() -> FastAPI:
     api_prefix = "/api/v1"
     for r in (auth.router, clients.router, fields.router, environmental.router,
               ves.router, analysis.router, irrigation.router, farm_history.router,
-              plans.router, lab.router):
+              drought.router, plans.router, lab.router):
         app.include_router(r, prefix=api_prefix)
 
     @app.get("/api")
     async def api_info() -> dict:
         return {"service": "agri-dss", "version": __version__, "docs": "/docs",
-                "console": "/console", "dawaad": "/dawaad"}
+                "console": "/console", "dawaad": "/dawaad",
+                "drought_metrics": "/api/v1/drought-metrics?region=Sool",
+                "water_points": "/api/v1/water-points"}
 
     @app.get("/", response_class=HTMLResponse, include_in_schema=False)
     async def landing() -> HTMLResponse:
