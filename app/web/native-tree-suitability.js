@@ -551,9 +551,91 @@
     renderDrawer();
   }
 
+  const strictOriginalText = new WeakMap();
+  const strictSomaliPhrases = {
+    "Plant Selector": "Xulashada Dhirta",
+    "Native Somali Trees": "Geedaha Dhaladka Soomaaliya",
+    "Click to select": "Guji si aad u doorato",
+    "Search plants…": "Raadi dhirta…",
+    "Season": "Xilliga",
+    "Output": "Wax-soo-saarka",
+    "Care": "Daryeelka",
+    "Optimal pH": "pH-ga Habboon",
+    "Avoid": "Ka Fogow",
+    "tap to run simulation": "guji si aad u samayso qiimayn",
+    "ACTIVE — simulated below": "FIRFIRCOON — hoos ayaa lagu qiimeeyey",
+    "Applicable pathology for": "Cudurada ku habboon",
+    "Smart Engine · Simulation": "Matoorka Caqliga · Qiimayn",
+    "refresh": "cusboonaysii",
+    "Plant population": "Tirada Dhirta",
+    "Expected yield": "Wax-soo-saarka la filayo",
+    "Water demand": "Baahida Biyaha",
+    "Generate certificate": "Samee Shahaado",
+    "Selected area": "Aagga la doortay",
+    "editable session objects": "walxaha Beeraha la tafatiri karo",
+    "Laboratory Analytics": "Falanqaynta Shaybaarka",
+    "Farm History": "Taariikhda Beeraha",
+    "Data overlay": "Lakabka Xogta",
+    "Basemap": "Khariidadda Hoose",
+    "Draw AOI": "Sawir Beer",
+    "Finish": "Dhammee",
+    "Cancel": "Jooji",
+    "Monthly Farm Analytics": "Falanqaynta Billaha Beeraha",
+    "No active alerts": "Digniin firfircoon ma jirto",
+  };
+
+  function enforceStrictSomali() {
+    if (!document.body) return;
+    const isSomali = localStorage.getItem("agri_lang") === "so";
+    const entries = Object.entries(strictSomaliPhrases).sort((a, b) => b[0].length - a[0].length);
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    let node;
+    while ((node = walker.nextNode())) {
+      const parent = node.parentElement;
+      if (!parent || /^(SCRIPT|STYLE|CODE|PRE)$/i.test(parent.tagName)) continue;
+      if (!strictOriginalText.has(node)) strictOriginalText.set(node, node.nodeValue);
+      const original = strictOriginalText.get(node);
+      if (!isSomali) {
+        if (node.nodeValue !== original) node.nodeValue = original;
+        continue;
+      }
+      let translated = original;
+      entries.forEach(([english, somali]) => { translated = translated.split(english).join(somali); });
+      if (node.nodeValue !== translated) node.nodeValue = translated;
+    }
+
+    if (isSomali) {
+      document.querySelectorAll("#flora-body .plant-pathology-note").forEach((element) => {
+        const replacement = "Xaqiiji Cudurka shaybaarka, kadibna adeegso nadaafad, dheecaan iyo maarayn isku dhafan.";
+        if (element.textContent !== replacement) element.textContent = replacement;
+      });
+      document.querySelectorAll("#flora-body .grid").forEach((grid) => {
+        const children = [...grid.children];
+        for (let index = 0; index < children.length - 1; index += 2) {
+          const label = children[index];
+          const value = children[index + 1];
+          const key = label.textContent.trim();
+          const setValue = (text) => { if (value.textContent !== text) value.textContent = text; };
+          if (key.includes("Xilliga") || key === "Season") setValue("Xilliga beerista ee lagu taliyey");
+          if (key.includes("Wax-soo-saarka") || key === "Output") setValue("Wax-soo-saar ku salaysan nooca geedka iyo xaaladda Beer");
+          if (key.includes("Daryeelka") || key === "Care") setValue("Raac talada beerista, waraabka, dheecaanka iyo nafaqada ee la xaqiijiyey");
+          if (key.includes("Ka Fogow") || key.includes("Avoid")) setValue("Ka fogow biyo-fadhi, milix badan iyo Ciid aan la tijaabin");
+        }
+      });
+    }
+  }
+
   function bootCriticalFix() {
     enhanceGis();
     enhanceLims();
+    enforceStrictSomali();
+    global.addEventListener("agri-language-changed", () => global.setTimeout(enforceStrictSomali, 0));
+    let translationTimer = null;
+    new MutationObserver(() => {
+      if (localStorage.getItem("agri_lang") !== "so") return;
+      clearTimeout(translationTimer);
+      translationTimer = global.setTimeout(enforceStrictSomali, 40);
+    }).observe(document.body, { childList: true, subtree: true });
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bootCriticalFix, { once: true });
