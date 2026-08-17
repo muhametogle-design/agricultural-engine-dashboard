@@ -305,9 +305,9 @@ arrive as `Decimal` (repository boundary now normalizes to float).
   IndexedDB or network code runs; LIMS also embeds a seven-entry Seed Oil fallback.
   The GIS hamburger persists a true collapsed state and invalidates Leaflet sizing.
 * `native-tree-suitability.js` provides a synchronous seven-tree fallback shared
-  by GIS and LIMS: Yicib (*Cordeauxia edulis*), Beeyo (*Boswellia sacra*), Xagar
-  (*Commiphora myrrha*), Qudhac (*Acacia tortilis*), Gob (*Ziziphus spina-christi*),
-  Timir (*Phoenix dactylifera*) and Raqay/Xamar (*Tamarindus indica*). Every tree
+  by GIS and LIMS: Yicib (*Cordeauxia edulis*), Moxor (*Boswellia sacra*), Xaggar
+  (*Commiphora myrrha*), Qudac (*Acacia tortilis*), Gob (*Ziziphus spina-christi*),
+  Timir (*Phoenix dactylifera*) and Raqay (*Tamarindus indica*). Every tree
   carries linked Cudurada and is handed to the unified store at startup.
 * Drawing or clicking a Beer polygon opens the **Plant Selector · LIMS Master
   Database** panel automatically. Trees, Midho, Khudaar and Saliidda Abuurka use

@@ -16,12 +16,12 @@ SOURCE = ROOT / "app/web/native-tree-suitability.js"
 
 EXPECTED_TREES = {
     "Yicib": "Cordeauxia edulis",
-    "Beeyo": "Boswellia sacra",
-    "Xagar": "Commiphora myrrha",
-    "Qudhac": "Acacia tortilis",
+    "Moxor": "Boswellia sacra",
+    "Xaggar": "Commiphora myrrha",
+    "Qudac": "Acacia tortilis",
     "Gob": "Ziziphus spina-christi",
     "Timir": "Phoenix dactylifera",
-    "Raqay/Xamar": "Tamarindus indica",
+    "Raqay": "Tamarindus indica",
 }
 
 
@@ -38,13 +38,20 @@ def test_native_tree_master_contains_requested_species_and_panel_styles():
         "bg-amber-500",
         "#EF4444",
         "bg-rose-600",
-        "🟢 Ku HABBOON (OPTIMAL MATCH)",
-        "🟡 KHATAR DHEX-DHEXAAD (MODERATE RISK)",
-        "🔴 AAN KU HABOONAYN (UNSUITABLE)",
+        "🟢 HABBOON",
+        "🟢 OPTIMAL MATCH",
+        "🟡 KHATAR DHEX-DHEXAAD",
+        "🟡 MODERATE RISK",
+        "🔴 KU HABBOONAAN LA'AAN",
+        "🔴 UNSUITABLE",
         "#ECFDF5",
         "#FFE4E6",
         "#FEF3C7",
-        "Cudurada · Pathology Alerts",
+        "Digniinaha Cudurada",
+        "Pathology Alerts",
+        "critical-lims-plant-drawer",
+        "critical-native-tree-buttons",
+        "agri-language-changed",
     ):
         assert marker in source
 
@@ -62,7 +69,7 @@ global.window={
 };
 global.document={readyState:"loading",addEventListener(){}};
 eval(SOURCE);
-const expected={"Yicib":"Cordeauxia edulis","Beeyo":"Boswellia sacra","Xagar":"Commiphora myrrha","Qudhac":"Acacia tortilis","Gob":"Ziziphus spina-christi","Timir":"Phoenix dactylifera","Raqay/Xamar":"Tamarindus indica"};
+const expected={"Yicib":"Cordeauxia edulis","Moxor":"Boswellia sacra","Xaggar":"Commiphora myrrha","Qudac":"Acacia tortilis","Gob":"Ziziphus spina-christi","Timir":"Phoenix dactylifera","Raqay":"Tamarindus indica"};
 if (window.AGRI_SHARED.catalog.length !== 7 || window.AGRI_SHARED.trees.length !== 7) throw new Error("native master count");
 for (const [name,sci] of Object.entries(expected)) {
   const item=window.AGRI_SHARED.catalog.find(record=>record.name===name);
