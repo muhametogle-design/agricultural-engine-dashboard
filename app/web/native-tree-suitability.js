@@ -210,7 +210,8 @@
   function enhanceGis() {
     const rightPanel = document.getElementById("right");
     const floraBody = document.getElementById("flora-body");
-    if (!rightPanel || !floraBody) return;
+    if (!rightPanel || !floraBody || global.__nativeSuitabilityGisInstalled) return;
+    global.__nativeSuitabilityGisInstalled = true;
 
     let context = document.getElementById("plant-selector-context");
     if (!context) {
@@ -629,6 +630,8 @@
     enhanceGis();
     enhanceLims();
     enforceStrictSomali();
+    if (global.__strictSomaliObserverInstalled) return;
+    global.__strictSomaliObserverInstalled = true;
     global.addEventListener("agri-language-changed", () => global.setTimeout(enforceStrictSomali, 0));
     let translationTimer = null;
     new MutationObserver(() => {
