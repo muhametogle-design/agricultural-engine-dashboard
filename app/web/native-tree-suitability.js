@@ -208,7 +208,27 @@
   }
 
   function enhanceGis() {
-    if (typeof global.evaluatePlantSuitability !== "function" || typeof global.renderPlantSuitability !== "function") return;
+    const rightPanel = document.getElementById("right");
+    const floraBody = document.getElementById("flora-body");
+    if (!rightPanel || !floraBody) return;
+
+    let context = document.getElementById("plant-selector-context");
+    if (!context) {
+      context = document.createElement("div");
+      context.id = "plant-selector-context";
+      context.className = "mt-2 rounded-lg border border-slate-800 bg-slate-900/80 px-2.5 py-2 text-xs text-slate-400";
+      context.textContent = "Draw or select a Beer polygon to activate Plant Selector.";
+      const search = document.getElementById("flora-search");
+      if (search) search.before(context);
+    }
+    let suitabilityCard = document.getElementById("plant-suitability-card");
+    if (!suitabilityCard) {
+      suitabilityCard = document.createElement("div");
+      suitabilityCard.id = "plant-suitability-card";
+      suitabilityCard.className = "mx-3 mt-3 flex-none rounded-xl border border-slate-800 bg-slate-900 p-3 text-xs text-slate-400";
+      suitabilityCard.textContent = "Select a Beer polygon and plant to run suitability analysis.";
+      floraBody.before(suitabilityCard);
+    }
 
     if (typeof global.DB !== "undefined" || typeof DB !== "undefined") {
       const database = typeof DB !== "undefined" ? DB : global.DB;
@@ -227,8 +247,60 @@
       });
     }
 
-    const baseEvaluate = global.evaluatePlantSuitability;
-    const baseRender = global.renderPlantSuitability;
+    const baseEvaluate = typeof global.evaluatePlantSuitability === "function"
+      ? global.evaluatePlantSuitability
+      : function fallbackEvaluation(plant, metrics) {
+          const statuses = metricStatuses(plant, metrics);
+          const status = worst(statuses.ph, statuses.groundwater, statuses.soil, statuses.salinity);
+          return {
+            status,
+            score: status === "green" ? 92 : status === "yellow" ? 68 : 28,
+            checks: [],
+            recommendations: [plant.care || "Follow verified establishment guidance."],
+            phRange: plant.ph || [5.5, 7.5],
+          };
+        };
+    const baseRender = typeof global.renderPlantSuitability === "function"
+      ? global.renderPlantSuitability
+      : function fallbackRender() {
+          suitabilityCard.textContent = "Select a Beer polygon and plant to run suitability analysis.";
+        };
+    const metricsProvider = typeof global.activePolygonSuitabilityMetrics === "function"
+      ? global.activePolygonSuitabilityMetrics
+      : (typeof activePolygonSuitabilityMetrics === "function" ? activePolygonSuitabilityMetrics : function fallbackMetrics(farm) {
+          const appState = typeof state !== "undefined" ? state : global.state;
+          const profile = typeof SOILS !== "undefined" ? (SOILS[appState.soil] || SOILS.shabelle) : {};
+          const center = farm.poly.getBounds().getCenter();
+          const classification = /clay|vertis|dhoobo/i.test(`${profile.texture} ${profile.wrb}`)
+            ? { code: "clay", label: "Dhoobo / Clay" }
+            : /sand|arenosol|gypsi/i.test(`${profile.texture} ${profile.wrb}`)
+              ? { code: "sandy", label: "Ciid / Sandy" }
+              : { code: "loam", label: "Ciid isku-dhafan / Loam" };
+          let aquiferDepth = null;
+          let aquiferName = "Unmapped";
+          if (typeof aquiferAt === "function") {
+            const aquifer = aquiferAt(center.lat, center.lng);
+            if (aquifer) {
+              const signal = Math.abs(Math.sin(center.lat * 31.7 + center.lng * 7.9));
+              aquiferDepth = Math.round(aquifer.depth[0] + signal * (aquifer.depth[1] - aquifer.depth[0]));
+              aquiferName = aquifer.name;
+            }
+          }
+          let station = null;
+          if (typeof GROUNDWATER_NETWORK !== "undefined" && global.L) {
+            station = GROUNDWATER_NETWORK.stations.reduce((best, item) => {
+              const distance = center.distanceTo(global.L.latLng(item.lat, item.lon));
+              return !best || distance < best.distance ? { item, distance } : best;
+            }, null)?.item;
+          }
+          return {
+            ph: Number(profile.ph ?? 7), ec: Number(profile.ec ?? 0),
+            classification: classification.label, soilCode: classification.code,
+            aquiferDepth, aquiferName,
+            conductivity: station?.conductivity ?? null, salinity: station?.salinity ?? null,
+            climateZone: "Arid pastoral",
+          };
+        });
 
     global.evaluatePlantSuitability = function nativeMetricEvaluation(plant, metrics, language) {
       const result = baseEvaluate(plant, metrics, language);
@@ -262,7 +334,7 @@
       const context = document.getElementById("plant-selector-context");
       const farm = state.selected;
       const plant = state.flora;
-      const metrics = activePolygonSuitabilityMetrics(farm);
+      const metrics = metricsProvider(farm);
       const result = global.evaluatePlantSuitability(plant, metrics, typeof uiLang === "undefined" ? "en" : uiLang);
       state.suitability = result;
 
@@ -310,6 +382,36 @@
           <div style="margin-top:7px;color:#94A3B8;font-size:9px">Decision-support only: verify field/laboratory soil, VES, drainage and irrigation-water quality.</div>
         </div>`;
     };
+
+    function activateSelector(farm) {
+      if (!farm) return;
+      rightPanel.classList.remove("translate-x-full");
+      rightPanel.classList.add("plant-selector-active");
+      context.innerHTML = `<b class="text-emerald-300">${escape(farm.name || "Beer")}</b> · active Beer`;
+      if (typeof renderTabs === "function") renderTabs();
+      if (typeof renderFlora === "function") renderFlora();
+      global.renderPlantSuitability();
+    }
+
+    const originalSelect = typeof global.selectAoi === "function"
+      ? global.selectAoi
+      : (typeof selectAoi === "function" ? selectAoi : null);
+    if (originalSelect && !originalSelect.__nativeSelectorWrapped) {
+      const wrappedSelect = function wrappedPolygonPlantSelector(farm) {
+        const result = originalSelect(farm);
+        global.setTimeout(() => activateSelector(farm), 0);
+        return result;
+      };
+      wrappedSelect.__nativeSelectorWrapped = true;
+      global.selectAoi = wrappedSelect;
+    }
+
+    floraBody.addEventListener("click", () => global.setTimeout(() => {
+      if (typeof state === "undefined" || !state.selected || !state.flora) return;
+      state.selected.selectedPlantId = state.flora.catalogId || state.flora.sci || state.flora.en;
+      if (typeof scheduleFarmPersist === "function") scheduleFarmPersist(state.selected);
+      global.renderPlantSuitability();
+    }, 0), true);
 
     const title = document.getElementById("plant-selector-title");
     if (title) title.textContent = "Plant Selector · Native Trees & LIMS Master Database";
