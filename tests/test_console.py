@@ -116,7 +116,7 @@ def test_dashboard_served():
         "Soil amendment required", "ringAreaM2", "renderSim",
         "World_Imagery", "mt{s}.google.com", "OpenStreetMap Standard", "tile.openstreetmap.org",
         "Bing Satellite + Labels", "GisBingHybridLayer", "gisTileXYToQuadKey", "gis_bing_maps_key", "bing-key-input", "Field Intelligence Map",
-        "Plant Selector · LIMS Master Database", "plant-suitability-card", "openPlantSelectorForFarm", "evaluatePlantSuitability", "selectedPlantId",
+        "Plant Selector · LIMS Master Database", "plant-suitability-card", "openPlantSelectorForFarm", "evaluatePlantSuitability", "selectedPlantId", "native-tree-suitability.js",
         "SQUARE v4", "map-frame", "map-summary", "map-aoi-count",
         "aspect-ratio:1/1", "grid-template-columns", "lab-map-label",
         "Afgooye Soil Laboratory", "updateAoiMapLabel", "localHwsdImagePromise",
@@ -194,9 +194,9 @@ const redPlant={en:"Avocado",sci:"Persea americana",care:"perfect drainage",avoi
 const redMetrics={ph:9,ec:5,soilCode:"clay",classification:"Dhoobo / Clay",aquiferDepth:180,conductivity:5000,climateZone:"Arid pastoral"};
 const results=[evaluatePlantSuitability(greenPlant,greenMetrics),evaluatePlantSuitability(yellowPlant,yellowMetrics),evaluatePlantSuitability(redPlant,redMetrics)];
 if (results.map(item=>item.status).join(",") !== "green,yellow,red") throw new Error(JSON.stringify(results));
-if (!results[0].label.name.includes("Habboon / Eligible")) throw new Error("green label");
-if (!results[1].label.name.includes("Khatar Dhex-dhexaad / Moderate")) throw new Error("yellow label");
-if (!results[2].label.name.includes("Ku Habboonaan La'aan / Unsuitable")) throw new Error("red label");
+if (results[0].label.name !== "🟢 Ku HABBOON (OPTIMAL MATCH)") throw new Error("green label");
+if (results[1].label.name !== "🟡 KHATAR DHEX-DHEXAAD (MODERATE RISK)") throw new Error("yellow label");
+if (results[2].label.name !== "🔴 AAN KU HABOONAYN (UNSUITABLE)") throw new Error("red label");
 '''
     completed = subprocess.run([node, "-e", engine + checks], capture_output=True, text=True)
     assert completed.returncode == 0, completed.stderr
@@ -296,6 +296,7 @@ def test_lims_dashboard_is_modular_and_offline_safe():
     assert "/web/agri.shared.js" in page.text
     assert "/web/agri.store.js" in page.text
     assert "/web/agri.i18n.js" in page.text
+    assert "/web/native-tree-suitability.js" in page.text
     assert "/web/vendor/react.min.js" in page.text
     assert ".strategic-planner h2" in page.text
     assert "font-size:19px" in page.text

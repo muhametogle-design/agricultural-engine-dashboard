@@ -8,6 +8,7 @@
 <script src="/web/agri.shared.js"></script>
 <script src="/web/agri.store.js"></script>
 <script src="/web/agri.i18n.js"></script>
+<script src="/web/native-tree-suitability.js"></script>
 <link rel="stylesheet" href="/web/vendor/leaflet/leaflet.css"/>
 <script src="/web/vendor/leaflet/leaflet.js"></script>
 <style>
@@ -1236,13 +1237,13 @@ function enrich(e, kind, group){
 }
 function sharedFlora(item){
  const isTree=item.category==="Fruits"||item.category==="Tree";
- return {catalogId:item.id,somali:item.categorySo||"",en:item.name,sci:item.family+" · regional cultivar",season:(item.seasons||[]).join(" · "),
-  output:item.category==="Seed Oil"?"Regional oilseed/oil-tree production":"Regional produce profile for "+item.region,
-  care:"Root profile: "+item.rootDepth+" · "+item.nitrogenDemand,ph:[item.minPh,item.maxPh],
-  avoid:"Avoid pH outside "+item.minPh+"–"+item.maxPh+" and monitor linked pathology risks.",group:item.category,kind:isTree?"tree":"crop",rootDepth:item.rootDepth||"Medium",nitrogenDemand:item.nitrogenDemand||"Light Feeder",
+ return {catalogId:item.id,somali:item.somaliName||item.categorySo||"",en:item.name,sci:item.scientificName||item.family+" · regional cultivar",season:(item.seasons||[]).join(" · "),
+  output:item.output||(item.category==="Seed Oil"?"Regional oilseed/oil-tree production":"Regional produce profile for "+item.region),
+  care:item.care||("Root profile: "+item.rootDepth+" · "+item.nitrogenDemand),ph:[item.minPh,item.maxPh],
+  avoid:item.avoid||("Avoid pH outside "+item.minPh+"–"+item.maxPh+" and monitor linked pathology risks."),group:item.category,kind:isTree?"tree":"crop",rootDepth:item.rootDepth||"Medium",nitrogenDemand:item.nitrogenDemand||"Light Feeder",
   spacing:isTree?[6,6]:[1.2,.4],seedKgHa:isTree?0:20,seedNote:isTree?"certified nursery stock":"use locally certified seed",
-  yieldT:isTree?null:[1,4],kgYr:isTree?[15,80]:null,yieldNote:null,water:isTree?{mode:"tree",lTreeWeek:35}:{mode:"crop",mm:500},
-  pathologies:item.pathologies||[]};
+  yieldT:isTree?null:[1,4],kgYr:isTree?[15,80]:null,yieldNote:null,water:item.waterMm?{mode:"orchard",mm:item.waterMm}:(isTree?{mode:"tree",lTreeWeek:35}:{mode:"crop",mm:500}),
+  pathologies:(item.pathologies||[]).map(record=>({name:record.name||record.disease,cause:record.cause||"Pathogen/pest complex",action:record.action||record.remedy||record.immediate?.[0]||"Confirm diagnosis and apply integrated management."}))};
 }
 const SHARED_CATALOG=(window.AGRI_SHARED&&Array.isArray(AGRI_SHARED.catalog)&&AGRI_SHARED.catalog.length?AGRI_SHARED.catalog:STATIC_MASTER_CATALOG);
 const SHARED_FRUITS=SHARED_CATALOG.filter(item=>item.category==="Fruits").map(sharedFlora);
@@ -1542,7 +1543,7 @@ function evaluatePlantSuitability(plant,metrics,lang="en"){
  else if(conductivity!=null)add(0,`Groundwater conductivity ${conductivity} µS/cm is within the screening limit.`,`Gudbinta biyaha ${conductivity} µS/cm waxay ku jirtaa xadka baaritaanka.`);
  if(metrics.climateZone==="Arid pastoral"&&highWater)add(1,"High crop water demand conflicts with the arid pastoral climate.","Baahida biyaha badan waxay ka hor imanaysaa cimilada qalalan ee xoolo-dhaqatada.","Use protected drip irrigation, mulch, windbreaks and seasonal water budgeting.","Adeegso waraab dhibic ah, mulch, dabayl-joojiye iyo miisaaniyad biyo xilliyeed.");
  else add(0,"The crop water profile is compatible with the screened climate class.","Baahida biyaha dalaggu waxay la jaanqaadaysaa nooca cimilada la baaray.");
- const red=checks.filter(check=>check.level===2).length,yellow=checks.filter(check=>check.level===1).length,status=red?"red":yellow?"yellow":"green",score=Math.max(0,100-red*35-yellow*12),labels={green:{emoji:"🟢",name:"Green · Habboon / Eligible"},yellow:{emoji:"🟡",name:"Yellow · Khatar Dhex-dhexaad / Moderate"},red:{emoji:"🔴",name:"Red · Ku Habboonaan La'aan / Unsuitable"}};
+ const red=checks.filter(check=>check.level===2).length,yellow=checks.filter(check=>check.level===1).length,status=red?"red":yellow?"yellow":"green",score=Math.max(0,100-red*35-yellow*12),labels={green:{emoji:"",name:"🟢 Ku HABBOON (OPTIMAL MATCH)"},yellow:{emoji:"",name:"🟡 KHATAR DHEX-DHEXAAD (MODERATE RISK)"},red:{emoji:"",name:"🔴 AAN KU HABOONAYN (UNSUITABLE)"}};
  return {status,score,label:labels[status],checks,recommendations:[...new Set(recommendations)],phRange:[phLow,phHigh],ecLimit};
 }
 function renderPlantSuitability(){const card=document.getElementById("plant-suitability-card"),context=document.getElementById("plant-selector-context"),a=state.selected,f=state.flora;if(!card||!context)return;
