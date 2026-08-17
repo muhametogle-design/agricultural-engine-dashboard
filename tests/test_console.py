@@ -43,6 +43,9 @@ def test_dawaad_drought_map_component():
         "/web/vendor/leaflet/leaflet.js",
         "/web/vendor/leaflet/leaflet.css",
         "← Main GIS",
+        "Drought Monitoring / Kormeerka Abaaraha",
+        'id="monitoring-region"',
+        "/web/drought.mock.json",
         "Gobol boundaries",
         "Degmo boundaries",
     ):
@@ -51,6 +54,10 @@ def test_dawaad_drought_map_component():
     assert "Bing Maps" not in page.text
     assert client.get("/web/vendor/leaflet/leaflet.js").status_code == 200
     assert client.get("/web/vendor/leaflet/leaflet.css").status_code == 200
+    mock = client.get("/web/drought.mock.json")
+    assert mock.status_code == 200
+    assert set(mock.json()["droughtMetrics"]) == {"sool", "nugaal", "sanaag", "togdheer", "mudug"}
+    assert len(mock.json()["waterPoints"]["features"]) == 10
 
     source_response = client.get("/web/dawaad-map.js")
     assert source_response.status_code == 200
@@ -69,6 +76,13 @@ def test_dawaad_drought_map_component():
         "requestFullscreen",
         "dawaadRegions",
         "dawaadDistricts",
+        "dawaadClimateStations",
+        "dawaadWaterPoints",
+        "Climate stations",
+        "Pastoral water points",
+        "loadMonitoring",
+        "focusMonitoringRegion",
+        "local standalone mock",
         "FeatureCollection",
         "geoBoundaries CC BY 4.0",
     ):

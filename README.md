@@ -361,6 +361,10 @@ arrive as `Decimal` (repository boundary now normalizes to float).
 * Every response is explicitly marked `dataMode: mock` and says it is not a live
   or official observation. Browser contracts and a typed fetch client live in
   `app/web/drought.types.ts` and `app/web/drought.api.ts`.
+* The Dawaad page now renders the selected region's dekadal rain, anomaly and VCI,
+  climate-station markers, and status-colored pastoral water points. FastAPI is
+  used when available; static-server sessions fall back to the checked-in
+  `drought.mock.json`, so the indicators remain visible at `/web/dawaad.html`.
 
 ## Production notes
 

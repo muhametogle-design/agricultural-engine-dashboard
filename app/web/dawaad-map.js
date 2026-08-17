@@ -17,6 +17,10 @@
     maxZoom: 19,
     defaultBasemap: "esri",
     boundaryTimeoutMs: 20000,
+    monitoringTimeoutMs: 8000,
+    monitoringApiBase: "",
+    monitoringFallbackUrl: "/web/drought.mock.json",
+    initialRegion: "Sool",
     boundarySources: Object.freeze({
       regions:
         "https://media.githubusercontent.com/media/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/SOM/ADM1/geoBoundaries-SOM-ADM1_simplified.geojson",
@@ -114,6 +118,9 @@
       this.map = null;
       this.baseLayers = {};
       this.boundaryLayers = {};
+      this.monitoringLayers = {};
+      this.monitoringState = { state: "idle", region: this.options.initialRegion, source: null };
+      this.monitoringFallback = null;
       this.controls = {};
       this.layerState = {
         regions: { state: "idle", count: 0, error: null },
@@ -137,9 +144,12 @@
       this._createPanes();
       this._createBasemaps();
       this._createBoundaryLayers();
+      this._createMonitoringLayers();
       this._createControls();
       this._bindEvents();
-      this.ready = this.reloadBoundaries();
+      this.boundariesReady = this.reloadBoundaries();
+      this.monitoringReady = this.loadMonitoring(this.options.initialRegion);
+      this.ready = Promise.allSettled([this.boundariesReady, this.monitoringReady]);
       return this;
     }
 
@@ -148,6 +158,10 @@
       this.map.getPane("dawaadRegions").style.zIndex = "430";
       this.map.createPane("dawaadDistricts");
       this.map.getPane("dawaadDistricts").style.zIndex = "440";
+      this.map.createPane("dawaadClimateStations");
+      this.map.getPane("dawaadClimateStations").style.zIndex = "460";
+      this.map.createPane("dawaadWaterPoints");
+      this.map.getPane("dawaadWaterPoints").style.zIndex = "470";
     }
 
     _createBasemaps() {
@@ -218,6 +232,11 @@
       this.boundaryLayers.regions.addTo(this.map);
     }
 
+    _createMonitoringLayers() {
+      this.monitoringLayers.climateStations = L.featureGroup().addTo(this.map);
+      this.monitoringLayers.waterPoints = L.featureGroup().addTo(this.map);
+    }
+
     _bindBoundaryFeature(levelLabel, feature, layer) {
       const name = boundaryName(feature.properties);
       layer.bindTooltip(`${escapeHtml(levelLabel)} · ${escapeHtml(name)}`, {
@@ -247,6 +266,8 @@
             "OpenStreetMap Standard": this.baseLayers.osm,
           },
           {
+            "Climate stations": this.monitoringLayers.climateStations,
+            "Pastoral water points": this.monitoringLayers.waterPoints,
             "Gobol boundaries": this.boundaryLayers.regions,
             "Degmo boundaries": this.boundaryLayers.districts,
           },
@@ -268,6 +289,162 @@
           zoom: this.map.getZoom(),
         });
       });
+    }
+
+    async loadMonitoring(region = this.options.initialRegion) {
+      const requestedRegion = String(region || this.options.initialRegion).trim();
+      this._setMonitoringState({ state: "loading", region: requestedRegion, source: null });
+      try {
+        let metrics;
+        let waterPoints;
+        let source = "mock API";
+        try {
+          const base = String(this.options.monitoringApiBase || "").replace(/\/$/, "");
+          [metrics, waterPoints] = await Promise.all([
+            this._fetchMonitoringJson(
+              `${base}/api/v1/drought-metrics?region=${encodeURIComponent(requestedRegion)}`,
+            ),
+            this._fetchMonitoringJson(`${base}/api/v1/water-points`),
+          ]);
+        } catch (apiError) {
+          const fallback = await this._loadMonitoringFallback();
+          metrics = fallback.droughtMetrics[requestedRegion.toLowerCase()];
+          waterPoints = fallback.waterPoints;
+          source = "local standalone mock";
+          if (!metrics) throw apiError;
+        }
+
+        this._renderClimateStations(metrics);
+        this._renderWaterPoints(waterPoints);
+        const rainfall = metrics.rainfallRecords || [];
+        const vegetation = (metrics.vegetationIndices || [])[0] || {};
+        const average = (items, key) =>
+          items.length ? items.reduce((sum, item) => sum + Number(item[key] || 0), 0) / items.length : 0;
+        const summary = {
+          state: "ready",
+          region: metrics.region,
+          period: metrics.period,
+          averageRainfallMm: Number(average(rainfall, "rainfallMm").toFixed(1)),
+          averageAnomalyPct: Number(average(rainfall, "anomalyPct").toFixed(1)),
+          vciScore: vegetation.vciScore,
+          vegetationStatus: vegetation.status,
+          stationCount: (metrics.stations || []).length,
+          waterPointCount: (waterPoints.features || []).length,
+          dataMode: metrics.dataMode || "mock",
+          source,
+          disclaimer: metrics.disclaimer,
+        };
+        this._setMonitoringState(summary);
+        this._emit("dawaad:monitoringload", summary);
+        return summary;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        const failure = { state: "error", region: requestedRegion, source: null, error: message };
+        this._setMonitoringState(failure);
+        this._emit("dawaad:monitoringerror", failure);
+        throw error;
+      }
+    }
+
+    focusMonitoringRegion(options = {}) {
+      const layer = this.monitoringLayers.climateStations;
+      if (!layer || !layer.getLayers().length) return false;
+      this.map.fitBounds(layer.getBounds(), { padding: [36, 36], maxZoom: 9, ...options });
+      return true;
+    }
+
+    async _fetchMonitoringJson(url) {
+      const controller = new AbortController();
+      const timeout = global.setTimeout(() => controller.abort(), this.options.monitoringTimeoutMs);
+      try {
+        const response = await fetch(url, {
+          signal: controller.signal,
+          headers: { Accept: "application/json" },
+          cache: "no-store",
+        });
+        if (!response.ok) throw new Error(`Monitoring API returned HTTP ${response.status}`);
+        return await response.json();
+      } finally {
+        global.clearTimeout(timeout);
+      }
+    }
+
+    async _loadMonitoringFallback() {
+      if (this.monitoringFallback) return this.monitoringFallback;
+      const response = await fetch(this.options.monitoringFallbackUrl, { cache: "force-cache" });
+      if (!response.ok) throw new Error(`Monitoring fallback returned HTTP ${response.status}`);
+      this.monitoringFallback = await response.json();
+      return this.monitoringFallback;
+    }
+
+    _renderClimateStations(metrics) {
+      const layer = this.monitoringLayers.climateStations;
+      layer.clearLayers();
+      const rainfallByStation = new Map(
+        (metrics.rainfallRecords || []).map((record) => [record.stationId, record]),
+      );
+      (metrics.stations || []).forEach((station) => {
+        const rainfall = rainfallByStation.get(station.id);
+        const anomaly = Number(rainfall?.anomalyPct || 0);
+        const color = anomaly <= -50 ? "#ef4444" : anomaly <= -20 ? "#f59e0b" : "#22c55e";
+        const marker = L.circleMarker([station.lat, station.lng], {
+          pane: "dawaadClimateStations",
+          radius: 8,
+          color: "#fff",
+          weight: 2,
+          fillColor: color,
+          fillOpacity: 0.95,
+        });
+        marker.bindTooltip(
+          `<b>${escapeHtml(station.name)}</b><br>${rainfall?.rainfallMm ?? "—"} mm · ${anomaly}%`,
+          { direction: "top", className: "dawaad-monitoring-tooltip" },
+        );
+        marker.bindPopup(
+          `<div class="dawaad-popup"><strong>${escapeHtml(station.name)}</strong>` +
+            `<span>${escapeHtml(station.region)} · ${escapeHtml(metrics.period?.dekad || "")}</span>` +
+            `<p>Rainfall <b>${rainfall?.rainfallMm ?? "—"} mm</b><br>` +
+            `Historical mean <b>${rainfall?.historicalMeanMm ?? "—"} mm</b><br>` +
+            `Anomaly <b>${anomaly}%</b></p></div>`,
+        );
+        marker.addTo(layer);
+      });
+    }
+
+    _renderWaterPoints(collection) {
+      const layer = this.monitoringLayers.waterPoints;
+      layer.clearLayers();
+      const colors = { Functional: "#22c55e", Stressed: "#f59e0b", Dry: "#ef4444" };
+      (collection.features || []).forEach((feature) => {
+        const properties = feature.properties || {};
+        const coordinates = feature.geometry?.coordinates || [properties.lng, properties.lat];
+        const radius = properties.type === "Borehole" ? 8 : properties.type === "Berkad" ? 7 : 6;
+        const marker = L.circleMarker([coordinates[1], coordinates[0]], {
+          pane: "dawaadWaterPoints",
+          radius,
+          color: "#fff",
+          weight: 2,
+          fillColor: colors[properties.status] || "#94a3b8",
+          fillOpacity: 0.95,
+        });
+        marker.bindTooltip(
+          `<b>${escapeHtml(properties.name)}</b><br>${escapeHtml(properties.type)} · ${escapeHtml(properties.status)}`,
+          { direction: "top", className: "dawaad-monitoring-tooltip" },
+        );
+        marker.bindPopup(
+          `<div class="dawaad-popup"><strong>${escapeHtml(properties.name)}</strong>` +
+            `<span>${escapeHtml(properties.type)} · ${escapeHtml(properties.status)}</span>` +
+            `<p>Depth <b>${properties.depthMeters ?? "—"} m</b><br>` +
+            `ID <b>${escapeHtml(properties.id)}</b></p></div>`,
+        );
+        marker.addTo(layer);
+      });
+    }
+
+    _setMonitoringState(state) {
+      this.monitoringState = { ...state };
+      if (typeof this.options.onMonitoringStatus === "function") {
+        this.options.onMonitoringStatus(this.monitoringState, this);
+      }
     }
 
     async reloadBoundaries() {
@@ -363,6 +540,7 @@
       this.map = null;
       this.baseLayers = {};
       this.boundaryLayers = {};
+      this.monitoringLayers = {};
       this.controls = {};
     }
   }
