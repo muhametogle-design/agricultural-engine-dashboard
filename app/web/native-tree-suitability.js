@@ -243,6 +243,11 @@
           rootDepth: master.rootDepth,
           nitrogenDemand: master.nitrogenDemand,
           water: { mode: "orchard", mm: master.waterMm },
+          pathologies: master.pathologies.map((record) => ({
+            name: record.disease,
+            cause: record.cause,
+            action: record.remedy || record.immediate?.[0] || "Confirm diagnosis and apply integrated management.",
+          })),
         });
       });
     }
