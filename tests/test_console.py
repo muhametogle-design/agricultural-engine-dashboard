@@ -112,6 +112,7 @@ def test_dashboard_served():
     assert r.status_code == 200
     for marker in (
         "Native Somali Trees", "Ziziphus mauritiana", "base-active", 'id:"soil",key:"soil"',
+        "/web/vendor/leaflet/leaflet.css", "/web/vendor/leaflet/leaflet.js",
         "Soil amendment required", "ringAreaM2", "renderSim",
         "World_Imagery", "mt{s}.google.com", "OpenStreetMap Standard", "tile.openstreetmap.org",
         "Bing Satellite + Labels", "GisBingHybridLayer", "gisTileXYToQuadKey", "gis_bing_maps_key", "bing-key-input", "Field Intelligence Map",
@@ -142,6 +143,7 @@ def test_dashboard_served():
         assert marker in r.text
     assert "f.icon" not in r.text
     assert "GRP_ICON" not in r.text
+    assert "unpkg.com/leaflet" not in r.text
     assert "Demo plot" not in r.text
     assert "demoPlot" not in r.text
     assert "Loading synchronized regional catalog" not in r.text
