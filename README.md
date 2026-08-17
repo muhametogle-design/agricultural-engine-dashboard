@@ -366,6 +366,21 @@ arrive as `Decimal` (repository boundary now normalizes to float).
   used when available; static-server sessions fall back to the checked-in
   `drought.mock.json`, so the indicators remain visible at `/web/dawaad.html`.
 
+### 2026-08-17 — pastoral agro-hydrology utility panel
+
+* A collapsible map-overlay panel hosts reusable widgets from
+  `app/web/pastoral-tools.js`: `AquiferOverlayWidget`, `SolarPumpWidget`, and
+  `PastoralFencePlanner`.
+* The toggleable vector aquifer screen distinguishes High Yield, Medium and Deep
+  Saline zones. `dawaad.aquifers.geojson` is explicitly an indicative mock; its
+  popup and metadata require VES, field mapping and test-drilling verification.
+* Solar sizing accepts daily cubic-metre demand and TDH/well depth, then reports
+  pump kW, PV-array kWp, estimated runtime and design flow using documented 55%
+  wire-to-water efficiency, motor reserve, solar derating and peak-sun assumptions.
+* The fence tool records map clicks as a Leaflet polyline, closes seasonal grazing
+  reserves, and calculates geodesic fence perimeter in metres plus spherical area
+  in hectares with Start, Finish, Undo and Clear controls.
+
 ## Production notes
 
 - **Scaling**: engines are CPU-bound pure functions → run via `asyncio.to_thread`
@@ -392,7 +407,7 @@ arrive as `Decimal` (repository boundary now normalizes to float).
 
 ## Tests
 
-93 passing (`pytest`): engine math with known-answer fixtures, respx-mocked
+96 passing (`pytest`): engine math with known-answer fixtures, respx-mocked
 SoilGrids/POWER/Open-Meteo clients (retry, sentinel, null, coverage paths),
 orchestrator degradation, irrigation schedule/volume arithmetic, CSV/iCalendar
 exports, DEM provider against a synthetic plane, Dawaad drought/water GeoJSON

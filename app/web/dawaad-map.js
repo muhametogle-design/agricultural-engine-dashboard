@@ -82,7 +82,9 @@
     }
 
     _toggle() {
-      const container = this._map.getContainer();
+      const mapContainer = this._map.getContainer();
+      const container = mapContainer.parentElement || mapContainer;
+      this._fullscreenContainer = container;
       if (!document.fullscreenElement) {
         const request = container.requestFullscreen || container.webkitRequestFullscreen;
         if (request) request.call(container);
@@ -93,7 +95,7 @@
     }
 
     _onFullscreenChange() {
-      const active = document.fullscreenElement === this._map.getContainer();
+      const active = document.fullscreenElement === (this._fullscreenContainer || this._map.getContainer());
       this._button.setAttribute("aria-pressed", String(active));
       this._button.setAttribute("aria-label", active ? "Exit full screen map" : "Enter full screen map");
       this._button.title = active ? "Exit full screen" : "Enter full screen";

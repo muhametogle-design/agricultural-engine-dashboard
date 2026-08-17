@@ -39,7 +39,11 @@ def test_dawaad_drought_map_component():
         "Esri Satellite + Labels",
         "No API key is required",
         "/web/dawaad-map.js",
+        "/web/pastoral-tools.js",
         "/web/dawaad-map.css",
+        "Underground Aquifer Layer",
+        "Solar Water Pump Sizing",
+        "Pastoral Fencing &amp; Corridor Planner",
         "/web/vendor/leaflet/leaflet.js",
         "/web/vendor/leaflet/leaflet.css",
         "← Main GIS",
@@ -54,6 +58,15 @@ def test_dawaad_drought_map_component():
     assert "Bing Maps" not in page.text
     assert client.get("/web/vendor/leaflet/leaflet.js").status_code == 200
     assert client.get("/web/vendor/leaflet/leaflet.css").status_code == 200
+    tools = client.get("/web/pastoral-tools.js")
+    assert tools.status_code == 200
+    for marker in ("calculateSolarPump", "SolarPumpWidget", "PastoralFencePlanner", "AquiferOverlayWidget"):
+        assert marker in tools.text
+    aquifers = client.get("/web/dawaad.aquifers.geojson")
+    assert aquifers.status_code == 200
+    assert {feature["properties"]["potential"] for feature in aquifers.json()["features"]} == {
+        "High Yield", "Medium", "Deep Saline"
+    }
     mock = client.get("/web/drought.mock.json")
     assert mock.status_code == 200
     assert set(mock.json()["droughtMetrics"]) == {"sool", "nugaal", "sanaag", "togdheer", "mudug"}
