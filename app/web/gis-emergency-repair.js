@@ -13,6 +13,26 @@
     { id: "repair-timir", name: "Timir", scientific: "Phoenix dactylifera", ph: [7, 8.5], color: "#65A30D", offset: [-0.023, -0.035] },
   ];
 
+  const MOJIBAKE = Object.freeze({
+    "ðŸŒŠ": "🌊", "ðŸœ": "🏜️", "ðŸ": "🍍", "â•": "===", "Â·": "·",
+    "âœ”": "✔", "âœŽ": "✎", "âŒ–": "🔍", "âœ•": "✖", "â€“": "–",
+    "â€”": "—", "â†’": "→", "ðŸŒ¿": "🌿", "ðŸŒ´": "🌴", "ðŸŽ": "🍎", "ðŸ‰": "🍉",
+  });
+
+  global.MAPSQUARE_FRUIT_GROUPS_FALLBACK = Object.freeze([
+    ["🌊 Riverine & Irrigated", "g1", [
+      { somali_name: "Cambe", scientific_name: "Mangifera indica", english_name: "Mango", optimal_soil_ph: "5.5 - 7.5" },
+      { somali_name: "Timir", scientific_name: "Phoenix dactylifera", english_name: "Date Palm", optimal_soil_ph: "6.5 - 8.5" },
+    ]],
+    ["🏜️ Indigenous Desert Fruits", "g2", [
+      { somali_name: "Gob", scientific_name: "Ziziphus spina-christi", english_name: "Christ's Thorn Jujube", optimal_soil_ph: "6.0 - 8.5" },
+    ]],
+    ["🍍 Tropical Fruits", "g3", [
+      { somali_name: "Ananas", scientific_name: "Ananas comosus", english_name: "Pineapple", optimal_soil_ph: "5.0 - 6.5" },
+      { somali_name: "Layji", scientific_name: "Litchi chinensis", english_name: "Lychee", optimal_soil_ph: "5.5 - 6.5" },
+    ]],
+  ]);
+
   const resolve = (name) => {
     try { return global.eval(name); } catch (_) { return global[name]; }
   };
@@ -20,6 +40,33 @@
   const escape = (value) => String(value ?? "")
     .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;").replaceAll("'", "&#39;");
+
+  function cleanText(value) {
+    let output = String(value ?? "");
+    Object.entries(MOJIBAKE).forEach(([broken, fixed]) => {
+      output = output.split(broken).join(fixed);
+    });
+    return output;
+  }
+
+  function cleanMojibake(root = document.body) {
+    if (!root) return;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let node;
+    while ((node = walker.nextNode())) {
+      if (!node.parentElement || /^(SCRIPT|STYLE|CODE|PRE)$/i.test(node.parentElement.tagName)) continue;
+      const cleaned = cleanText(node.nodeValue);
+      if (cleaned !== node.nodeValue) node.nodeValue = cleaned;
+    }
+    root.querySelectorAll("[title],[placeholder],[aria-label]").forEach((element) => {
+      ["title", "placeholder", "aria-label"].forEach((name) => {
+        if (!element.hasAttribute(name)) return;
+        const current = element.getAttribute(name);
+        const cleaned = cleanText(current);
+        if (cleaned !== current) element.setAttribute(name, cleaned);
+      });
+    });
+  }
 
   global.GIS_REPAIR_STATE = global.GIS_REPAIR_STATE || {
     activeFeature: null,
@@ -48,12 +95,23 @@
   }
 
   function mapInstance() {
-    const map = resolve("map") || global.map;
+    let map = resolve("map") || global.map || global.GIS_REPAIR_STATE.map;
     if (map && typeof map.invalidateSize === "function") {
       global.GIS_REPAIR_STATE.map = map;
       return map;
     }
-    return null;
+    const container = document.getElementById("map");
+    if (!container || !global.L) return null;
+    try {
+      if (container._leaflet_id) container._leaflet_id = null;
+      map = global.L.map(container, { zoomControl: true, attributionControl: true }).setView([8.4772, 47.3597], 8);
+      global.GIS_REPAIR_STATE.map = map;
+      global.map = map;
+      return map;
+    } catch (error) {
+      console.warn("Fallback map initialization failed", error);
+      return null;
+    }
   }
 
   function appState() {
@@ -75,7 +133,7 @@
   function resizeMap() {
     const map = mapInstance();
     if (!map) return;
-    [0, 50, 160, 360, 700].forEach((delay) => global.setTimeout(() => {
+    [0, 100, 250, 500].forEach((delay) => global.setTimeout(() => {
       try { map.invalidateSize({ pan: false, animate: false }); } catch (_) {}
     }, delay));
   }
@@ -93,6 +151,16 @@
     }
     const mutations = new MutationObserver(resizeMap);
     targets.forEach((target) => mutations.observe(target, { attributes: true, attributeFilter: ["class", "style"] }));
+    const originalSetLeftSidebar = resolve("setLeftSidebar");
+    if (typeof originalSetLeftSidebar === "function" && !originalSetLeftSidebar.__gisRepairWrapped) {
+      const wrappedSetLeftSidebar = function wrappedSetLeftSidebar() {
+        const result = originalSetLeftSidebar.apply(this, arguments);
+        global.setTimeout(() => map.invalidateSize({ pan: false, animate: false }), 100);
+        return result;
+      };
+      wrappedSetLeftSidebar.__gisRepairWrapped = true;
+      global.setLeftSidebar = wrappedSetLeftSidebar;
+    }
     resizeMap();
   }
 
@@ -263,10 +331,23 @@
     global.GIS_REPAIR_STATE.nativeLayer = layer;
   }
 
-  function bindLayer(layer, feature) {
+  function bindLayer(layer, featureFactory) {
     if (!layer || layer.__gisRepairBound || typeof layer.on !== "function") return;
     layer.__gisRepairBound = true;
-    layer.on("click", () => setActiveFeature(feature()));
+    layer.on("click", () => {
+      const feature = featureFactory();
+      setActiveFeature(feature);
+      if (feature.type === "farm" && feature.farm) {
+        const farm = feature.farm;
+        const center = farm.poly.getBounds().getCenter();
+        call("selectAoi", farm);
+        call("openPlantSelectorForFarm", farm);
+        call("assessGroundwater", center, "selected farm polygon", true);
+        call("updateStats");
+        call("renderPlantSuitability");
+        resizeMap();
+      }
+    });
   }
 
   function bindDynamicLayers() {
@@ -333,6 +414,7 @@
 
   function boot() {
     injectCss();
+    cleanMojibake(document.body);
     const map = mapInstance();
     if (!map) {
       global.setTimeout(boot, 250);
@@ -345,10 +427,17 @@
     bindPlantCards();
     bindDynamicLayers();
     ensureTileFallback();
+    if (!global.__MAPSQUARE_MOJIBAKE_OBSERVER__) {
+      global.__MAPSQUARE_MOJIBAKE_OBSERVER__ = new MutationObserver(() => cleanMojibake(document.body));
+      global.__MAPSQUARE_MOJIBAKE_OBSERVER__.observe(document.body, {
+        childList: true, subtree: true, characterData: true,
+      });
+    }
     global.setInterval(() => {
       bindDynamicLayers();
       bindPlantCards();
     }, 700);
+    resizeMap();
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, { once: true });
