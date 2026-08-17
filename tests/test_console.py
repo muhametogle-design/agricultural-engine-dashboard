@@ -116,7 +116,7 @@ def test_dashboard_served():
         "Soil amendment required", "ringAreaM2", "renderSim",
         "World_Imagery", "mt{s}.google.com", "OpenStreetMap Standard", "tile.openstreetmap.org",
         "Bing Satellite + Labels", "GisBingHybridLayer", "gisTileXYToQuadKey", "gis_bing_maps_key", "bing-key-input", "Field Intelligence Map",
-        "Plant Selector · LIMS Master Database", "plant-suitability-card", "openPlantSelectorForFarm", "evaluatePlantSuitability", "selectedPlantId", "native-tree-suitability.js",
+        "Plant Selector · LIMS Master Database", "plant-suitability-card", "openPlantSelectorForFarm", "evaluatePlantSuitability", "selectedPlantId", "native-tree-suitability.js", "gis-emergency-repair.js",
         "SQUARE v4", "map-frame", "map-summary", "map-aoi-count",
         "aspect-ratio:1/1", "grid-template-columns", "lab-map-label",
         "Afgooye Soil Laboratory", "updateAoiMapLabel", "localHwsdImagePromise",
@@ -153,6 +153,11 @@ def test_dashboard_served():
     assert r.text.count('<section class="page">') == 2
     assert "height:297mm;overflow:hidden" in r.text
     assert "Warbixinta Farsamo ee Beerta" in r.text
+
+    repair = client.get("/web/gis-emergency-repair.js")
+    assert repair.status_code == 200
+    for marker in ("invalidateSize", "ResizeObserver", "activeFeature", "bindDynamicLayers", "addNativePins", "OpenStreetMap contributors"):
+        assert marker in repair.text
 
     boundary = client.get("/web/somalia_unified.geojson")
     assert boundary.status_code == 200
