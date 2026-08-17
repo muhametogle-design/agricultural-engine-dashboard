@@ -23,6 +23,11 @@
   .draw-dot{background:#f59e0b;border:1px solid #7c2d12;border-radius:50%}
   .flora-active{outline:2px solid #fbbf24;outline-offset:-2px;border-color:#fbbf24!important}
   .soil-active{outline:2px solid #38bdf8;outline-offset:-2px}
+  #right.plant-selector-active{box-shadow:-10px 0 32px rgba(16,185,129,.16)}
+  #right.plant-selector-active #plant-selector-title{color:#6ee7b7;text-shadow:0 0 18px rgba(52,211,153,.35)}
+  .suitability-metric{border:1px solid rgba(71,85,105,.65);border-radius:7px;background:rgba(2,6,23,.55);padding:6px}
+  .suitability-metric span{display:block;color:#64748b;font-size:9px;text-transform:uppercase;letter-spacing:.04em}
+  .suitability-metric b{display:block;color:#e2e8f0;font-size:11px;margin-top:2px}
   button:focus-visible,input:focus-visible{outline:2px solid #34d399;outline-offset:1px}
 
   /* Compact, high-contrast map workspace */
@@ -339,16 +344,20 @@
     <div class="p-3 border-b border-slate-800 flex-none">
       <div class="flex items-center justify-between">
         <div>
-          <div class="font-bold text-emerald-300 text-sm">Global Crops · Fruits · Vegetables</div>
+          <div id="plant-selector-title" class="font-bold text-emerald-300 text-sm">Plant Selector · LIMS Master Database</div>
           <div id="produce-count" class="text-xs text-slate-400">Regional seed catalog ready · synchronizing local additions…</div>
         </div>
         <button onclick="toggleRight()" class="xl:hidden text-slate-500">✕</button>
       </div>
+      <div id="plant-selector-context" class="mt-2 rounded-lg border border-slate-800 bg-slate-900/80 px-2.5 py-2 text-xs text-slate-400">Draw or select a Beer polygon to activate plant suitability.</div>
       <input id="flora-search" oninput="onSearch()" data-i18n-placeholder="search" placeholder="Search plants…"
              aria-label="Search flora database" class="mt-2 w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm placeholder:text-slate-600"/>
       <div id="tabs" class="mt-2 flex flex-wrap gap-1 text-[11px]"></div>
     </div>
 
+    <div id="plant-suitability-card" class="mx-3 mt-3 flex-none rounded-xl border border-slate-800 bg-slate-900 p-3 text-xs text-slate-400">
+      Select a Beer polygon and plant to run the Ciid, Dhoobo, pH, aquifer and salinity check.
+    </div>
     <div id="flora-body" class="flex-none p-3 space-y-2"></div>
 
     <!-- SMART ENGINE -->
@@ -427,7 +436,7 @@ function applyLanguage(){
  document.querySelectorAll("[data-i18n]").forEach(node=>{node.textContent=tr(node.dataset.i18n);});
  document.querySelectorAll("[data-i18n-placeholder]").forEach(node=>{node.placeholder=tr(node.dataset.i18nPlaceholder);});
  const button=document.getElementById("lang-toggle");if(button)button.innerHTML=`<span class="${uiLang==="so"?"text-white":"text-slate-500"}">Soomaali</span> | <span class="${uiLang==="en"?"text-white":"text-slate-500"}">English</span>`;
- renderTabs();if(document.getElementById("flora-body"))renderFlora();if(document.getElementById("solar-pump-result"))renderSolarPump();if(Number.isFinite(state.aquiferAssessment?.lat)&&!document.getElementById("aquifer-alert")?.classList.contains("hidden"))assessGroundwater(L.latLng(state.aquiferAssessment.lat,state.aquiferAssessment.lng),state.aquiferAssessment.source);if(window.AGRI_I18N)AGRI_I18N.setLanguage(uiLang);
+ renderTabs();if(document.getElementById("flora-body"))renderFlora();if(document.getElementById("plant-suitability-card")&&typeof renderPlantSuitability==="function")renderPlantSuitability();if(document.getElementById("solar-pump-result"))renderSolarPump();if(Number.isFinite(state.aquiferAssessment?.lat)&&!document.getElementById("aquifer-alert")?.classList.contains("hidden"))assessGroundwater(L.latLng(state.aquiferAssessment.lat,state.aquiferAssessment.lng),state.aquiferAssessment.source);if(window.AGRI_I18N)AGRI_I18N.setLanguage(uiLang);
 }
 function toggleLanguage(){uiLang=uiLang==="en"?"so":"en";localStorage.setItem("agri_lang",uiLang);applyLanguage();}
 const STANDALONE_GIS=location.pathname.indexOf("/web/")===0;
@@ -447,7 +456,7 @@ document.getElementById("api-base").value=apiBase;
 document.getElementById("api-token").value=apiToken;
 document.getElementById("client-name").value=localStorage.getItem("ssb_client")||"";
 function saveClient(){localStorage.setItem("ssb_client",document.getElementById("client-name").value);}
-const state={draw:null,aois:[],selected:null,seq:1,flora:null,soil:"shabelle",labManual:false,aquiferAssessment:null,solarPump:null};
+const state={draw:null,aois:[],selected:null,seq:1,flora:null,soil:"shabelle",labManual:false,aquiferAssessment:null,solarPump:null,suitability:null};
 
 /* Synchronous catalog paint happens before Leaflet/network initialization. */
 function renderStartupCatalog(category="Fruits"){
@@ -485,7 +494,7 @@ function currentSoilSnapshot(){
 function farmCoordinates(a){return a.poly.getLatLngs()[0].map(point=>[Number(point.lng.toFixed(7)),Number(point.lat.toFixed(7))]);}
 async function persistFarm(a){
  const now=new Date().toISOString();a.history=a.history||[];
- await putFarmRecord({id:a.id,serverFieldId:a.serverFieldId||null,name:a.name,color:a.color,coordinates:farmCoordinates(a),createdAt:a.createdAt||now,updatedAt:now,history:a.history});
+ await putFarmRecord({id:a.id,serverFieldId:a.serverFieldId||null,name:a.name,color:a.color,coordinates:farmCoordinates(a),selectedPlantId:a.selectedPlantId||null,createdAt:a.createdAt||now,updatedAt:now,history:a.history});
 }
 function scheduleFarmPersist(a){clearTimeout(farmSaveTimer);farmSaveTimer=setTimeout(()=>persistFarm(a).catch(console.warn),350);}
 function historyApiPayload(event){return {event_type:event.type,soil_ph:event.soil?.ph,ec_ds_m:event.soil?.ec,organic_matter_pct:event.soil?.om,nitrogen_ppm:event.soil?.n,phosphorus_ppm:event.soil?.p,potassium_ppm:event.soil?.k,pathology_alerts:event.pathology?[event.pathology]:[],notes:event.notes,metadata:{plant:event.plant,offline_event_id:event.id,coordinates:event.coordinates},observed_at:event.recordedAt};}
@@ -505,7 +514,7 @@ function recordFarmEvent(a,type,extra){
 async function restoreFarmRecords(){
  try{
   const records=await allFarmRecords();if(!records.length)return;
-  records.sort((a,b)=>a.createdAt.localeCompare(b.createdAt)).forEach(record=>createAoi(record.coordinates.map(([lon,lat])=>L.latLng(lat,lon)),record.name,{id:record.id,serverFieldId:record.serverFieldId,color:record.color,createdAt:record.createdAt,history:record.history||[],restoring:true}));
+  records.sort((a,b)=>a.createdAt.localeCompare(b.createdAt)).forEach(record=>createAoi(record.coordinates.map(([lon,lat])=>L.latLng(lat,lon)),record.name,{id:record.id,serverFieldId:record.serverFieldId,color:record.color,createdAt:record.createdAt,selectedPlantId:record.selectedPlantId||null,history:record.history||[],restoring:true}));
   listAois();if(state.aois[0]){selectAoi(state.aois[0]);const group=L.featureGroup(state.aois.map(a=>a.poly));map.fitBounds(group.getBounds().pad(.2));}
  }catch(error){console.warn("Farm history restore failed",error);}
 }
@@ -649,7 +658,7 @@ function assessGroundwater(latlng,source="coordinate",showVisual=true){
   meta.textContent=uiLang==="so"?`${aquifer.name} · ${aquifer.type} · kalsoonida baaritaanka ${aquifer.confidence} · goobta la qiimeeyey`:`${aquifer.name} · ${aquifer.type} · ${aquifer.confidence} screening confidence · assessed from ${source}`;
   if(aquiferAssessmentMarker){aquiferAssessmentMarker.remove();aquiferAssessmentMarker=null;}if(showVisual)aquiferAssessmentMarker=L.circleMarker(latlng,{radius:9,color:"#fff",weight:3,fillColor:aquifer.color,fillOpacity:1}).bindTooltip(`${uiLang==="so"?"Goob ceel":"Well candidate"} · ${depth} m`,{permanent:true,direction:"top",className:"aquifer-label"}).addTo(map);
  }else{state.aquiferAssessment={name:uiLang==="so"?"Kayd biyo lama khariidadayn":"No mapped aquifer",depth:null,yieldM3:null,confidence:uiLang==="so"?"Xog ma jirto":"No coverage",lat:latlng.lat,lng:latlng.lng,source};text.textContent=uiLang==="so"?"Goobtan kuma jirto kayd biyo wax-soo-saar leh oo khariidadaysan. Samee VES iyo xaqiijin ceel ka hor qodista.":"No mapped productive aquifer intersects this coordinate. Complete VES resistivity and borehole verification before drilling.";meta.textContent=uiLang==="so"?"Ka baxsan xuduudaha baaritaanka hadda jira":`Outside current screening boundaries · assessed from ${source}`;if(aquiferAssessmentMarker){aquiferAssessmentMarker.remove();aquiferAssessmentMarker=null;}if(showVisual)aquiferAssessmentMarker=L.circleMarker(latlng,{radius:8,color:"#fff",weight:2,fillColor:"#64748b",fillOpacity:1}).bindTooltip(uiLang==="so"?"Kayd biyo lama khariidadayn":"No mapped aquifer",{permanent:true,direction:"top",className:"aquifer-label"}).addTo(map);}
- renderSolarPump();alert.classList.toggle("hidden",!showVisual);
+ renderSolarPump();if(typeof renderPlantSuitability==="function")renderPlantSuitability();alert.classList.toggle("hidden",!showVisual);
 }
 function toggleAquiferLayer(on){if(on){aquiferLayer.addTo(map);const point=state.selected?state.selected.poly.getBounds().getCenter():state.aquiferAssessment&&Number.isFinite(state.aquiferAssessment.lat)?L.latLng(state.aquiferAssessment.lat,state.aquiferAssessment.lng):null;if(point)assessGroundwater(point,state.selected?"selected farm polygon":"map coordinate",true);}else{aquiferLayer.remove();document.getElementById("aquifer-alert").classList.add("hidden");if(aquiferAssessmentMarker){aquiferAssessmentMarker.remove();aquiferAssessmentMarker=null;}}}
 
@@ -856,7 +865,7 @@ const dotIcon=()=>L.divIcon({className:"draw-dot",iconSize:[10,10]});
 const PALETTE=["#34d399","#38bdf8","#f472b6","#facc15","#a78bfa","#fb923c"];
 function createAoi(latlngs,name,options={}){const color=options.color||PALETTE[state.aois.length%PALETTE.length];
  const poly=L.polygon(latlngs,{color,weight:2,fillColor:color,fillOpacity:.15}).addTo(map);
- const a={id:options.id||"farm-"+Date.now()+"-"+state.seq++,serverFieldId:options.serverFieldId||null,name,color,poly,handles:null,mids:[],editing:false,dirty:true,geometryDirty:false,_m2:null,createdAt:options.createdAt||new Date().toISOString(),history:options.history||[]};
+ const a={id:options.id||"farm-"+Date.now()+"-"+state.seq++,serverFieldId:options.serverFieldId||null,name,color,poly,handles:null,mids:[],editing:false,dirty:true,geometryDirty:false,_m2:null,selectedPlantId:options.selectedPlantId||null,createdAt:options.createdAt||new Date().toISOString(),history:options.history||[]};
  poly.on("click",()=>selectAoi(a));state.aois.push(a);updateAoiMapLabel(a);
  if(options.restoring)return a;
  listAois();selectAoi(a);map.fitBounds(poly.getBounds().pad(.3));
@@ -877,9 +886,9 @@ function addMid(a,i){const m=L.marker([0,0],{icon:L.divIcon({className:"mid-mark
  a.mids.push(m);moveMids(a);}
 function moveMids(a){const ll=a.poly.getLatLngs()[0];if(!a.mids)return;a.mids.forEach((m,i)=>{const p=ll[i],q=ll[(i+1)%ll.length];m.setLatLng([(p.lat+q.lat)/2,(p.lng+q.lng)/2]);});}
 function dropVertex(a,i){const ll=a.poly.getLatLngs()[0];if(ll.length<=3){alert("Keep at least 3 vertices.");return;}ll.splice(i,1);a.poly.setLatLngs(ll);a.dirty=true;a.geometryDirty=true;setEditable(a,true);updateStats();}
-function selectAoi(a){state.selected=a;state.aois.forEach(x=>{const on=x===a;x.poly.setStyle({weight:on?3:2,fillOpacity:on?.22:.15});if(x!==a&&x.editing)setEditable(x,false);});updateStats();listAois();assessGroundwater(a.poly.getBounds().getCenter(),"selected farm polygon",document.getElementById("ov-aquifer").checked);}
+function selectAoi(a){state.selected=a;state.aois.forEach(x=>{const on=x===a;x.poly.setStyle({weight:on?3:2,fillOpacity:on?.22:.15});if(x!==a&&x.editing)setEditable(x,false);});updateStats();listAois();assessGroundwater(a.poly.getBounds().getCenter(),"selected farm polygon",document.getElementById("ov-aquifer").checked);openPlantSelectorForFarm(a);}
 function updateStats(){document.getElementById("stat-count").textContent=state.aois.length;const mapCount=document.getElementById("map-aoi-count");if(mapCount)mapCount.textContent=state.aois.length;const a=state.selected;
- if(!a){document.getElementById("stat-ha").textContent="—";document.getElementById("stat-ac").textContent="select / draw a polygon";renderFencingPlanner(null);renderSim();return;}
+ if(!a){document.getElementById("stat-ha").textContent="—";document.getElementById("stat-ac").textContent="select / draw a polygon";renderFencingPlanner(null);renderSim();if(typeof renderPlantSuitability==="function")renderPlantSuitability();return;}
  const m2=aoiM2(a);updateAoiMapLabel(a);document.getElementById("stat-ha").textContent=fmtHa(m2);
  document.getElementById("stat-ac").textContent=fmtAc(m2)+" · "+fnum(m2,0)+" m²";
  const row=document.querySelector(`[data-aoi="${a.id}"] .aoi-area`);if(row)row.textContent=fmtHa(m2);scheduleFarmPersist(a);renderFencingPlanner(a);if(a.geometryDirty)assessGroundwater(a.poly.getBounds().getCenter(),"edited farm polygon",document.getElementById("ov-aquifer").checked);renderSim();}
@@ -1222,7 +1231,7 @@ function enrich(e, kind, group){
  const k=meta.kind||kind;
  return {somali:e.somali_name,en:e.english_name,sci:e.scientific_name,season:e.seasonal_behavior,
   output:e.fruit_output,care:e.planting_care,ph:phOf(e.optimal_soil_ph),avoid:e.what_to_avoid,
-  group,kind:k,pathologies:pathologiesForFlora(e,k),
+  group,kind:k,rootDepth:meta.rootDepth||(k==="crop"?"Medium":"Deep"),nitrogenDemand:meta.nitrogenDemand||(k==="crop"?"Heavy Feeder":"Light Feeder"),pathologies:pathologiesForFlora(e,k),
   spacing:meta.spacing||(k==="crop"?[1.5,0.6]:[8,8]),
   seedKgHa:meta.seedKgHa,seedNote:meta.seedNote,yieldT:meta.yieldT,
   kgYr:meta.kgYr,yieldNote:meta.yieldNote,water:meta.water||(k==="crop"?{mode:"crop",mm:450}:{mode:"tree",lTreeWeek:30})};
@@ -1232,7 +1241,7 @@ function sharedFlora(item){
  return {catalogId:item.id,somali:item.categorySo||"",en:item.name,sci:item.family+" · regional cultivar",season:(item.seasons||[]).join(" · "),
   output:item.category==="Seed Oil"?"Regional oilseed/oil-tree production":"Regional produce profile for "+item.region,
   care:"Root profile: "+item.rootDepth+" · "+item.nitrogenDemand,ph:[item.minPh,item.maxPh],
-  avoid:"Avoid pH outside "+item.minPh+"–"+item.maxPh+" and monitor linked pathology risks.",group:item.category,kind:isTree?"tree":"crop",
+  avoid:"Avoid pH outside "+item.minPh+"–"+item.maxPh+" and monitor linked pathology risks.",group:item.category,kind:isTree?"tree":"crop",rootDepth:item.rootDepth||"Medium",nitrogenDemand:item.nitrogenDemand||"Light Feeder",
   spacing:isTree?[6,6]:[1.2,.4],seedKgHa:isTree?0:20,seedNote:isTree?"certified nursery stock":"use locally certified seed",
   yieldT:isTree?null:[1,4],kgYr:isTree?[15,80]:null,yieldNote:null,water:isTree?{mode:"tree",lTreeWeek:35}:{mode:"crop",mm:500},
   pathologies:item.pathologies||[]};
@@ -1257,7 +1266,7 @@ function syncUnifiedCatalog(records){
  const knownCategories=new Set(["Tree","Fruits","Seed Oil","Vegetables"]);
  DB.crops=BASE_GIS_CROPS.concat(converted.filter((_,index)=>records[index].category==="Field Crops"||!knownCategories.has(records[index].category)));
  DB.vegetables=BASE_GIS_VEGETABLES.concat(converted.filter((_,index)=>records[index].category==="Vegetables"));
- updateProduceCount();if(typeof renderFlora==="function")renderFlora();
+ updateProduceCount();if(state.selected?.selectedPlantId&&typeof findFloraByKey==="function")state.flora=findFloraByKey(state.selected.selectedPlantId);if(typeof renderFlora==="function")renderFlora();if(typeof renderPlantSuitability==="function")renderPlantSuitability();
 }
 updateProduceCount();
 if(window.AGRI_DATA_STORE){AGRI_DATA_STORE.ready.then(syncUnifiedCatalog).catch(console.warn);AGRI_DATA_STORE.subscribe(syncUnifiedCatalog);}
@@ -1291,7 +1300,7 @@ function applyLab(opts){
  logEv(`${manual?"Laboratory sample applied":"Auto-sample applied"} — pH ${ph}${ec?", EC "+ec+" dS/m":""}${om?", OM "+om+"%":""}${n?", N "+n+" ppm":""}${p?", P "+p+" ppm":""}${k?", K "+k+" ppm":""}`,{flora:state.flora?state.flora.en:null,rating:r,src});
  if(state.selected)recordFarmEvent(state.selected,"soil_test",{notes:src});
  if(activeTab==="soil")renderFlora();
- renderSim();
+ renderSim();renderPlantSuitability();
 }
 
 /* ── Hybrid mode: auto-generate the lab baseline from FAO/IIASA HWSD v2.0 ── */
@@ -1424,7 +1433,7 @@ function floraCard(f){
  const pathologySelect=el.querySelector(".plant-pathology-select"),pathologyNote=el.querySelector(".plant-pathology-note");
  pathologySelect.onclick=event=>event.stopPropagation();
  pathologySelect.onchange=event=>{event.stopPropagation();const item=f.pathologies[Number(event.target.value)];pathologyNote.innerHTML=`<b>${item.cause}</b> · ${item.action}`;if(state.selected)recordFarmEvent(state.selected,"pathology_alert",{pathology:item.name,plant:f.en,notes:item.action});};
- el.onclick=()=>{state.flora=f;renderFlora();renderSim();logEv("Selected flora profile: "+f.en+" ("+f.sci+")",{area:state.selected?fmtHa(aoiM2(state.selected)):null,flora:f.en,rating:healthScore(SOILS[state.soil]),src:"global flora database"});};
+ el.onclick=()=>selectFloraForPolygon(f);
  return el;
 }
 const alphaFlora=(a,b)=>a.en.localeCompare(b.en,undefined,{sensitivity:"base"});
@@ -1466,7 +1475,7 @@ function renderSoils(body){
    ${typeof s.n==="number"?`<div class="mt-1.5 text-[10px] text-slate-400">N ${s.n} ppm (${N_BAND(s.n)[0]}) · P ${s.p} ppm (${P_BAND(s.p)[0]}) · K ${s.k} ppm (${K_BAND(s.k)[0]})</div>`:""}
    <div class="mt-2 text-[11px] text-slate-400 leading-snug">${s.note}</div>
    <div class="mt-1.5 text-right text-[10px] ${active?"text-sky-300 font-bold":"text-slate-600"}">${active?"● field soil selected":"tap to select as field soil"}</div>`;
-  el.onclick=()=>{state.soil=id;renderFlora();renderSim();logEv("Field soil diagnostic set to: "+s.name+" ["+s.wrb+"]",{area:state.selected?fmtHa(aoiM2(state.selected)):null,flora:state.flora?state.flora.en:null,rating:r,src:"soil diagnostic substrate"});};
+  el.onclick=()=>{state.soil=id;renderFlora();renderSim();renderPlantSuitability();logEv("Field soil diagnostic set to: "+s.name+" ["+s.wrb+"]",{area:state.selected?fmtHa(aoiM2(state.selected)):null,flora:state.flora?state.flora.en:null,rating:r,src:"soil diagnostic substrate"});};
   body.appendChild(el);});
  body.insertAdjacentHTML("beforeend",'<div class="text-[10px] text-slate-600 px-1 pt-1">Enter laboratory values in the left sidebar to override any regional baseline.</div>');
 }
@@ -1500,6 +1509,53 @@ function findEnriched(item){
  for(const [,arr]of DB.fruitGroups)for(const f of arr)if(f.sci===sci)return f;
  return [...DB.nativeTrees,...DB.seedOils,...DB.crops,...DB.vegetables].find(f=>f.sci===sci)||null;
 }
+function allPlantSelectorEntries(){return [...DB.nativeTrees,...DB.fruitGroups.flatMap(([,items])=>items),...DB.seedOils,...DB.crops,...DB.vegetables];}
+function floraSelectionKey(f){return f?(f.catalogId||f.sci||f.en):null;}
+function findFloraByKey(key){return key?allPlantSelectorEntries().find(f=>floraSelectionKey(f)===key||f.sci===key||f.en===key)||null:null;}
+function tabForFlora(f){if(!f)return "fruits";if(DB.seedOils.includes(f))return "seedOils";if(DB.vegetables.includes(f))return "vegetables";if(DB.crops.includes(f))return "crops";if(DB.fruitGroups.some(([,items])=>items.includes(f)))return "fruits";return "nativeTrees";}
+function classifyCiidDhoobo(texture="",wrb=""){const hay=(texture+" "+wrb).toLowerCase();if(/clay|vertis|dhoobo|cracking/.test(hay))return {code:"clay",label:"Dhoobo / Clay"};if(/sand|arenosol|gypsi|ciid/.test(hay))return {code:"sandy",label:"Ciid / Sandy"};return {code:"loam",label:"Ciid isku-dhafan / Loam"};}
+function nearestGroundwaterStation(latlng){return GROUNDWATER_NETWORK.stations.reduce((best,station)=>{const distance=latlng.distanceTo(L.latLng(station.lat,station.lon));return !best||distance<best.distance?{station,distance}:best;},null);}
+function activePolygonSuitabilityMetrics(a=state.selected){if(!a)return null;const profile=SOILS[state.soil]||SOILS.shabelle,latest=[...(a.history||[])].reverse().find(event=>event.type==="soil_test"&&event.soil),soil=latest?.soil||{},center=a.poly.getBounds().getCenter(),nearest=nearestGroundwaterStation(center),number=(value,fallback=null)=>value!==null&&value!==undefined&&value!==""&&Number.isFinite(Number(value))?Number(value):fallback,ph=number(soil.ph,number(profile.ph)),ec=number(soil.ec,number(profile.ec)),texture=profile.texture||soil.soilClass||"regional soil",classification=classifyCiidDhoobo(texture,profile.wrb),station=nearest?.station,aquifer=aquiferAt(center.lat,center.lng),aquiferSignal=Math.abs(Math.sin(center.lat*31.7+center.lng*7.9)),aquiferDepth=aquifer?Math.round(aquifer.depth[0]+aquiferSignal*(aquifer.depth[1]-aquifer.depth[0])):null;
+ const arid=!new Set(["shabelle","mshabelle","hiiraan","ljuba","mjuba"]).has(state.soil);
+ return {ph,ec,texture,soilClass:profile.name||soil.soilClass||state.soil,wrb:profile.wrb||"—",classification:classification.label,soilCode:classification.code,aquiferDepth,aquiferName:aquifer?.name||"Unmapped",conductivity:number(station?.conductivity),salinity:number(station?.salinity),groundwaterStation:station?.name||"—",groundwaterDistanceKm:nearest?nearest.distance/1000:null,climateZone:arid?"Arid pastoral":"Riverine semi-arid"};}
+function evaluatePlantSuitability(plant,metrics,lang="en"){
+ const so=lang==="so",checks=[],recommendations=[],hay=`${plant.en} ${plant.sci} ${plant.care} ${plant.avoid}`.toLowerCase(),add=(level,en,soText,fixEn,fixSo)=>{checks.push({level,text:so?soText:en});if(level>0&&(fixEn||fixSo))recommendations.push(so?(fixSo||fixEn):(fixEn||fixSo));};
+ const phLow=Number(plant.ph?.[0]??5.5),phHigh=Number(plant.ph?.[1]??7.5),ph=metrics.ph,phGap=ph<phLow?phLow-ph:ph>phHigh?ph-phHigh:0;
+ if(phGap===0)add(0,`pH ${ph} is inside the optimal ${phLow}–${phHigh} range.`,`pH ${ph} wuxuu ku jiraa xadka habboon ${phLow}–${phHigh}.`);
+ else if(phGap<=0.8)add(1,`pH ${ph} is marginal for the ${phLow}–${phHigh} target.`,`pH ${ph} waa xad-dhexaad marka loo eego ${phLow}–${phHigh}.`,ph>phHigh?"Use elemental sulfur, compost and acidified irrigation after a lab buffer test.":"Use agricultural lime after a laboratory lime-requirement test.",ph>phHigh?"Isticmaal baaruud, compost iyo waraab aashito leh kadib tijaabada shaybaarka.":"Isticmaal lime beeraha kadib tijaabada baahida lime-ka.");
+ else add(2,`pH ${ph} is far outside the ${phLow}–${phHigh} range.`,`pH ${ph} aad ayuu uga baxsan yahay xadka ${phLow}–${phHigh}.`,"Choose a pH-tolerant crop or complete a verified multi-season amendment programme.","Dooro dalag u adkaysta pH-ga ama samee barnaamij hagaajin la xaqiijiyey.");
+ const saltSensitive=/avocado|banana|papaya|citrus|orange|lemon|lime|strawberry|bean|onion|carrot|potato|kiwi/.test(hay),saltTolerant=/salvadora|toothbrush|date palm|phoenix|jojoba|olive|pomegranate|fig|sesame|sorghum|millet|barley|quinoa|beet/.test(hay),ecLimit=saltTolerant?6:saltSensitive?1.5:3;
+ if(metrics.ec==null)add(1,"Soil salinity EC has not been tested.","EC-ga milixda Ciidda lama tijaabin.","Test saturated-paste or field EC before planting.","Tijaabi EC-ga Ciidda ka hor beerista.");
+ else if(metrics.ec<=ecLimit)add(0,`Soil EC ${metrics.ec} dS/m is within the working limit.`,`EC-ga Ciidda ${metrics.ec} dS/m wuxuu ku jiraa xadka shaqada.`);
+ else if(metrics.ec<=ecLimit+1.5)add(1,`Soil EC ${metrics.ec} dS/m needs salinity management.`,`EC-ga Ciidda ${metrics.ec} dS/m wuxuu u baahan yahay maarayn milix.`,"Use drip irrigation, drainage, leaching fraction and lower-salinity source blending.","Adeegso waraabka dhibicda, dheecaan, dhaqidda milixda iyo isku-darka biyo milix yar.");
+ else add(2,`Soil EC ${metrics.ec} dS/m exceeds this plant's tolerance.`,`EC-ga Ciidda ${metrics.ec} dS/m wuxuu dhaafay dulqaadka geedkan.`,"Do not establish until salinity is corrected and confirmed by laboratory testing.","Ha beerin ilaa milixda la saxo oo shaybaar lagu xaqiijiyo.");
+ const drainageSensitive=/waterlog|standing water|poor drainage|poorly drained|root rot|perfect drainage/.test(hay);
+ if(metrics.soilCode==="clay"&&drainageSensitive)add(metrics.ec>2?2:1,`Dhoobo/clay raises drainage and root-rot risk for ${plant.en}.`,`Dhoobo waxay kordhinaysaa khatarta dheecaan-xumada iyo qudhunka xididka ${plant.en}.`,"Use raised beds, ripping and verified surface/subsurface drainage.","Adeegso sariiro kor loo qaaday, jeexid iyo dheecaan la xaqiijiyey.");
+ else if(metrics.soilCode==="sandy"&&(plant.nitrogenDemand==="Heavy Feeder"||Number(plant.water?.mm||0)>=800))add(1,"Ciid/sandy soil drains quickly and has low nutrient retention.","Ciiddu si dhakhso ah ayay u daadisaa biyaha, nafaqadana way yar haysaa.","Add compost bands, mulch and frequent low-volume fertigation.","Ku dar compost, mulch iyo bacrimin-waraab yar oo soo noqnoqda.");
+ else add(0,`${metrics.classification} is compatible with the plant's root profile.`,`${metrics.classification} waxay la jaanqaadaysaa xididdada geedka.`);
+ const highWater=Number(plant.water?.mm||0)>=900||/banana|papaya|coconut|citrus|rice|celery/.test(hay),depth=metrics.aquiferDepth;
+ if(depth==null)add(1,"Aquifer depth is unverified for this Beer.","Qoto-dheeraanta biyaha Beer-kan lama xaqiijin.","Complete VES and a pumping test before irrigation investment.","Samee VES iyo tijaabada bamgareynta ka hor maalgelinta waraabka.");
+ else if((highWater&&depth>150)||depth>240)add(2,`Aquifer depth ${depth} m creates a high irrigation reliability and energy risk.`,`Qoto-dheeraanta biyaha ${depth} m waxay keentaa khatar waraab iyo tamar sare.`,"Choose a lower-water crop or verify a high-yield borehole, storage and energy design.","Dooro dalag biyo yar ama xaqiiji ceel wax-soo-saar sare, kayd iyo naqshad tamar.");
+ else if(depth>120||(highWater&&depth>80))add(1,`Aquifer depth ${depth} m requires efficient pumping and storage.`,`Qoto-dheeraanta biyaha ${depth} m waxay u baahan tahay bam iyo kayd hufan.`,"Use solar pump sizing, night storage and deficit-aware drip scheduling.","Adeegso cabbirka bamka qorraxda, kayd iyo jadwal waraab dhibic ah.");
+ else add(0,`Aquifer depth ${depth} m is workable for the modeled irrigation demand.`,`Qoto-dheeraanta biyaha ${depth} m waa la maareyn karaa baahida waraabka.`);
+ const waterConductivityLimit=saltTolerant?4500:saltSensitive?1800:2800,conductivity=metrics.conductivity;
+ if(conductivity!=null&&conductivity>waterConductivityLimit*1.5)add(2,`Nearest groundwater conductivity ${conductivity} µS/cm is a severe salinity risk.`,`Gudbinta biyaha ${conductivity} µS/cm waa khatar milixeed oo daran.`,"Laboratory-test irrigation water and use another source or salt-tolerant species.","Shaybaar ku tijaabi biyaha; isticmaal il kale ama geed milix u adkaysta.");
+ else if(conductivity!=null&&conductivity>waterConductivityLimit)add(1,`Groundwater conductivity ${conductivity} µS/cm is marginal.`,`Gudbinta biyaha ${conductivity} µS/cm waa xad-dhexaad.`,"Blend water, monitor root-zone EC and provide drainage/leaching.","Isku qas biyaha, la soco EC-ga xididka, sameena dheecaan iyo dhaqid.");
+ else if(conductivity!=null)add(0,`Groundwater conductivity ${conductivity} µS/cm is within the screening limit.`,`Gudbinta biyaha ${conductivity} µS/cm waxay ku jirtaa xadka baaritaanka.`);
+ if(metrics.climateZone==="Arid pastoral"&&highWater)add(1,"High crop water demand conflicts with the arid pastoral climate.","Baahida biyaha badan waxay ka hor imanaysaa cimilada qalalan ee xoolo-dhaqatada.","Use protected drip irrigation, mulch, windbreaks and seasonal water budgeting.","Adeegso waraab dhibic ah, mulch, dabayl-joojiye iyo miisaaniyad biyo xilliyeed.");
+ else add(0,"The crop water profile is compatible with the screened climate class.","Baahida biyaha dalaggu waxay la jaanqaadaysaa nooca cimilada la baaray.");
+ const red=checks.filter(check=>check.level===2).length,yellow=checks.filter(check=>check.level===1).length,status=red?"red":yellow?"yellow":"green",score=Math.max(0,100-red*35-yellow*12),labels={green:{emoji:"🟢",name:"Green · Habboon / Eligible"},yellow:{emoji:"🟡",name:"Yellow · Khatar Dhex-dhexaad / Moderate"},red:{emoji:"🔴",name:"Red · Ku Habboonaan La'aan / Unsuitable"}};
+ return {status,score,label:labels[status],checks,recommendations:[...new Set(recommendations)],phRange:[phLow,phHigh],ecLimit};
+}
+function renderPlantSuitability(){const card=document.getElementById("plant-suitability-card"),context=document.getElementById("plant-selector-context"),a=state.selected,f=state.flora;if(!card||!context)return;
+ if(!a){state.suitability=null;context.textContent=uiLang==="so"?"Sawir ama dooro Beer si aad u bilowdo Xulashada Dhirta.":"Draw or select a Beer polygon to activate Plant Selector.";card.className="mx-3 mt-3 flex-none rounded-xl border border-slate-800 bg-slate-900 p-3 text-xs text-slate-400";card.textContent=uiLang==="so"?"Dooro Beer iyo geed si loo baaro Ciid, Dhoobo, pH, biyo iyo milix.":"Select a Beer polygon and plant to run the Ciid, Dhoobo, pH, aquifer and salinity check.";return;}
+ context.innerHTML=`<b class="text-emerald-300">${htmlEscape(a.name)}</b> · ${fmtHa(aoiM2(a))} · ${uiLang==="so"?"Beer firfircoon":"active Beer"}`;
+ if(!f){state.suitability=null;card.className="mx-3 mt-3 flex-none rounded-xl border border-sky-800 bg-sky-950/20 p-3 text-xs text-sky-100";card.innerHTML=`<b>${uiLang==="so"?"Beer waa diyaar — hadda dooro geed":"Beer ready — now select a plant"}</b><div class="mt-1 text-slate-400">Midho · Khudaar · Saliidda Abuurka · Trees</div>`;return;}
+ const metrics=activePolygonSuitabilityMetrics(a),result=evaluatePlantSuitability(f,metrics,uiLang);state.suitability=result;const tone=TONE[result.status==="yellow"?"amber":result.status],checkIcon=level=>level===0?"✓":level===1?"!":"×",recommendations=result.recommendations.length?`<div class="mt-2 rounded-lg border border-slate-700 bg-slate-950/50 p-2"><b class="text-amber-200">${uiLang==="so"?"Tallaabooyinka lagu taliyey":"Recommended actions"}</b><ul class="mt-1 list-disc space-y-1 pl-4 text-slate-300">${result.recommendations.map(item=>`<li>${htmlEscape(item)}</li>`).join("")}</ul></div>`:"";
+ card.className=`mx-3 mt-3 flex-none rounded-xl border p-3 text-xs ${tone.cls} ${tone.txt}`;card.innerHTML=`<div class="flex items-start gap-2"><span class="text-xl">${result.label.emoji}</span><div><b class="text-sm">${result.label.name}</b><div class="text-[10px] opacity-80">${htmlEscape(a.name)} · ${htmlEscape(f.somali||f.en)} / ${htmlEscape(f.en)} · score ${result.score}/100</div></div></div><div class="mt-2 grid grid-cols-3 gap-1.5"><div class="suitability-metric"><span>Ciid / Dhoobo</span><b>${htmlEscape(metrics.classification)}</b></div><div class="suitability-metric"><span>pH</span><b>${metrics.ph??"—"} · target ${result.phRange.join("–")}</b></div><div class="suitability-metric"><span>EC / salinity</span><b>${metrics.ec??"—"} dS/m · ${metrics.salinity??"—"} g/L water</b></div><div class="suitability-metric"><span>Aquifer</span><b>${metrics.aquiferDepth??"—"} m · ${htmlEscape(metrics.aquiferName)}</b></div><div class="suitability-metric"><span>Conductivity</span><b>${metrics.conductivity??"—"} µS/cm · ${htmlEscape(metrics.groundwaterStation)}</b></div><div class="suitability-metric"><span>Climate</span><b>${htmlEscape(metrics.climateZone)}</b></div></div><div class="mt-2 space-y-1">${result.checks.map(check=>`<div class="flex gap-1.5"><b>${checkIcon(check.level)}</b><span>${htmlEscape(check.text)}</span></div>`).join("")}</div>${recommendations}<div class="mt-2 text-[9px] opacity-70">${uiLang==="so"?"Baaritaan go'aan-taageero ah; xaqiiji shaybaarka, VES iyo tayada biyaha.":"Decision-support screening; verify laboratory soil, VES and irrigation-water quality."}</div>`;
+}
+function openPlantSelectorForFarm(a){if(!a)return;const right=document.getElementById("right"),saved=findFloraByKey(a.selectedPlantId);state.flora=saved||null;if(saved)activeTab=tabForFlora(saved);else if(activeTab==="soil"||activeTab==="crops")activeTab="fruits";right.classList.remove("translate-x-full");right.classList.add("plant-selector-active");right.scrollTop=0;renderTabs();renderFlora();renderPlantSuitability();setTimeout(()=>map.invalidateSize(),60);}
+function selectFloraForPolygon(f){const a=state.selected,key=floraSelectionKey(f),changed=!a||a.selectedPlantId!==key;state.flora=f;if(a){a.selectedPlantId=key;scheduleFarmPersist(a);if(changed)recordFarmEvent(a,"note",{plant:f.en,notes:`Plant Selector suitability profile selected: ${f.en}`});}renderFlora();renderSim();renderPlantSuitability();logEv("Selected flora profile: "+f.en+" ("+f.sci+")",{area:a?fmtHa(aoiM2(a)):null,flora:f.en,rating:healthScore(SOILS[state.soil]),src:"LIMS master plant selector"});}
 function renderSim(){
  const box=document.getElementById("sim-body");
  const a=state.selected,f=state.flora;
@@ -1529,7 +1585,7 @@ function renderSim(){
   <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] mb-2">
     <span>🗺️ <b class="text-emerald-300">${a.name}</b> · ${fmtHa(m2)}</span>
     <span>🌿 <b class="text-amber-300">${f.somali} — ${f.en}</b></span>
-    <span>🧪 <select onchange="state.soil=this.value;renderSim();renderFlora()" class="bg-slate-950 border border-slate-700 rounded px-1.5 py-0.5 text-[11px] max-w-[150px]">
+    <span>🧪 <select onchange="state.soil=this.value;renderSim();renderFlora();renderPlantSuitability()" class="bg-slate-950 border border-slate-700 rounded px-1.5 py-0.5 text-[11px] max-w-[150px]">
       ${REGION_ORDER.filter(id=>!SOILS[id].hidden||id===state.soil).map(id=>`<option value="${id}" ${id===state.soil?"selected":""}>${SOILS[id].name.split(" ").slice(0,2).join(" ")}</option>`).join("")}
     </select></span>
     <span class="rounded px-1.5 py-0.5 border border-emerald-700 text-emerald-300 text-[10px]">Health ${r.score}/100 · ${r.grade}</span>

@@ -304,6 +304,14 @@ arrive as `Decimal` (repository boundary now normalizes to float).
 * A synchronous `STATIC_MASTER_CATALOG` paints usable categories before Leaflet,
   IndexedDB or network code runs; LIMS also embeds a seven-entry Seed Oil fallback.
   The GIS hamburger persists a true collapsed state and invalidates Leaflet sizing.
+* Drawing or clicking a Beer polygon now opens the **Plant Selector · LIMS Master
+  Database** panel automatically. Trees, Midho, Khudaar and Saliidda Abuurka use
+  the shared catalog, and each polygon retains its selected master plant ID.
+* The polygon suitability engine combines Ciid/Dhoobo texture, measured or saved
+  pH/EC, screened aquifer depth, nearest groundwater conductivity/salinity and
+  arid/riverine climate demand. It renders Green Habboon/Eligible, Yellow Khatar
+  Dhex-dhexaad/Moderate, or Red Ku Habboonaan La'aan/Unsuitable with bilingual
+  reasons and amendment/irrigation actions.
 * The default camera is Laascaanood (`8.4774, 47.3597`). The GIS Engine basemap
   selector includes OpenStreetMap Standard, Esri and Google imagery, plus a
   quadkey-based Bing Satellite + Labels option. Bing never requests tiles until
@@ -407,7 +415,7 @@ arrive as `Decimal` (repository boundary now normalizes to float).
 
 ## Tests
 
-96 passing (`pytest`): engine math with known-answer fixtures, respx-mocked
+97 passing (`pytest`): engine math with known-answer fixtures, respx-mocked
 SoilGrids/POWER/Open-Meteo clients (retry, sentinel, null, coverage paths),
 orchestrator degradation, irrigation schedule/volume arithmetic, CSV/iCalendar
 exports, DEM provider against a synthetic plane, Dawaad drought/water GeoJSON

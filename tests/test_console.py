@@ -115,6 +115,7 @@ def test_dashboard_served():
         "Soil amendment required", "ringAreaM2", "renderSim",
         "World_Imagery", "mt{s}.google.com", "OpenStreetMap Standard", "tile.openstreetmap.org",
         "Bing Satellite + Labels", "GisBingHybridLayer", "gisTileXYToQuadKey", "gis_bing_maps_key", "bing-key-input", "Field Intelligence Map",
+        "Plant Selector · LIMS Master Database", "plant-suitability-card", "openPlantSelectorForFarm", "evaluatePlantSuitability", "selectedPlantId",
         "SQUARE v4", "map-frame", "map-summary", "map-aoi-count",
         "aspect-ratio:1/1", "grid-template-columns", "lab-map-label",
         "Afgooye Soil Laboratory", "updateAoiMapLabel", "localHwsdImagePromise",
@@ -170,6 +171,32 @@ def test_gis_bing_quadkey_engine():
     engine = source[start:end]
     check = "\nif (gisTileXYToQuadKey(3, 5, 3) !== '213') throw new Error('quadkey regression');"
     completed = subprocess.run([node, "-e", engine + check], capture_output=True, text=True)
+    assert completed.returncode == 0, completed.stderr
+
+
+def test_polygon_plant_suitability_engine_has_green_yellow_red_outcomes():
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("Node.js is required for the suitability regression")
+    dashboard_path = Path(__file__).resolve().parents[1] / "app/web/dashboard.html"
+    source = dashboard_path.read_text(encoding="utf-8")
+    start = source.index("function evaluatePlantSuitability")
+    end = source.index("function renderPlantSuitability", start)
+    engine = source[start:end]
+    checks = r'''
+const greenPlant={en:"Jojoba",sci:"Simmondsia chinensis",care:"drought and salt tolerant",avoid:"",ph:[6,8.5],water:{mm:500},nitrogenDemand:"Light Feeder"};
+const greenMetrics={ph:7,ec:1,soilCode:"sandy",classification:"Ciid / Sandy",aquiferDepth:60,conductivity:1000,climateZone:"Arid pastoral"};
+const yellowPlant={en:"Banana",sci:"Musa acuminata",care:"high water",avoid:"avoid waterlogging",ph:[5.5,7],water:{mm:1500},nitrogenDemand:"Heavy Feeder"};
+const yellowMetrics={ph:7.4,ec:1.8,soilCode:"sandy",classification:"Ciid / Sandy",aquiferDepth:100,conductivity:2000,climateZone:"Arid pastoral"};
+const redPlant={en:"Avocado",sci:"Persea americana",care:"perfect drainage",avoid:"root rot and saline water",ph:[5.5,7],water:{mm:1000},nitrogenDemand:"Heavy Feeder"};
+const redMetrics={ph:9,ec:5,soilCode:"clay",classification:"Dhoobo / Clay",aquiferDepth:180,conductivity:5000,climateZone:"Arid pastoral"};
+const results=[evaluatePlantSuitability(greenPlant,greenMetrics),evaluatePlantSuitability(yellowPlant,yellowMetrics),evaluatePlantSuitability(redPlant,redMetrics)];
+if (results.map(item=>item.status).join(",") !== "green,yellow,red") throw new Error(JSON.stringify(results));
+if (!results[0].label.name.includes("Habboon / Eligible")) throw new Error("green label");
+if (!results[1].label.name.includes("Khatar Dhex-dhexaad / Moderate")) throw new Error("yellow label");
+if (!results[2].label.name.includes("Ku Habboonaan La'aan / Unsuitable")) throw new Error("red label");
+'''
+    completed = subprocess.run([node, "-e", engine + checks], capture_output=True, text=True)
     assert completed.returncode == 0, completed.stderr
 
 
@@ -287,7 +314,7 @@ def test_lims_dashboard_is_modular_and_offline_safe():
 
     i18n = client.get("/web/agri.i18n.js")
     assert i18n.status_code == 200
-    for marker in ("MutationObserver", "Soomaali", "Khariidadda & Beeraha", "Falanqaynta Billaha Beeraha", "Dayrka Beeraha", "Cabbirka Bamka Qorraxda", "Bing Dayax-gacmeed + Magacyo", "Furaha API ayaa loo baahan yahay", "Soo Dawi Warbixinta PDF", "Cudurada", "Saliidda Abuurka"):
+    for marker in ("MutationObserver", "Soomaali", "Khariidadda & Beeraha", "Falanqaynta Billaha Beeraha", "Dayrka Beeraha", "Cabbirka Bamka Qorraxda", "Bing Dayax-gacmeed + Magacyo", "Furaha API ayaa loo baahan yahay", "Xulashada Dhirta · Kaydka Sare ee LIMS", "Soo Dawi Warbixinta PDF", "Cudurada", "Saliidda Abuurka"):
         assert marker in i18n.text
     assert i18n.text.count('\":\"') >= 80
     assert '"Export PDF Report":"' not in i18n.text
