@@ -66,7 +66,8 @@ code{{background:#0b120e;padding:2px 6px;border-radius:6px;font-size:13px}}
 <h1>Agricultural Spatial DSS</h1>
 <p>version {version} — PostGIS · SoilGrids · NASA POWER · Open-Meteo · terrain DEM</p>
 <a class="btn" href="/console">Open the map console →</a>
-<a class="btn" href="/dashboard">Open the unified dashboard →</a>
+<a class="btn" href="/workspace">Open unified 3-in-1 workspace →</a>
+<a class="btn" href="/dashboard">Open the GIS dashboard →</a>
 <a class="btn" href="/dawaad">Open Dawaad / Abaar Alert →</a>
 <a class="btn" href="/lims">Open the laboratory dashboard →</a>
 <a class="btn alt" href="/docs">API reference (Swagger)</a>
@@ -114,7 +115,7 @@ def create_app() -> FastAPI:
     @app.get("/api")
     async def api_info() -> dict:
         return {"service": "agri-dss", "version": __version__, "docs": "/docs",
-                "console": "/console", "dawaad": "/dawaad",
+                "console": "/console", "workspace": "/workspace", "dawaad": "/dawaad",
                 "drought_metrics": "/api/v1/drought-metrics?region=Sool",
                 "water_points": "/api/v1/water-points"}
 
@@ -129,6 +130,12 @@ def create_app() -> FastAPI:
     @app.get("/console", response_class=HTMLResponse, include_in_schema=False)
     async def console() -> HTMLResponse:
         return HTMLResponse(console_path.read_text(encoding="utf-8"))
+
+    workspace_path = Path(__file__).resolve().parent / "web" / "unified-workspace.html"
+
+    @app.get("/workspace", response_class=HTMLResponse, include_in_schema=False)
+    async def workspace() -> HTMLResponse:
+        return HTMLResponse(workspace_path.read_text(encoding="utf-8"))
 
     dashboard_path = Path(__file__).resolve().parent / "web" / "dashboard.html"
 

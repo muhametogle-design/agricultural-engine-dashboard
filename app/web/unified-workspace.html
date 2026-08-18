@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#020617">
+<title>Unified Agro-Hydrology Workspace</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13'>🌍</text></svg>">
+<link rel="stylesheet" href="/web/vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="/web/unified-workspace.css">
+</head>
+<body>
+<div class="app-shell">
+  <header class="app-header">
+    <button id="toggle-drought" class="icon-button" type="button" aria-expanded="true" title="Toggle drought panel">☀</button>
+    <div class="brand"><strong>UNIFIED AGRO-HYDROLOGY</strong><span data-i18n="brandSub">Abaar · Lab LIMS · GIS Engine</span></div>
+    <div class="header-status"><span class="status-dot"></span><span data-i18n="workspaceReady">Workspace ready</span></div>
+    <button id="home-map" class="header-button" type="button" data-i18n="homeMap">Laascaanood home</button>
+    <button id="language-toggle" class="language-button" type="button">Soomaali | English</button>
+    <button id="toggle-lims" class="icon-button" type="button" aria-expanded="true" title="Toggle LIMS panel">🧪</button>
+  </header>
+
+  <div id="workspace" class="workspace">
+    <aside id="drought-panel" class="side-panel drought-panel" aria-label="Drought monitoring portal">
+      <div class="panel-title"><div><strong data-i18n="droughtTitle">Abaar / Dawaad</strong><span data-i18n="droughtSub">Early warning portal</span></div><span id="drought-mode" class="mode-badge">MOCK</span></div>
+      <section class="panel-section">
+        <label class="field-label" for="region-select" data-i18n="region">Pastoral region</label>
+        <select id="region-select" class="control"><option>Sool</option><option>Nugaal</option><option>Sanaag</option><option>Togdheer</option><option>Mudug</option></select>
+        <div class="metric-grid">
+          <article><span data-i18n="rainfall">10-day rainfall</span><b id="rainfall-value">—</b></article>
+          <article><span data-i18n="anomaly">Rainfall anomaly</span><b id="anomaly-value">—</b></article>
+          <article><span data-i18n="vci">VCI score</span><b id="vci-value">—</b></article>
+          <article><span data-i18n="vegetation">Vegetation</span><b id="vegetation-value">—</b></article>
+        </div>
+        <div class="mini-row"><span id="station-count">0 stations</span><span id="water-count">0 water points</span></div>
+        <p id="drought-source" class="note">Loading monitoring indicators…</p>
+      </section>
+      <section class="panel-section"><h2 data-i18n="groundwater">Groundwater status</h2><div id="groundwater-summary" class="status-card">—</div><div class="legend"><span><i class="good"></i><span data-i18n="functional">Functional</span></span><span><i class="warn"></i><span data-i18n="stressed">Stressed</span></span><span><i class="bad"></i><span data-i18n="dry">Dry</span></span></div></section>
+      <section class="panel-section"><h2 data-i18n="externalSources">External data slots</h2><div class="source-list"><a href="https://spatial.faoswalim.org/" target="_blank" rel="noopener">FAO SWALIM</a><a href="https://power.larc.nasa.gov/" target="_blank" rel="noopener">NASA POWER</a><a href="https://soilgrids.org/" target="_blank" rel="noopener">ISRIC SoilGrids</a></div><p class="note" data-i18n="sourceDisclaimer">Mock integration values are not live official observations.</p></section>
+    </aside>
+
+    <main class="gis-panel">
+      <div class="gis-toolbar">
+        <div class="tool-group"><select id="draw-site-type" class="tool"><option value="Farm">Farm / Beer</option><option value="Mine">Mine / Macdan</option></select><button id="start-draw" class="tool primary" type="button" data-i18n="drawPolygon">Draw polygon</button><button id="finish-draw" class="tool" type="button" data-i18n="finish">Finish</button><button id="cancel-draw" class="tool" type="button" data-i18n="cancel">Cancel</button><button id="edit-polygon" class="tool" type="button" data-i18n="editVertices">Edit vertices</button><button id="delete-polygon" class="tool danger" type="button" data-i18n="delete">Delete</button></div>
+        <div class="area-group"><span><small data-i18n="activeSite">Active site</small><b id="active-site-name">—</b></span><span><small data-i18n="hectares">Hectares</small><b id="area-ha">0.00 ha</b></span><span><small data-i18n="acres">Acres</small><b id="area-ac">0.00 ac</b></span></div>
+      </div>
+      <div class="map-container"><div id="unified-map"></div><div id="draw-help" class="map-hint hidden" data-i18n="drawHelp">Click map corners, then press Finish.</div></div>
+      <div class="coordinate-strip"><span data-i18n="coordinates">Coordinates</span><code id="coordinate-output">No active geometry</code></div>
+    </main>
+
+    <aside id="lims-panel" class="side-panel lims-panel" aria-label="Laboratory information management system">
+      <div class="panel-title"><div><strong data-i18n="limsTitle">Lab LIMS</strong><span data-i18n="limsSub">Soil chemistry and sample tracking</span></div><span id="sample-total" class="count-badge">0</span></div>
+      <section class="panel-section linked-site"><span data-i18n="linkedSite">Linked mapped site</span><b id="linked-site-name">No site selected</b><small id="linked-site-coordinates">—</small></section>
+      <form id="sample-form" class="sample-form">
+        <div class="two-columns"><label><span data-i18n="sampleId">Sample ID</span><input id="sample-id" class="control" required></label><label><span data-i18n="siteType">Site type</span><select id="site-type" class="control"><option value="Farm">Farm</option><option value="Mine">Mine</option><option value="Water Point">Water Point</option></select></label></div>
+        <label><span data-i18n="clientName">Client / farmer</span><input id="sample-client" class="control" required></label>
+        <div class="three-columns"><label><span>pH</span><input id="sample-ph" class="control" type="number" min="0" max="14" step=".1" required></label><label><span>EC dS/m</span><input id="sample-ec" class="control" type="number" min="0" step=".1"></label><label><span>OM %</span><input id="sample-om" class="control" type="number" min="0" step=".1"></label></div>
+        <div class="three-columns"><label><span>N ppm</span><input id="sample-n" class="control" type="number" min="0"></label><label><span>P ppm</span><input id="sample-p" class="control" type="number" min="0"></label><label><span>K ppm</span><input id="sample-k" class="control" type="number" min="0"></label></div>
+        <button class="submit-button" type="submit" data-i18n="saveSample">Save linked sample</button>
+      </form>
+      <section class="panel-section sample-section"><div class="section-heading"><h2 data-i18n="samples">Samples</h2><button id="clear-samples" class="text-button" type="button" data-i18n="clear">Clear</button></div><div id="sample-list" class="sample-list"></div></section>
+    </aside>
+  </div>
+</div>
+<script src="/web/vendor/leaflet/leaflet.js"></script>
+<script src="/web/unified-workspace.js"></script>
+</body>
+</html>

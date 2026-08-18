@@ -192,6 +192,7 @@ Zones provably partition the field (see tests, ±3 %).
 | `GET /drought-metrics?region=Sool` | deterministic 10-day CHIRPS-compatible rainfall and VCI mock |
 | `GET /water-points` | active pastoral water-point mock as GeoJSON FeatureCollection |
 | `GET /console` | single-page map console (sign-in → field → ingest → master plan) |
+| `GET /workspace` | unified screen-fit Dawaad + Lab LIMS + GIS operational workspace |
 | `GET /dawaad` | Dawaad / Abaar Alert Leaflet drought-map component and administrative overlays |
 | `GET /lims` | responsive React laboratory operations, finance, pathology and crop-rotation dashboard |
 | `POST /fields/{id}/environmental?refresh=` | soil+climate ingestion (cache-first) |
@@ -362,6 +363,19 @@ arrive as `Decimal` (repository boundary now normalizes to float).
   or official observation. Browser contracts and a typed fetch client live in
   `app/web/drought.types.ts` and `app/web/drought.api.ts`.
 
+### Unified 3-in-1 operational workspace
+
+* `/workspace` presents Dawaad early warning, the Leaflet GIS engine, and Lab LIMS
+  together in one screen-fit grid with independently scrolling side panels.
+* The GIS supports polygon tracing, draggable vertices, midpoint insertion,
+  context-menu vertex deletion, geodesic hectares/acres, site persistence and
+  synchronized coordinates in both Dawaad and LIMS.
+* LIMS samples are linked to the active farm, mine or water point and persist in
+  local storage. The drought panel uses the mock APIs when available and retains
+  deterministic standalone fallback indicators with explicit non-live labeling.
+* Both side-panel toggles call `map.invalidateSize()` on staged delays, and every
+  workspace-owned label switches through the `Soomaali | English` control.
+
 ## Production notes
 
 - **Scaling**: engines are CPU-bound pure functions → run via `asyncio.to_thread`
@@ -388,7 +402,7 @@ arrive as `Decimal` (repository boundary now normalizes to float).
 
 ## Tests
 
-93 passing (`pytest`): engine math with known-answer fixtures, respx-mocked
+94 passing (`pytest`): engine math with known-answer fixtures, respx-mocked
 SoilGrids/POWER/Open-Meteo clients (retry, sentinel, null, coverage paths),
 orchestrator degradation, irrigation schedule/volume arithmetic, CSV/iCalendar
 exports, DEM provider against a synthetic plane, Dawaad drought/water GeoJSON

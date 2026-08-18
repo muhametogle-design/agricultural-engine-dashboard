@@ -24,6 +24,45 @@ def test_console_served():
         assert marker in r.text
 
 
+def test_unified_three_in_one_workspace():
+    app = create_app()
+    app.state.pool = None
+    app.state.terrain = None
+    client = TestClient(app)
+
+    page = client.get("/workspace")
+    assert page.status_code == 200
+    for marker in (
+        "UNIFIED AGRO-HYDROLOGY",
+        "Abaar / Dawaad",
+        "Lab LIMS",
+        'id="unified-map"',
+        'id="start-draw"',
+        'id="sample-form"',
+        "Soomaali | English",
+        "/web/unified-workspace.css",
+        "/web/unified-workspace.js",
+    ):
+        assert marker in page.text
+
+    source = client.get("/web/unified-workspace.js")
+    assert source.status_code == 200
+    for marker in (
+        "class UnifiedWorkspace",
+        "sphericalArea",
+        "toggleEditing",
+        "buildHandles",
+        "midpoint",
+        "invalidateSize",
+        "drought-metrics",
+        "water-points",
+        "saveSample",
+        "linked-site-coordinates",
+        "localStorage",
+    ):
+        assert marker in source.text
+
+
 def test_dawaad_drought_map_component():
     app = create_app()
     app.state.pool = None
