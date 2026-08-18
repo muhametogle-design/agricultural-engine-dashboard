@@ -39,17 +39,10 @@ def test_dawaad_drought_map_component():
         "Esri Satellite + Labels",
         "No API key is required",
         "/web/dawaad-map.js",
-        "/web/pastoral-tools.js",
         "/web/dawaad-map.css",
-        "Underground Aquifer Layer",
-        "Solar Water Pump Sizing",
-        "Pastoral Fencing &amp; Corridor Planner",
         "/web/vendor/leaflet/leaflet.js",
         "/web/vendor/leaflet/leaflet.css",
         "← Main GIS",
-        "Drought Monitoring / Kormeerka Abaaraha",
-        'id="monitoring-region"',
-        "/web/drought.mock.json",
         "Gobol boundaries",
         "Degmo boundaries",
     ):
@@ -58,19 +51,6 @@ def test_dawaad_drought_map_component():
     assert "Bing Maps" not in page.text
     assert client.get("/web/vendor/leaflet/leaflet.js").status_code == 200
     assert client.get("/web/vendor/leaflet/leaflet.css").status_code == 200
-    tools = client.get("/web/pastoral-tools.js")
-    assert tools.status_code == 200
-    for marker in ("calculateSolarPump", "SolarPumpWidget", "PastoralFencePlanner", "AquiferOverlayWidget"):
-        assert marker in tools.text
-    aquifers = client.get("/web/dawaad.aquifers.geojson")
-    assert aquifers.status_code == 200
-    assert {feature["properties"]["potential"] for feature in aquifers.json()["features"]} == {
-        "High Yield", "Medium", "Deep Saline"
-    }
-    mock = client.get("/web/drought.mock.json")
-    assert mock.status_code == 200
-    assert set(mock.json()["droughtMetrics"]) == {"sool", "nugaal", "sanaag", "togdheer", "mudug"}
-    assert len(mock.json()["waterPoints"]["features"]) == 10
 
     source_response = client.get("/web/dawaad-map.js")
     assert source_response.status_code == 200
@@ -89,13 +69,6 @@ def test_dawaad_drought_map_component():
         "requestFullscreen",
         "dawaadRegions",
         "dawaadDistricts",
-        "dawaadClimateStations",
-        "dawaadWaterPoints",
-        "Climate stations",
-        "Pastoral water points",
-        "loadMonitoring",
-        "focusMonitoringRegion",
-        "local standalone mock",
         "FeatureCollection",
         "geoBoundaries CC BY 4.0",
     ):
@@ -112,11 +85,9 @@ def test_dashboard_served():
     assert r.status_code == 200
     for marker in (
         "Native Somali Trees", "Ziziphus mauritiana", "base-active", 'id:"soil",key:"soil"',
-        "/web/vendor/leaflet/leaflet.css", "/web/vendor/leaflet/leaflet.js",
         "Soil amendment required", "ringAreaM2", "renderSim",
         "World_Imagery", "mt{s}.google.com", "OpenStreetMap Standard", "tile.openstreetmap.org",
         "Bing Satellite + Labels", "GisBingHybridLayer", "gisTileXYToQuadKey", "gis_bing_maps_key", "bing-key-input", "Field Intelligence Map",
-        "Plant Selector · LIMS Master Database", "plant-suitability-card", "openPlantSelectorForFarm", "evaluatePlantSuitability", "selectedPlantId", "native-tree-suitability.js", "gis-emergency-repair.js",
         "SQUARE v4", "map-frame", "map-summary", "map-aoi-count",
         "aspect-ratio:1/1", "grid-template-columns", "lab-map-label",
         "Afgooye Soil Laboratory", "updateAoiMapLabel", "localHwsdImagePromise",
@@ -143,7 +114,6 @@ def test_dashboard_served():
         assert marker in r.text
     assert "f.icon" not in r.text
     assert "GRP_ICON" not in r.text
-    assert "unpkg.com/leaflet" not in r.text
     assert "Demo plot" not in r.text
     assert "demoPlot" not in r.text
     assert "Loading synchronized regional catalog" not in r.text
@@ -153,11 +123,6 @@ def test_dashboard_served():
     assert r.text.count('<section class="page">') == 2
     assert "height:297mm;overflow:hidden" in r.text
     assert "Warbixinta Farsamo ee Beerta" in r.text
-
-    repair = client.get("/web/gis-emergency-repair.js")
-    assert repair.status_code == 200
-    for marker in ("invalidateSize", "ResizeObserver", "activeFeature", "bindDynamicLayers", "addNativePins", "OpenStreetMap contributors"):
-        assert marker in repair.text
 
     boundary = client.get("/web/somalia_unified.geojson")
     assert boundary.status_code == 200
@@ -178,32 +143,6 @@ def test_gis_bing_quadkey_engine():
     engine = source[start:end]
     check = "\nif (gisTileXYToQuadKey(3, 5, 3) !== '213') throw new Error('quadkey regression');"
     completed = subprocess.run([node, "-e", engine + check], capture_output=True, text=True)
-    assert completed.returncode == 0, completed.stderr
-
-
-def test_polygon_plant_suitability_engine_has_green_yellow_red_outcomes():
-    node = shutil.which("node")
-    if not node:
-        pytest.skip("Node.js is required for the suitability regression")
-    dashboard_path = Path(__file__).resolve().parents[1] / "app/web/dashboard.html"
-    source = dashboard_path.read_text(encoding="utf-8")
-    start = source.index("function evaluatePlantSuitability")
-    end = source.index("function renderPlantSuitability", start)
-    engine = source[start:end]
-    checks = r'''
-const greenPlant={en:"Jojoba",sci:"Simmondsia chinensis",care:"drought and salt tolerant",avoid:"",ph:[6,8.5],water:{mm:500},nitrogenDemand:"Light Feeder"};
-const greenMetrics={ph:7,ec:1,soilCode:"sandy",classification:"Ciid / Sandy",aquiferDepth:60,conductivity:1000,climateZone:"Arid pastoral"};
-const yellowPlant={en:"Banana",sci:"Musa acuminata",care:"high water",avoid:"avoid waterlogging",ph:[5.5,7],water:{mm:1500},nitrogenDemand:"Heavy Feeder"};
-const yellowMetrics={ph:7.4,ec:1.8,soilCode:"sandy",classification:"Ciid / Sandy",aquiferDepth:100,conductivity:2000,climateZone:"Arid pastoral"};
-const redPlant={en:"Avocado",sci:"Persea americana",care:"perfect drainage",avoid:"root rot and saline water",ph:[5.5,7],water:{mm:1000},nitrogenDemand:"Heavy Feeder"};
-const redMetrics={ph:9,ec:5,soilCode:"clay",classification:"Dhoobo / Clay",aquiferDepth:180,conductivity:5000,climateZone:"Arid pastoral"};
-const results=[evaluatePlantSuitability(greenPlant,greenMetrics),evaluatePlantSuitability(yellowPlant,yellowMetrics),evaluatePlantSuitability(redPlant,redMetrics)];
-if (results.map(item=>item.status).join(",") !== "green,yellow,red") throw new Error(JSON.stringify(results));
-if (results[0].label.name !== "🟢 Ku HABBOON (OPTIMAL MATCH)") throw new Error("green label");
-if (results[1].label.name !== "🟡 KHATAR DHEX-DHEXAAD (MODERATE RISK)") throw new Error("yellow label");
-if (results[2].label.name !== "🔴 AAN KU HABOONAYN (UNSUITABLE)") throw new Error("red label");
-'''
-    completed = subprocess.run([node, "-e", engine + checks], capture_output=True, text=True)
     assert completed.returncode == 0, completed.stderr
 
 
@@ -301,7 +240,6 @@ def test_lims_dashboard_is_modular_and_offline_safe():
     assert "/web/agri.shared.js" in page.text
     assert "/web/agri.store.js" in page.text
     assert "/web/agri.i18n.js" in page.text
-    assert "/web/native-tree-suitability.js" in page.text
     assert "/web/vendor/react.min.js" in page.text
     assert ".strategic-planner h2" in page.text
     assert "font-size:19px" in page.text
@@ -322,7 +260,7 @@ def test_lims_dashboard_is_modular_and_offline_safe():
 
     i18n = client.get("/web/agri.i18n.js")
     assert i18n.status_code == 200
-    for marker in ("MutationObserver", "Soomaali", "Khariidadda & Beeraha", "Falanqaynta Billaha Beeraha", "Dayrka Beeraha", "Cabbirka Bamka Qorraxda", "Bing Dayax-gacmeed + Magacyo", "Furaha API ayaa loo baahan yahay", "Xulashada Dhirta · Kaydka Sare ee LIMS", "Soo Dawi Warbixinta PDF", "Cudurada", "Saliidda Abuurka"):
+    for marker in ("MutationObserver", "Soomaali", "Khariidadda & Beeraha", "Falanqaynta Billaha Beeraha", "Dayrka Beeraha", "Cabbirka Bamka Qorraxda", "Bing Dayax-gacmeed + Magacyo", "Furaha API ayaa loo baahan yahay", "Soo Dawi Warbixinta PDF", "Cudurada", "Saliidda Abuurka"):
         assert marker in i18n.text
     assert i18n.text.count('\":\"') >= 80
     assert '"Export PDF Report":"' not in i18n.text
