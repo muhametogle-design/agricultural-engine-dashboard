@@ -6,7 +6,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app import __version__
@@ -100,11 +100,10 @@ def create_app() -> FastAPI:
         return {"service": "agri-dss", "version": __version__, "docs": "/docs",
                 "console": "/console"}
 
-    @app.get("/", response_class=HTMLResponse, include_in_schema=False)
-    async def landing() -> HTMLResponse:
-        html = (LANDING_HTML.replace("{version}", __version__)
-                            .replace("{{", "{").replace("}}", "}"))
-        return HTMLResponse(html)
+    @app.get("/", include_in_schema=False)
+    async def landing() -> RedirectResponse:
+        """One public entry point for the integrated GIS/LIMS/Dawaad workspace."""
+        return RedirectResponse(url="/dashboard", status_code=307)
 
     console_path = Path(__file__).resolve().parent / "web" / "console.html"
 
