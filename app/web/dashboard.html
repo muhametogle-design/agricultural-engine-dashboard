@@ -375,8 +375,10 @@ function listAois(){const box=document.getElementById("aoi-list");box.innerHTML=
    if(act==="del"){if(a.handles)a.handles.remove();a.poly.remove();state.aois=state.aois.filter(x=>x!==a);if(state.selected===a)state.selected=state.aois[0]||null;listAois();updateStats();logEv("Deleted AOI "+a.name);return;}
    selectAoi(a);};
   box.appendChild(el);});}
-function toggleLeft(){document.getElementById("left").classList.toggle("-translate-x-full");document.getElementById("left-scrim").classList.toggle("hidden");}
-function toggleRight(){document.getElementById("right").classList.toggle("translate-x-full");}
+let _mapResizeTimer=null;
+function refreshMapCanvas(){clearTimeout(_mapResizeTimer);_mapResizeTimer=setTimeout(()=>map.invalidateSize({pan:false}),100);}
+function toggleLeft(){document.getElementById("left").classList.toggle("-translate-x-full");document.getElementById("left-scrim").classList.toggle("hidden");refreshMapCanvas();}
+function toggleRight(){document.getElementById("right").classList.toggle("translate-x-full");refreshMapCanvas();}
 async function pingApi(){const base=apiBase||location.origin;try{const r=await fetch(base+"/healthz");if(!r.ok)throw 0;document.getElementById("api-led").className="w-2 h-2 rounded-full bg-emerald-500";document.getElementById("api-text").textContent="API online";}catch{document.getElementById("api-led").className="w-2 h-2 rounded-full bg-slate-600";document.getElementById("api-text").textContent="API offline";}}
 pingApi();
 
