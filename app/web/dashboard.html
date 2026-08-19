@@ -136,10 +136,10 @@
     </div>
   </div>
   <div class="flex-1"></div>
-  <a href="/web/dawaad.html" title="Dawaad / Abaar Alert drought GIS"
-     class="whitespace-nowrap rounded-lg border border-amber-700/70 bg-amber-950/30 px-2.5 py-1.5 text-xs font-extrabold text-amber-300 hover:border-amber-400">Dawaad / Abaar Alert</a>
-  <a href="/web/lims.html" title="Laboratory Information Management System"
-     class="px-2 py-1.5 rounded-lg border border-slate-800 hover:border-violet-500 text-xs text-slate-400">Lab LIMS</a>
+  <button onclick="openModule('dawaad')" title="Open Abaar Alert inside this workspace"
+     class="whitespace-nowrap rounded-lg border border-amber-700/70 bg-amber-950/30 px-2.5 py-1.5 text-xs font-extrabold text-amber-300 hover:border-amber-400">Dawaad / Abaar Alert</button>
+  <button onclick="openModule('lims')" title="Open Laboratory Information Management System inside this workspace"
+     class="px-2 py-1.5 rounded-lg border border-slate-800 hover:border-violet-500 text-xs text-slate-400">Lab LIMS</button>
   <button id="lang-toggle" onclick="toggleLanguage()" class="min-w-[168px] whitespace-nowrap rounded-lg border border-emerald-700/70 bg-emerald-950/30 px-4 py-2 text-sm font-black text-emerald-200" title="Soomaali | English">Soomaali | English</button>
   <div class="flex items-center gap-1.5 text-[11px] text-slate-500"><span id="api-led" class="w-2 h-2 rounded-full bg-slate-600"></span><span id="api-text">API…</span></div>
   <button id="theme-btn" onclick="toggleTheme()" role="switch" aria-checked="true" aria-label="Switch to light mode" title="Toggle light / dark mode"
@@ -154,7 +154,7 @@
          absolute lg:static h-full -translate-x-full lg:translate-x-0 transition-transform overflow-y-auto">
     <nav class="p-2 border-b border-slate-800 flex-none space-y-1.5">
       <button data-i18n="map" class="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg bg-emerald-950/60 text-emerald-300 text-sm">Map & Farms</button>
-      <a href="/web/dawaad.html" class="flex w-full items-center gap-2.5 rounded-lg border border-amber-800/60 bg-amber-950/30 px-2.5 py-2 text-sm font-bold text-amber-300 hover:bg-amber-900/40">☀ Dawaad / Abaar Alert</a>
+      <button onclick="openModule('dawaad')" class="flex w-full items-center gap-2.5 rounded-lg border border-amber-800/60 bg-amber-950/30 px-2.5 py-2 text-sm font-bold text-amber-300 hover:bg-amber-900/40">☀ Dawaad / Abaar Alert</button>
     </nav>
     <div class="p-3 border-b border-slate-800 flex-none">
       <div data-i18n="basemap" class="text-sm font-bold uppercase tracking-wide text-slate-300 mb-2">Basemap</div>
@@ -309,6 +309,16 @@
     </div>
   </aside>
   <div id="left-scrim" onclick="toggleLeft()" class="hidden absolute inset-0 bg-black/50 z-10 lg:hidden"></div>
+
+  <!-- Same-page portal: GIS remains the only page; Lab and Dawaad open here. -->
+  <section id="module-panel" class="hidden absolute inset-0 z-40 flex flex-col bg-slate-950" aria-label="Integrated portal module">
+    <div class="h-11 flex-none flex items-center gap-3 border-b border-slate-800 px-3">
+      <b id="module-title" class="text-sm text-slate-100">Portal</b>
+      <span class="text-[11px] text-slate-500">Somali SpatialBio Engine</span>
+      <button onclick="closeModule()" class="ml-auto rounded border border-slate-700 px-3 py-1 text-xs text-slate-300 hover:border-emerald-500">← Return to GIS</button>
+    </div>
+    <iframe id="module-frame" class="min-h-0 flex-1 border-0 bg-slate-950" title="Integrated module"></iframe>
+  </section>
 
   <!-- ══ COMPACT MAP WORKSPACE ══ -->
   <main id="map-shell" class="flex-1 min-w-0 relative flex flex-col items-center justify-start p-2 sm:p-3">
@@ -1602,6 +1612,19 @@ let _lastSimKey="";
 function logSimOnce(a,f,plants){
  const k=a.id+"|"+f.sci+"|"+plants+"|"+state.soil;if(k===_lastSimKey)return;_lastSimKey=k;
  logEv(`Simulated soil-crop diagnostic — ${f.en} on ${a.name} → ${fnum(plants,0)} units`,{area:fmtHa(aoiM2(a)),flora:f.en,rating:healthScore(SOILS[state.soil]),src:"SSB smart engine · geodesic area"});}
+
+function openModule(name){
+ const module={lims:{path:"/web/lims.html",title:"🧪 Laboratory LIMS"},dawaad:{path:"/web/dawaad.html",title:"☀️ Dawaad / Abaar Alert"}}[name];
+ if(!module)return;
+ document.getElementById("module-title").textContent=module.title;
+ document.getElementById("module-frame").src=module.path;
+ document.getElementById("module-panel").classList.remove("hidden");
+}
+function closeModule(){
+ document.getElementById("module-panel").classList.add("hidden");
+ document.getElementById("module-frame").src="about:blank";
+ setTimeout(()=>map.invalidateSize({pan:false}),100);
+}
 
 applyLanguage();restoreLeftSidebar();renderSim();listAois();restoreFarmRecords();
 </script>
