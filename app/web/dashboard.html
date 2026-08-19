@@ -58,13 +58,6 @@
     body *{visibility:hidden}
     .cert-wrap,.cert-wrap *{visibility:visible}
     .cert-wrap{position:absolute;inset:0;overflow:visible;background:#fff}
-    #ph-legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:2px}
-
-  /* ── PRINT: certificate only; NASA banner + lineage statically stripped ── */
-  @media print{
-    body *{visibility:hidden}
-    .cert-wrap,.cert-wrap *{visibility:visible}
-    .cert-wrap{position:absolute;inset:0;overflow:visible;background:#fff}
     .data-node,.cert-hidden,[data-no-print]{display:none!important}
     aside,header,main,footer{display:none!important}
   }
@@ -94,8 +87,6 @@
     </div>
   </div>
   <div class="flex-1"></div>
-  <a href="/lims" title="Laboratory Information Management System"
-     class="px-2 py-1.5 rounded-lg border border-slate-800 hover:border-violet-500 text-xs text-slate-400">🧪 Lab LIMS</a>
   <div class="flex items-center gap-1.5 text-[11px] text-slate-500"><span id="api-led" class="w-2 h-2 rounded-full bg-slate-600"></span><span id="api-text">API…</span></div>
   <button id="theme-btn" onclick="toggleTheme()" role="switch" aria-checked="true" aria-label="Switch to light mode" title="Toggle light / dark mode"
           class="px-2.5 py-1.5 rounded-lg border border-slate-800 hover:border-emerald-500 text-sm">🌙</button>
@@ -113,23 +104,6 @@
     <div class="p-3 border-b border-slate-800 flex-none">
       <div class="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Basemap</div>
       <div id="basemaps" class="grid grid-cols-2 gap-2"></div>
-      <div class="mt-2.5 text-[10px] uppercase tracking-widest text-slate-500 mb-1">Data overlay</div>
-      <label class="flex items-center gap-1.5 text-[11px] text-slate-400 select-none cursor-pointer">
-        <input type="checkbox" id="ov-ph" onchange="togglePhOverlay(this.checked)"/> 🗺️ FAO topsoil pH map (HWSD v2.0)
-      </label>
-      <div id="ph-legend" class="hidden mt-2 rounded-lg bg-slate-900 border border-slate-800 p-2">
-        <div class="text-[9px] uppercase tracking-widest text-slate-500 mb-1">topsoil 0–20 cm pH</div>
-        <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[10px] text-slate-400">
-          <span><i style="background:#2d9c3c"></i>&lt; 5.5 — strong acid</span>
-          <span><i style="background:#7bc043"></i>5.5–6.5 — acid</span>
-          <span><i style="background:#c8da48"></i>6.5–7.0 — neutral</span>
-          <span><i style="background:#f4d03f"></i>7.0–7.5 — mild alkali</span>
-          <span><i style="background:#f39c12"></i>7.5–8.0 — alkali</span>
-          <span><i style="background:#e67e22"></i>8.0–8.5 — strong alkali</span>
-          <span><i style="background:#c0392b"></i>&gt; 8.5 — extreme</span>
-        </div>
-        <div class="mt-1 text-[9px] text-slate-600">FAO/IIASA HWSD v2.0 · 1 km grid · labels auto-join to polygons</div>
-      </div>
     </div>
     <div class="p-3 border-b border-slate-800 flex-none">
       <div class="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Polygon engine</div>
@@ -212,7 +186,7 @@
   <main class="flex-1 min-w-0 relative"><div id="map" class="absolute inset-0"></div></main>
 
   <!-- ══ RIGHT SIDEBAR ══ -->
-  <aside id="right" class="w-[430px] bg-slate-950 border-l border-slate-800 flex flex-col z-20 flex-none
+  <aside id="right" class="w-[380px] max-w-full bg-slate-950 border-l border-slate-800 flex flex-col z-20 flex-none
          absolute right-0 h-full translate-x-full lg:translate-x-0 lg:static transition-transform">
     <div class="p-3 border-b border-slate-800 flex-none">
       <div class="flex items-center justify-between">
@@ -227,6 +201,7 @@
       <div id="tabs" class="mt-2 flex flex-wrap gap-1 text-[11px]"></div>
     </div>
 
+    <div id="plant-suitability-card" class="mx-3 mt-3 rounded-xl border border-slate-800 bg-slate-900 p-3 text-xs text-slate-400">Draw or select a polygon, then choose a plant to run the Ciid, Dhoobo, pH and water suitability check.</div>
     <div id="flora-body" class="flex-1 overflow-y-auto p-3 space-y-2 min-h-0"></div>
 
     <!-- SMART ENGINE -->
@@ -284,7 +259,7 @@ function setApiBase(v){let s=(v||"").trim().replace(/\/+$/,"");try{s=new URL(s).
 document.getElementById("api-base").value=apiBase;
 document.getElementById("client-name").value=localStorage.getItem("ssb_client")||"";
 function saveClient(){localStorage.setItem("ssb_client",document.getElementById("client-name").value);}
-const state={draw:null,aois:[],selected:null,seq:1,flora:null,soil:"shabelle",labManual:false};
+const state={draw:null,aois:[],selected:null,selectedPolygon:null,seq:1,flora:null,soil:"shabelle",labManual:false,suitability:null};
 
 /* ═══════════════ SPEC-4 · HISTORICAL DATA LOG (multi-session audit) ═══════════════ */
 function loadHist(){try{return JSON.parse(localStorage.getItem("ssb_history")||"[]");}catch{return [];}}
@@ -342,51 +317,6 @@ Object.keys(BASES).forEach(n=>{
  baseBox.appendChild(b);});
 BASES[activeBase].addTo(map);
 
-/* FAO HWSD v2.0 topsoil-pH overlay (pre-rendered from the Somalia clip) */
-const PH_BOUNDS=[[-1.8,40.9],[12.2,51.5]];
-let phOverlay=null;
-function togglePhOverlay(on){
- document.getElementById("ph-legend").classList.toggle("hidden",!on);
- if(on){
-  const base=apiBase||location.origin;
-  phOverlay=L.imageOverlay(base+"/web/hwsd_ph_overlay.png",PH_BOUNDS,{interactive:false,opacity:1}).addTo(map);
-  if(state.selected)state.selected.poly.bringToFront();
-  logEv("Displayed FAO topsoil pH overlay (HWSD v2.0 clip)",{flora:state.flora?state.flora.en:null,rating:healthScore(SOILS[state.soil]),src:"data/hwsd/hwsd2_somalia.tif"});
- }else if(phOverlay){map.removeLayer(phOverlay);phOverlay=null;}
-}
-
-/* click-to-probe: exact topsoil readings from the HWSD v2.0 cell under the cursor */
-let _probeBusy=false;
-function probeSoil(latlng){
- if(_probeBusy||!phOverlay)return;_probeBusy=true;
- const base=apiBase||location.origin;
- const pop=L.popup({maxWidth:280}).setLatLng(latlng).setContent("<div class='text-xs p-1'>⏳ Sampling FAO HWSD v2.0 topsoil…</div>").openOn(map);
- fetch(base+"/api/v1/lab/hwsd/sample?lat="+latlng.lat.toFixed(6)+"&lon="+latlng.lng.toFixed(6))
- .then(r=>r.json()).then(j=>{
-  if(!j.available){pop.setContent("<div class='text-xs p-1'>HWSD dataset not mounted on this server.</div>");return;}
-  const s=j.sample;
-  if(!s||s.ph==null){pop.setContent("<div class='text-xs p-1'>Outside the soil grid at this point.</div>");return;}
-  const phCol=s.ph<5.5?"#2d9c3c":s.ph<6.5?"#7bc043":s.ph<7?"#c8da48":s.ph<7.5?"#f4d03f":s.ph<8?"#f39c12":s.ph<8.5?"#e67e22":"#c0392b";
-  pop.setContent("<div class='p-1' style='font-size:12px;line-height:1.35'>"
-   +"<div style='font-weight:700;margin-bottom:2px'>🛰 FAO topsoil reading <span style='color:#64748b'>0–20 cm</span></div>"
-   +"<div style='font-size:22px;font-weight:700'><span style='display:inline-block;width:14px;height:14px;border-radius:3px;background:"+phCol+";margin-right:4px'></span>pH "+s.ph+"</div>"
-   +"<div>Organic matter: <b>"+(s.om_pct??"—")+"%</b> · Total N: <b>"+(s.nitrogen_pct??"—")+"%</b></div>"
-   +"<div>Texture: clay <b>"+(s.clay_pct??"—")+"%</b> · sand <b>"+(s.sand_pct??"—")+"%</b> · silt <b>"+(s.silt_pct??"—")+"%</b></div>"
-   +"<div>CEC: <b>"+(s.cec??"—")+"</b> · WRB class: <b>"+(s.wrb??"—")+"</b> · MU "+s.mu_id+"</div>"
-   +"<div style='font-size:10px;color:#64748b;margin-top:2px'>"+s.source+(s.nearest_km?" · nearest profiled pixel "+s.nearest_km+" km away":"")+"</div>"
-   +"<button onclick='probeToLab()' class='mt-1 px-2 py-1 rounded' style='background:#6d28d9;color:#fff;font-size:11px;margin-top:4px'>⤵ Use as lab baseline</button></div>");
-  window._probeSample=s;
- }).catch(()=>pop.setContent("<div class='text-xs p-1'>HWSD endpoint unreachable.</div>"))
- .finally(()=>{_probeBusy=false;});
-}
-function probeToLab(){
- const s=window._probeSample;if(!s)return;
- document.getElementById("lab-ph").value=s.ph;
- if(s.om_pct)document.getElementById("lab-om").value=s.om_pct;
- applyLab({manual:false,src:s.source});
- map.closePopup();
-}
-
 /* ═══════════════ SPEC-6 · GEOMETRY ENGINE (single-pass geodesic, memoized) ═══════════════ */
 function ringAreaM2(ll){const R=6378137,d=Math.PI/180;let s=0;for(let i=0;i<ll.length;i++){const a=ll[i],b=ll[(i+1)%ll.length];s+=(b.lng-a.lng)*d*(2+Math.sin(a.lat*d)+Math.sin(b.lat*d));}return Math.abs(s*R*R/2);}
 const fmtHa=m2=>(m2/1e4).toLocaleString(undefined,{maximumFractionDigits:2})+" ha";
@@ -395,7 +325,7 @@ const fnum=(x,d=1)=>x.toLocaleString(undefined,{maximumFractionDigits:d});
 function aoiM2(a){if(!a.dirty&&a._m2!=null)return a._m2;a._m2=ringAreaM2(a.poly.getLatLngs()[0]);a.dirty=false;return a._m2;}  /* cached: recompute only on vertex mutation */
 
 /* ═══════════════ POLYGON ENGINE ═══════════════ */
-map.on("click",e=>{if(state.draw){state.draw.pts.push(e.latlng);rebuildDraft();return;}probeSoil(e.latlng);});
+map.on("click",e=>{if(state.draw){state.draw.pts.push(e.latlng);rebuildDraft();}});
 map.on("dblclick",e=>{if(state.draw){if(e.originalEvent)L.DomEvent.stop(e.originalEvent);finishDraw();}});
 function startDraw(){cancelDraw();state.draw={pts:[],layer:L.layerGroup().addTo(map)};showDraw(true);map.doubleClickZoom.disable();}
 function rebuildDraft(){const d=state.draw;d.layer.clearLayers();d.pts.forEach(p=>L.marker(p,{icon:dotIcon(),interactive:false,keyboard:false}).addTo(d.layer));if(d.pts.length>1)L.polyline(d.pts,{color:"#f59e0b",weight:2,dashArray:"6 6"}).addTo(d.layer);}
@@ -425,7 +355,7 @@ function addMid(a,i){const m=L.marker([0,0],{icon:L.divIcon({className:"mid-mark
  a.mids.push(m);moveMids(a);}
 function moveMids(a){const ll=a.poly.getLatLngs()[0];if(!a.mids)return;a.mids.forEach((m,i)=>{const p=ll[i],q=ll[(i+1)%ll.length];m.setLatLng([(p.lat+q.lat)/2,(p.lng+q.lng)/2]);});}
 function dropVertex(a,i){const ll=a.poly.getLatLngs()[0];if(ll.length<=3){alert("Keep at least 3 vertices.");return;}ll.splice(i,1);a.poly.setLatLngs(ll);a.dirty=true;setEditable(a,true);updateStats();}
-function selectAoi(a){state.selected=a;state.aois.forEach(x=>{const on=x===a;x.poly.setStyle({weight:on?3:2,fillOpacity:on?.22:.15});if(x!==a&&x.editing)setEditable(x,false);});updateStats();listAois();}
+function selectAoi(a){state.selected=a;state.selectedPolygon=a;state.aois.forEach(x=>{const on=x===a;x.poly.setStyle({weight:on?4:2,color:on?"#facc15":x.color,fillOpacity:on?.28:.12});if(x!==a&&x.editing)setEditable(x,false);});updateStats();listAois();renderPlantSuitability();}
 function updateStats(){document.getElementById("stat-count").textContent=state.aois.length;const a=state.selected;
  if(!a){document.getElementById("stat-ha").textContent="—";document.getElementById("stat-ac").textContent="select / draw a polygon";renderSim();return;}
  const m2=aoiM2(a);document.getElementById("stat-ha").textContent=fmtHa(m2);
@@ -894,10 +824,14 @@ function renderTabs(){tabsBox.innerHTML="";TABS.forEach(t=>{const b=document.cre
 const qs=()=>document.getElementById("flora-search").value.trim().toLowerCase();
 let _qT=null;function onSearch(){clearTimeout(_qT);_qT=setTimeout(renderFlora,140);}
 
+function classifyPolygonSoil(profile){const text=`${profile.texture||""} ${profile.wrb||""} ${profile.name||""}`.toLowerCase();if(/clay|vertisol|dhoobo/.test(text))return "Dhoobo / Heavy clay";if(/calci|limestone|nuurad|gyps/.test(text))return "Dhagax-nuurad / Calcareous";if(/sand|arenosol|ciid/.test(text))return "Ciid Cas / Red sands";return "Simbir / Alluvial silt-loam";}
+function evaluatePlantSuitability(plant){const soil=SOILS[state.soil]||SOILS.shabelle,ph=Number(soil.ph),ec=Number(soil.ec),lo=Number(plant.ph[0]),hi=Number(plant.ph[1]),gap=ph<lo?lo-ph:ph>hi?ph-hi:0,checks=[],tips=[];if(gap===0)checks.push([0,`pH ${ph} matches ${lo}–${hi}.`]);else if(gap<=.8){checks.push([1,`pH ${ph} is marginal for ${lo}–${hi}.`]);tips.push("Talooyinka: use laboratory-approved amendment management.");}else{checks.push([2,`pH ${ph} is outside ${lo}–${hi}.`]);tips.push("Digniinaha: select a pH-tolerant plant or verify a multi-season amendment plan.");}const soilType=classifyPolygonSoil(soil),sensitive=/waterlogged|root rot|poor drainage/.test(`${plant.avoid} ${plant.care}`.toLowerCase());if(/Dhoobo/.test(soilType)&&sensitive){checks.push([1,"Dhoobo drainage can raise root-rot risk."]);tips.push("Talooyinka: use raised beds and controlled drainage; do not flood irrigate.");}else checks.push([0,`${soilType} is acceptable for this screening profile.`]);const level=Number.isFinite(ec)?ec>4?2:ec>2?1:0:1;checks.push([level,Number.isFinite(ec)?`Soil EC ${ec} dS/m ${level===0?"is within range.":level===1?"needs salinity management.":"is a severe salinity risk."}`:"EC / salinity is unverified."]);checks.push([1,"Aquifer depth must be confirmed by VES or borehole testing."]);const red=checks.filter(c=>c[0]===2).length,yellow=checks.filter(c=>c[0]===1).length,status=red?"red":yellow?"yellow":"green";return{status,checks,tips,soilType,ph,lo,hi,ec};}
+function renderPlantSuitability(){const card=document.getElementById("plant-suitability-card");if(!card)return;const a=state.selectedPolygon,f=state.flora;if(!a){card.className="mx-3 mt-3 rounded-xl border border-slate-800 bg-slate-900 p-3 text-xs text-slate-400";card.textContent="Draw or select a polygon, then choose a Native Tree, Midho, Khudaar or Saliidda Abuurka plant.";return;}if(!f){card.className="mx-3 mt-3 rounded-xl border border-sky-800 bg-sky-950/30 p-3 text-xs text-sky-100";card.innerHTML=`<b>${a.name} is active.</b><div class="mt-1">Select a plant to calculate suitability.</div>`;return;}const r=evaluatePlantSuitability(f),meta={green:["🟢","Habboon / Eligible","border-emerald-700 bg-emerald-950/50 text-emerald-100"],yellow:["🟡","Khatar Dhex-dhexaad / Moderate","border-amber-700 bg-amber-950/30 text-amber-100"],red:["🔴","Ku Habboonaan La'aan / Unsuitable","border-red-700 bg-red-950/40 text-red-100"]}[r.status];state.suitability=r;card.className=`mx-3 mt-3 rounded-xl border p-3 text-xs ${meta[2]}`;card.innerHTML=`<div class="flex gap-2"><span class="text-lg">${meta[0]}</span><div><b>${meta[1]}</b><div class="opacity-80">${f.somali} · ${f.en}</div></div></div><div class="mt-2 grid grid-cols-2 gap-1 text-[10px]"><div>pH <b>${r.ph}</b> · target <b>${r.lo}–${r.hi}</b></div><div>EC <b>${r.ec||"—"}</b> dS/m</div><div>Ciid <b>${r.soilType}</b></div><div>Aquifer <b>verify VES</b></div></div><div class="mt-2 space-y-1">${r.checks.map(c=>`<div>${c[0]===0?"✓":c[0]===1?"!":"×"} ${c[1]}</div>`).join("")}</div><div class="mt-2 border-t border-white/10 pt-2"><b>Cudurada / Digniinaha:</b> ${f.avoid}</div>${r.tips.length?`<div class="mt-1"><b>Talooyinka:</b> ${r.tips.join(" ")}</div>`:""}`;}
+function selectFloraForPolygon(f){state.flora=f;renderFlora();renderSim();renderPlantSuitability();logEv("Selected flora profile: "+f.en+" ("+f.sci+")",{area:state.selected?fmtHa(aoiM2(state.selected)):null,flora:f.en,rating:healthScore(SOILS[state.soil]),src:"global flora database"});}
 function floraCard(f){
  const active=state.flora===f;
  const el=document.createElement("div");
- el.className="rounded-xl border bg-slate-900 p-3 cursor-pointer hover:border-emerald-600 transition-colors "+(active?"flora-active border-amber-500":"border-slate-800");
+ el.className="rounded-xl border bg-slate-900 p-3 cursor-pointer hover:border-emerald-500 transition-colors "+(active?"flora-active border-amber-500":"border-slate-800");
  el.innerHTML=`
   <div class="flex items-baseline gap-2"><span class="text-base">${f.icon}</span>
     <b class="text-sm">${f.en}</b><span class="text-[11px] text-emerald-400">${f.somali}</span>
@@ -910,7 +844,9 @@ function floraCard(f){
     <span class="text-red-400/90">⚠ Avoid</span><span class="text-red-200/80">${f.avoid}</span>
   </div>
   <div class="mt-2 text-right text-[10px] ${active?"text-amber-300 font-bold":"text-slate-600"}">${active?"● ACTIVE — simulated below":"tap to run simulation"}</div>`;
- el.onclick=()=>{state.flora=f;renderFlora();renderSim();logEv("Selected flora profile: "+f.en+" ("+f.sci+")",{area:state.selected?fmtHa(aoiM2(state.selected)):null,flora:f.en,rating:healthScore(SOILS[state.soil]),src:"global flora database"});};
+ el.setAttribute("role","button");el.setAttribute("tabindex","0");
+ el.addEventListener("click",()=>selectFloraForPolygon(f));
+ el.addEventListener("keydown",event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();selectFloraForPolygon(f);}});
  return el;
 }
 function renderFlora(){
@@ -1037,7 +973,7 @@ function logSimOnce(a,f,plants){
  const k=a.id+"|"+f.sci+"|"+plants+"|"+state.soil;if(k===_lastSimKey)return;_lastSimKey=k;
  logEv(`Simulated soil-crop diagnostic — ${f.en} on ${a.name} → ${fnum(plants,0)} units`,{area:fmtHa(aoiM2(a)),flora:f.en,rating:healthScore(SOILS[state.soil]),src:"SSB smart engine · geodesic area"});}
 
-renderTabs();renderFlora();renderSim();listAois();
+renderTabs();renderFlora();renderSim();renderPlantSuitability();listAois();
 </script>
 </body>
 </html>
