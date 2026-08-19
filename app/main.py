@@ -124,6 +124,12 @@ def create_app() -> FastAPI:
     async def lims() -> HTMLResponse:
         return HTMLResponse(lims_path.read_text(encoding="utf-8"))
 
+    dawaad_path = Path(__file__).resolve().parent / "web" / "dawaad.html"
+
+    @app.get("/drought", response_class=HTMLResponse, include_in_schema=False)
+    async def drought() -> HTMLResponse:
+        return HTMLResponse(dawaad_path.read_text(encoding="utf-8"))
+
     web_dir = Path(__file__).resolve().parent / "web"
     app.mount("/web", StaticFiles(directory=web_dir), name="web")
 
