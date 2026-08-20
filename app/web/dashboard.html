@@ -388,7 +388,7 @@
     <rect x="9" y="9" width="6" height="6" rx="1" transform="rotate(20 12 12)"/>
     <path d="M4 6 9 11M20 18l-5-5"/><path d="M2 12h4M18 12h4" opacity=".6"/></svg>
   <span>Sources: FAO SWALIM Groundwater Bulletin &amp; Spatial Portal · NASA POWER · ISRIC SoilGrids.</span>
-  <span class="ml-auto hidden md:inline text-slate-600">Monitoring values marked demo/cached are integration previews—consult official portals for current observations.</span>
+  <span class="ml-auto hidden md:inline text-slate-600">Monitoring values are reference/cached integration records—consult official portals for current observations.</span>
 </footer>
 
 <!-- ══ MONTHLY FARM ANALYTICS MODAL ══ -->
@@ -901,7 +901,7 @@ function updateStats(){document.getElementById("stat-count").textContent=state.a
  document.getElementById("stat-ac").textContent=fmtAc(m2)+" · "+fnum(m2,0)+" m²";
  const row=document.querySelector(`[data-aoi="${a.id}"] .aoi-area`);if(row)row.textContent=fmtHa(m2);scheduleFarmPersist(a);renderFencingPlanner(a);if(a.geometryDirty)assessGroundwater(a.poly.getBounds().getCenter(),"edited farm polygon",document.getElementById("ov-aquifer").checked);renderSim();}
 function listAois(){const box=document.getElementById("aoi-list");box.innerHTML="";
- if(!state.aois.length){box.innerHTML='<div class="text-center text-slate-600 text-xs py-4">No areas yet — draw one or load the demo plot.</div>';return;}
+ if(!state.aois.length){box.innerHTML='<div class="text-center text-slate-600 text-xs py-4">No areas yet — draw a farm or concession polygon.</div>';return;}
  state.aois.forEach(a=>{const on=a===state.selected;const el=document.createElement("div");el.dataset.aoi=a.id;
   el.className="rounded-lg border p-2.5 mb-1.5 text-sm cursor-pointer "+(on?"border-emerald-600 bg-emerald-950/40":"border-slate-800 bg-slate-900 hover:border-slate-600");
   el.innerHTML=`<div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full" style="background:${a.color}"></span><b>${a.name}</b><span class="flex-1"></span><span class="aoi-area text-emerald-300 font-mono text-sm font-bold">${fmtHa(aoiM2(a))}</span></div>
